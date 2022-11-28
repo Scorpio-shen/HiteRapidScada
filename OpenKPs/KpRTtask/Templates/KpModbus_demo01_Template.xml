@@ -1,0 +1,167 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<DevTemplate>
+  <Settings>
+    <ZeroAddr>false</ZeroAddr>
+    <DecAddr>true</DecAddr>
+    <DefByteOrder2 />
+    <DefByteOrder4 />
+    <DefByteOrder8 />
+  </Settings>
+  <ElemGroups>
+    <ElemGroup active="true" tableType="HoldingRegisters" address="0" name="datagroup1">
+      <Elem name="data0" type="ushort" byteOrder="" />
+      <Elem name="data1" type="ushort" byteOrder="" />
+      <Elem name="data2_temperature" type="ushort" byteOrder="" />
+      <Elem name="data3_humidity" type="ushort" byteOrder="" />
+      <Elem name="data4_H2S" type="ushort" byteOrder="" />
+      <Elem name="data5_O2" type="ushort" byteOrder="" />
+      <Elem name="data6_CH4" type="ushort" byteOrder="" />
+      <Elem name="data7" type="ushort" byteOrder="" />
+      <Elem name="data8" type="ushort" byteOrder="" />
+      <Elem name="data9" type="ushort" byteOrder="" />
+    </ElemGroup>
+    <ElemGroup active="true" tableType="HoldingRegisters" address="40000" name="sys_sta">
+      <Elem name="H01" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="run_time" type="uint" byteOrder="2301" />
+      <Elem name="total_step" type="uint" byteOrder="2301" />
+      <Elem name="run_cyc" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="err_code" type="ushort" byteOrder="" />
+      <Elem name="err_step" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+      <Elem name="" type="ushort" byteOrder="" />
+    </ElemGroup>
+    <ElemGroup active="true" tableType="Coils" address="10000" name="bit_sta">
+      <Elem name="m_light" />
+      <Elem name="m_emg_light" />
+      <Elem name="m_drain_off_water" />
+      <Elem name="m_liquid_ctrl" />
+      <Elem name="m_fan" />
+      <Elem name="m_fan_tap" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="m_electron_manhole_cover" />
+      <Elem name="m_camera" />
+      <Elem name="m_infrared_sensor" />
+      <Elem name="m_emg_stop" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+      <Elem name="" />
+    </ElemGroup>
+  </ElemGroups>
+  <Cmds>
+    <Cmd tableType="HoldingRegisters" multiple="false" address="0" byteOrder="" cmdNum="1" name="cmd1" />
+    <Cmd tableType="Coils" multiple="false" address="10000" cmdNum="2" name="bit_ctrl_light" />
+    <Cmd tableType="Coils" multiple="false" address="10001" cmdNum="3" name="bit_ctrl_emg_light" />
+    <Cmd tableType="Coils" multiple="false" address="10002" cmdNum="4" name="bit_ctrl_drain_off_water" />
+    <Cmd tableType="Coils" multiple="false" address="10003" cmdNum="5" name="bit_ctrl_liquid_ctrl" />
+    <Cmd tableType="Coils" multiple="false" address="10004" cmdNum="6" name="bit_ctrl_fan" />
+    <Cmd tableType="Coils" multiple="false" address="10005" cmdNum="7" name="bit_ctrl_fan_tap" />
+  </Cmds>
+</DevTemplate>

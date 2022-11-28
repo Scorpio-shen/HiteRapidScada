@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6ECB8A64-B0EC-48E8-9109-9984D37854B9}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Scada.Comm.Devices</RootNamespace>
+    <AssemblyName>KpEnronModbus</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="EnronModbus\EnronDeviceTemplateFactory.cs" />
+    <Compile Include="EnronModbus\KpUtils.cs" />
+    <Compile Include="EnronModbus\Protocol\EnronCmd.cs" />
+    <Compile Include="EnronModbus\Protocol\EnronDeviceTemplate.cs" />
+    <Compile Include="EnronModbus\Protocol\EnronElem.cs" />
+    <Compile Include="EnronModbus\Protocol\EnronElemGroup.cs" />
+    <Compile Include="EnronModbus\UI\EnronUiCustomization.cs" />
+    <Compile Include="KpEnronModbusLogic.cs" />
+    <Compile Include="KpEnronModbusView.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ScadaComm\ScadaComm\ScadaCommCommon\ScadaCommCommon.csproj">
+      <Project>{7baeae0e-4694-41d7-bc29-f205aef69741}</Project>
+      <Name>ScadaCommCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ScadaData\ScadaData\ScadaData.csproj">
+      <Project>{c5dc293f-13ca-435f-a7db-4ba91639c292}</Project>
+      <Name>ScadaData</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\KpModbus\KpModbus.csproj">
+      <Project>{7cbf4a4b-e1a2-428e-8f68-edd2fce3088b}</Project>
+      <Name>KpModbus</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

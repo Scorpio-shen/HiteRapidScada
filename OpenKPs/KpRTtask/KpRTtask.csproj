@@ -1,0 +1,212 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{3D20F245-4AFA-49D2-AC60-DA40190A129B}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Scada.Comm.Devices</RootNamespace>
+    <AssemblyName>KpRTtask</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\..\..\..\..\webscada\ScadaComm\KP\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\KpRTtask.xml</DocumentationFile>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="kp\DeviceTemplateFactory_rttask.cs" />
+    <Compile Include="kp\DeviceTemplateFactory.cs" />
+    <Compile Include="kp\Helpers\CSVFileHelper.cs" />
+    <Compile Include="kp\Helpers\LogHelpter.cs" />
+    <Compile Include="kp\KpUtils_rttask.cs" />
+    <Compile Include="kp\KpUtils.cs" />
+    <Compile Include="kp\Protocol_rttask\DataUnit_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\DeviceTemplate_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\Elem_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\ElemGroup_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\ElemType_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\FuncCodes_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\ModbusCmd_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\ModbusPhrases_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\ModbusPoll_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\ModbusUtils_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\TableType_rttask.cs" />
+    <Compile Include="kp\Protocol_rttask\TransMode_rttask.cs" />
+    <Compile Include="kp\Protocol\ModbusCmd.cs" />
+    <Compile Include="kp\Protocol\DataUnit.cs" />
+    <Compile Include="kp\Protocol\DeviceTemplate.cs" />
+    <Compile Include="kp\Protocol\Elem.cs" />
+    <Compile Include="kp\Protocol\ElemGroup.cs" />
+    <Compile Include="kp\Protocol\ElemType.cs" />
+    <Compile Include="kp\Protocol\FuncCodes.cs" />
+    <Compile Include="kp\Protocol\ModbusPhrases.cs" />
+    <Compile Include="kp\Protocol\ModbusUtils.cs" />
+    <Compile Include="kp\Protocol\TableType.cs" />
+    <Compile Include="kp\Protocol\TransMode.cs" />
+    <Compile Include="kp\UI_modbus\CtrlCmd.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="kp\UI_modbus\CtrlCmd.Designer.cs">
+      <DependentUpon>CtrlCmd.cs</DependentUpon>
+    </Compile>
+    <Compile Include="kp\UI_modbus\CtrlElem.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="kp\UI_modbus\CtrlElem.Designer.cs">
+      <DependentUpon>CtrlElem.cs</DependentUpon>
+    </Compile>
+    <Compile Include="kp\UI_modbus\CtrlElemGroup.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="kp\UI_modbus\CtrlElemGroup.Designer.cs">
+      <DependentUpon>CtrlElemGroup.cs</DependentUpon>
+    </Compile>
+    <Compile Include="kp\UI_modbus\ElemInfo.cs" />
+    <Compile Include="kp\UI_modbus\FrmDevProps.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="kp\UI_modbus\FrmDevProps.Designer.cs">
+      <DependentUpon>FrmDevProps.cs</DependentUpon>
+    </Compile>
+    <Compile Include="kp\UI_modbus\FrmDevTemplate.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="kp\UI_modbus\FrmDevTemplate.Designer.cs">
+      <DependentUpon>FrmDevTemplate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="KpRTtaskLogic.cs" />
+    <Compile Include="kp\Protocol\ModbusPoll.cs" />
+    <Compile Include="KpRTtaskView.cs" />
+    <Compile Include="kp\UI_modbus\KpPhrases.cs" />
+    <Compile Include="kp\UI_modbus\FrmTemplateSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="kp\UI_modbus\FrmTemplateSettings.Designer.cs">
+      <DependentUpon>FrmTemplateSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="kp\UI_modbus\TreeUpdateTypes.cs" />
+    <Compile Include="kp\UI_modbus\UiCustomization.cs" />
+    <Compile Include="kp\UI_rttask\ElemInfo_rttask.cs" />
+    <Compile Include="kp\UI_rttask\FrmDevProps_rttask.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="kp\UI_rttask\FrmDevProps_rttask.Designer.cs">
+      <DependentUpon>FrmDevProps_rttask.cs</DependentUpon>
+    </Compile>
+    <Compile Include="kp\UI_rttask\FrmDevTemplate_rttask.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="kp\UI_rttask\FrmDevTemplate_rttask.Designer.cs">
+      <DependentUpon>FrmDevTemplate_rttask.cs</DependentUpon>
+    </Compile>
+    <Compile Include="kp\UI_rttask\KpPhrases_rttask.cs" />
+    <Compile Include="kp\UI_rttask\TreeUpdateTypes_rttask.cs" />
+    <Compile Include="kp\UI_rttask\UiCustomization_rttask.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="kp\UI_modbus\CtrlCmd.resx">
+      <DependentUpon>CtrlCmd.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="kp\UI_modbus\CtrlElem.resx">
+      <DependentUpon>CtrlElem.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="kp\UI_modbus\CtrlElemGroup.resx">
+      <DependentUpon>CtrlElemGroup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="kp\UI_modbus\FrmDevProps.resx">
+      <DependentUpon>FrmDevProps.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="kp\UI_modbus\FrmDevTemplate.resx">
+      <DependentUpon>FrmDevTemplate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="kp\UI_modbus\FrmTemplateSettings.resx">
+      <DependentUpon>FrmTemplateSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="kp\UI_rttask\FrmDevProps_rttask.resx">
+      <DependentUpon>FrmDevProps_rttask.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="kp\UI_rttask\FrmDevTemplate_rttask.resx">
+      <DependentUpon>FrmDevTemplate_rttask.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Lang\KpModbus.ru-RU.xml">
+      <SubType>Designer</SubType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Lang\Kprttask.en-GB.xml">
+      <SubType>Designer</SubType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Templates\KpModbus_demo01_Template.xml" />
+    <Content Include="Templates\Kprttask_test01.xml" />
+    <Content Include="Templates\KpModbus_Adam6015.xml" />
+    <Content Include="Templates\KpModbus_Bolid_S2000-T.xml" />
+    <Content Include="Templates\KpModbus_OWEN_MDDV.xml" />
+    <Content Include="Templates\KpModbus_OWEN_MU110-16R.xml" />
+    <Content Include="Templates\KpModbus_OWEN_MV110-16D.xml" />
+    <Content Include="Templates\KpModbus_OWEN_MV110-16D_DI.xml" />
+    <Content Include="Templates\KpModbus_OWEN_MV110-8A.xml" />
+    <Content Include="Templates\KpModbus_OWEN_MV110-8AS.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ScadaComm\ScadaComm\ScadaCommCommon\ScadaCommCommon.csproj">
+      <Project>{7baeae0e-4694-41d7-bc29-f205aef69741}</Project>
+      <Name>ScadaCommCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ScadaData\ScadaData\ScadaData.csproj">
+      <Project>{c5dc293f-13ca-435f-a7db-4ba91639c292}</Project>
+      <Name>ScadaData</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

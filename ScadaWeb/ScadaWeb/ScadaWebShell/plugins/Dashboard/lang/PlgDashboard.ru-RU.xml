@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PlgDashboardDictionaries>
+  <Dictionary key="Scada.Web.Plugins.Dashboard">
+    <Phrase key="LoadDashboardListError">Ошибка при загрузке списка дэшбордов</Phrase>
+    <Phrase key="LoadDashboardError">Ошибка при загрузке конфигурации дэшборда</Phrase>
+    <Phrase key="LoadDashboardNameError">Ошибка при загрузке наименования дэшборда</Phrase>
+    <Phrase key="InvalidDashboardKey">Некорректный ключ дэшборда.</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Dashboard.WFrmCurDataWidget.Js">
+    <Phrase key="LoadError">Ошибка загрузки данных</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Dashboard.WFrmDashboard">
+    <Phrase key="btnExportPdf">Экспорт в PDF</Phrase>
+    <Phrase key="DashboardNotFound">Дэшборд с указанным ключом не найден.</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Dashboard.WFrmDashboard.Js">
+    <Phrase key="ReceiveDashboardError">Ошибка при приёме конфигурации дэшборда</Phrase>
+    <Phrase key="NoWidgetsToExport">Нет виджетов, поддерживающих экспорт в PDF</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Dashboard.WFrmDashboardList">
+    <Phrase key="this">Дэшборды</Phrase>
+    <Phrase key="lblTitle">Дэшборды</Phrase>
+    <Phrase key="lblNoDashboards">Доступные дэшборды отсутствуют</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.PlgDashboardSpec">
+    <Phrase key="DashboardsMenuItem">Дэшборды</Phrase>
+  </Dictionary>
+</PlgDashboardDictionaries>

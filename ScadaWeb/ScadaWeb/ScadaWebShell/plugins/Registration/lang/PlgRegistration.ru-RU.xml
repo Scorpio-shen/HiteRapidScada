@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PlgRegistrationDictionaries>
+  <Dictionary key="Scada.Web.Plugins.Registration">
+    <Phrase key="this">Регистрация</Phrase>
+    <Phrase key="lblTitle">Регистрация {0}</Phrase>
+    <Phrase key="lblCompCode">Код компьютера</Phrase>
+    <Phrase key="lblRegKey">Регистрационный ключ</Phrase>
+    <Phrase key="hlGetPermanentKey">Закажите постоянный ключ</Phrase>
+    <Phrase key="hlGetTrialKey">Получите пробный ключ</Phrase>
+    <Phrase key="lblKeyStatus">Статус ключа</Phrase>
+    <Phrase key="btnSaveKey">Сохранить ключ</Phrase>
+    <Phrase key="RegDataMissed">Регистрационные данные отсутствуют.</Phrase>
+    <Phrase key="RegDataTypeMismatch">Несоответствие типа регистрационных данных.</Phrase>
+  </Dictionary>
+</PlgRegistrationDictionaries>

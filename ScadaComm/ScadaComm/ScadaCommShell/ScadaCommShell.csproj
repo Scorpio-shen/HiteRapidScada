@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{77DB1A1B-5B41-463A-A282-26571F202772}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Scada.Comm.Shell</RootNamespace>
+    <AssemblyName>ScadaCommShell</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\ScadaCommShell.xml</DocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WinControl">
+      <HintPath>..\..\..\Library\WinControl.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Code\CommLineCommand.cs" />
+    <Compile Include="Code\CommMessage.cs" />
+    <Compile Include="Code\CommNodeType.cs" />
+    <Compile Include="Code\CommShell.cs" />
+    <Compile Include="Code\CommEnvironment.cs" />
+    <Compile Include="Code\CommShellPhrases.cs" />
+    <Compile Include="Code\CommShellUtils.cs" />
+    <Compile Include="Code\SettingsConverter.cs" />
+    <Compile Include="Controls\CtrlLineCustomParams.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\CtrlLineCustomParams.Designer.cs">
+      <DependentUpon>CtrlLineCustomParams.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\CtrlLineMainParams.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\CtrlLineMainParams.Designer.cs">
+      <DependentUpon>CtrlLineMainParams.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\CtrlLineReqSequence.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\CtrlLineReqSequence.Designer.cs">
+      <DependentUpon>CtrlLineReqSequence.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmCommonParams.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmCommonParams.Designer.cs">
+      <DependentUpon>FrmCommonParams.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmDeviceCommand.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmDeviceCommand.Designer.cs">
+      <DependentUpon>FrmDeviceCommand.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmDeviceData.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmDeviceData.Designer.cs">
+      <DependentUpon>FrmDeviceData.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmDrivers.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmDrivers.Designer.cs">
+      <DependentUpon>FrmDrivers.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmLineParams.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmLineParams.Designer.cs">
+      <DependentUpon>FrmLineParams.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmLineStats.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmLineStats.Designer.cs">
+      <DependentUpon>FrmLineStats.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmStats.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmStats.designer.cs">
+      <DependentUpon>FrmStats.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Lang\ScadaComm.en-GB.xml">
+      <SubType>Designer</SubType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Lang\ScadaComm.ru-RU.xml">
+      <SubType>Designer</SubType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="Resources\comm_line_inactive.png" />
+    <None Include="Resources\comm_device.png" />
+    <None Include="Resources\comm_stats.png" />
+    <None Include="Resources\comm_params.png" />
+    <None Include="Resources\comm_lines.png" />
+    <None Include="Resources\comm_line.png" />
+    <None Include="Resources\comm_driver.png" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ScadaAgent\ScadaAgentCommon.UI\ScadaAgentCommon.UI.csproj">
+      <Project>{bb116ef0-eaaf-4ebf-a3a1-0870b7c4ca2b}</Project>
+      <Name>ScadaAgentCommon.UI</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ScadaAgent\ScadaAgentCommon\ScadaAgentCommon.csproj">
+      <Project>{b2f7cdb0-e692-40f3-ae8b-8bc366ec52cb}</Project>
+      <Name>ScadaAgentCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ScadaAgent\ScadaAgentConnector\ScadaAgentConnector.csproj">
+      <Project>{1e1b3570-9512-4515-81dd-3778ea772b19}</Project>
+      <Name>ScadaAgentConnector</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ScadaData\ScadaData\ScadaData.csproj">
+      <Project>{c5dc293f-13ca-435f-a7db-4ba91639c292}</Project>
+      <Name>ScadaData</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ScadaCommCommon\ScadaCommCommon.csproj">
+      <Project>{7BAEAE0E-4694-41D7-BC29-F205AEF69741}</Project>
+      <Name>ScadaCommCommon</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Controls\CtrlLineCustomParams.resx">
+      <DependentUpon>CtrlLineCustomParams.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Controls\CtrlLineMainParams.resx">
+      <DependentUpon>CtrlLineMainParams.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Controls\CtrlLineReqSequence.resx">
+      <DependentUpon>CtrlLineReqSequence.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmCommonParams.resx">
+      <DependentUpon>FrmCommonParams.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmDeviceCommand.resx">
+      <DependentUpon>FrmDeviceCommand.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmDeviceData.resx">
+      <DependentUpon>FrmDeviceData.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmDrivers.resx">
+      <DependentUpon>FrmDrivers.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmLineParams.resx">
+      <DependentUpon>FrmLineParams.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmLineStats.resx">
+      <DependentUpon>FrmLineStats.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmStats.resx">
+      <DependentUpon>FrmStats.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

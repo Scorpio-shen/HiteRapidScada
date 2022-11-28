@@ -1,0 +1,74 @@
+﻿@import "../../../css/common/globalvar.less";
+
+@widget-back-color: white;
+@widget-fore-color: black;
+@error-fore-color: red;
+@error-font-size: @data-font-size;
+
+@row-back-color: white;
+@row-back-color-alt: #f9f9f9;
+@row-hover-back-color: #e0e0e0;
+@row-hover-fore-color: @widget-fore-color;
+@cell-border-color: #999;
+@cell-font-size: @data-font-size;
+@cell-height: 18px;
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: @widget-back-color;
+    color: @widget-fore-color;
+    font-family: @default-font-family;
+    font-size: @form-font-size;
+}
+
+div.title {
+    font-size: 17px;
+    line-height: 20px;
+    margin: 10px;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+tr:nth-child(odd) {
+    background-color: @row-back-color;
+}
+
+tr:nth-child(even) {
+    background-color: @row-back-color-alt;
+}
+
+tr:hover {
+    background-color: @row-hover-back-color;
+    color: @row-hover-fore-color;
+}
+
+td { 
+    border: 1px solid @cell-border-color;
+    font-size: @cell-font-size;
+    line-height: @cell-height;
+    padding: 2px 3px;
+    vertical-align: middle;
+    text-align: left;
+    white-space: nowrap;
+}
+
+td.cap {
+    width: 70%;
+}
+
+.widget-error {
+    background-color: @widget-back-color;
+    border: 1px solid @cell-border-color;
+    color: @error-fore-color;
+    display: inline-block;
+    font-size: @error-font-size;
+    max-width: 100%;
+    padding: 5px 10px;
+    position: fixed;
+    right: 0;
+    top: 0;
+}

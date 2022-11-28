@@ -1,0 +1,119 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{7AB046BB-7D19-4E13-AC41-DD909490633F}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>ModTDEngineExport</RootNamespace>
+    <AssemblyName>ModTDEngineExport</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <AppDesigner Include="Properties\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="gelpter\LogHelpter.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="FrmAuthorInfo.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="ModTDEngineExportLogic.cs" />
+    <Compile Include="ModTDEngineExportView.cs" />
+    <Compile Include="TDEngineExport\CtrlExportQuery.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="TDEngineExport\DataSource.cs" />
+    <Compile Include="TDEngineExport\DbTableType.cs" />
+    <Compile Include="TDEngineExport\DBType.cs" />
+    <Compile Include="TDEngineExport\Exporter.cs" />
+    <Compile Include="TDEngineExport\FrmDBExportConfig.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TDEngineExport\FrmDBExportConfig.Designer.cs">
+      <DependentUpon>FrmDBExportConfig.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TDEngineExport\FrmManualExport.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="TDEngineExport\FrmManualExport.Designer.cs">
+      <DependentUpon>FrmManualExport.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TDEngineExport\ModConfig.cs" />
+    <Compile Include="TDEngineExport\TDEngineDataSource.cs" />
+    <Compile Include="TDengineDriver\TDengine.cs" />
+    <Compile Include="TDengineDriver\TDengineDataType.cs" />
+    <Compile Include="TDengineDriver\TDengineInitOption.cs" />
+    <Compile Include="TDengineDriver\TDengineMeta.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmAuthorInfo.resx">
+      <DependentUpon>FrmAuthorInfo.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TDEngineExport\CtrlExportQuery.resx">
+      <DependentUpon>CtrlExportQuery.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TDEngineExport\FrmDBExportConfig.resx">
+      <DependentUpon>FrmDBExportConfig.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TDEngineExport\FrmManualExport.resx">
+      <DependentUpon>FrmManualExport.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ScadaData\ScadaData\ScadaData.csproj">
+      <Project>{c5dc293f-13ca-435f-a7db-4ba91639c292}</Project>
+      <Name>ScadaData</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ScadaServer\ScadaServerCommon\ScadaServerCommon.csproj">
+      <Project>{3ca67403-5b85-489a-b7b4-81d682b23146}</Project>
+      <Name>ScadaServerCommon</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

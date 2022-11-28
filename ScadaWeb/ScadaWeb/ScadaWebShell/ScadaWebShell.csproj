@@ -1,0 +1,814 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>
+    </ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{868DE826-356E-47A4-9DE7-EA7168FCA90A}</ProjectGuid>
+    <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Scada.Web</RootNamespace>
+    <AssemblyName>ScadaWebShell</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <UseIISExpress>true</UseIISExpress>
+    <IISExpressSSLPort />
+    <IISExpressAnonymousAuthentication />
+    <IISExpressWindowsAuthentication />
+    <IISExpressUseClassicPipelineMode />
+    <UseGlobalApplicationHostFile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <WcfConfigValidationEnabled>True</WcfConfigValidationEnabled>
+    <Use64BitIISExpress />
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.ServiceModel.Web" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.ApplicationServices" />
+    <Reference Include="System.Web.DynamicData" />
+    <Reference Include="System.Web.Entity" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\..\ScadaData\ScadaData\Lang\ScadaData.en-GB.xml">
+      <Link>lang\ScadaData.en-GB.xml</Link>
+    </Content>
+    <Content Include="..\..\..\ScadaData\ScadaData\Lang\ScadaData.ru-RU.xml">
+      <Link>lang\ScadaData.ru-RU.xml</Link>
+    </Content>
+    <Content Include="About.aspx" />
+    <Content Include="css\common\contentform.css">
+      <DependentUpon>contentform.less</DependentUpon>
+    </Content>
+    <Content Include="css\common\contentform.min.css">
+      <DependentUpon>contentform.css</DependentUpon>
+    </Content>
+    <Content Include="css\common\modalform.css">
+      <DependentUpon>modalform.less</DependentUpon>
+    </Content>
+    <Content Include="css\common\modalform.min.css">
+      <DependentUpon>modalform.css</DependentUpon>
+    </Content>
+    <Content Include="css\controls\notifpanel.css">
+      <DependentUpon>notifpanel.less</DependentUpon>
+    </Content>
+    <Content Include="css\controls\notifpanel.min.css">
+      <DependentUpon>notifpanel.css</DependentUpon>
+    </Content>
+    <Content Include="css\dialogs\confirm.css">
+      <DependentUpon>confirm.less</DependentUpon>
+    </Content>
+    <Content Include="css\dialogs\confirm.min.css">
+      <DependentUpon>confirm.css</DependentUpon>
+    </Content>
+    <Content Include="css\mastermodal.css">
+      <DependentUpon>mastermodal.less</DependentUpon>
+    </Content>
+    <Content Include="css\mastermodal.min.css">
+      <DependentUpon>mastermodal.css</DependentUpon>
+    </Content>
+    <Content Include="css\common\searchform.css">
+      <DependentUpon>searchform.less</DependentUpon>
+    </Content>
+    <Content Include="css\common\searchform.min.css">
+      <DependentUpon>searchform.css</DependentUpon>
+    </Content>
+    <Content Include="dialogs\Calendar.aspx" />
+    <Content Include="config\ViewSettings.xml" />
+    <Content Include="config\WebSettings.xml" />
+    <Content Include="css\about.css">
+      <DependentUpon>about.less</DependentUpon>
+    </Content>
+    <Content Include="css\about.min.css">
+      <DependentUpon>about.css</DependentUpon>
+    </Content>
+    <Content Include="css\dialogs\calendar.css">
+      <DependentUpon>calendar.less</DependentUpon>
+    </Content>
+    <Content Include="css\dialogs\calendar.min.css">
+      <DependentUpon>calendar.css</DependentUpon>
+    </Content>
+    <Content Include="css\controls\notifier.css">
+      <DependentUpon>notifier.less</DependentUpon>
+    </Content>
+    <Content Include="css\controls\notifier.min.css">
+      <DependentUpon>notifier.css</DependentUpon>
+    </Content>
+    <Content Include="css\controls\popup.css">
+      <DependentUpon>popup.less</DependentUpon>
+    </Content>
+    <Content Include="css\controls\popup.min.css">
+      <DependentUpon>popup.css</DependentUpon>
+    </Content>
+    <Content Include="css\controls\splitter.css">
+      <DependentUpon>splitter.less</DependentUpon>
+    </Content>
+    <Content Include="css\controls\splitter.min.css">
+      <DependentUpon>splitter.css</DependentUpon>
+    </Content>
+    <Content Include="css\controls\tableheader.css">
+      <DependentUpon>tableheader.less</DependentUpon>
+    </Content>
+    <Content Include="css\controls\tableheader.min.css">
+      <DependentUpon>tableheader.css</DependentUpon>
+    </Content>
+    <Content Include="css\error.css">
+      <DependentUpon>error.less</DependentUpon>
+    </Content>
+    <Content Include="css\error.min.css">
+      <DependentUpon>error.css</DependentUpon>
+    </Content>
+    <Content Include="css\login.css">
+      <DependentUpon>login.less</DependentUpon>
+    </Content>
+    <Content Include="css\login.min.css">
+      <DependentUpon>login.css</DependentUpon>
+    </Content>
+    <Content Include="css\mastermain.css">
+      <DependentUpon>mastermain.less</DependentUpon>
+    </Content>
+    <Content Include="css\mastermain.min.css">
+      <DependentUpon>mastermain.css</DependentUpon>
+    </Content>
+    <Content Include="css\noview.css">
+      <DependentUpon>noview.less</DependentUpon>
+    </Content>
+    <Content Include="css\noview.min.css">
+      <DependentUpon>noview.css</DependentUpon>
+    </Content>
+    <Content Include="css\controls\treeview.css">
+      <DependentUpon>treeview.less</DependentUpon>
+    </Content>
+    <Content Include="css\controls\treeview.min.css">
+      <DependentUpon>treeview.css</DependentUpon>
+    </Content>
+    <Content Include="css\reports.css">
+      <DependentUpon>reports.less</DependentUpon>
+    </Content>
+    <Content Include="css\reports.min.css">
+      <DependentUpon>reports.css</DependentUpon>
+    </Content>
+    <Content Include="css\user.css">
+      <DependentUpon>user.less</DependentUpon>
+    </Content>
+    <Content Include="css\user.min.css">
+      <DependentUpon>user.css</DependentUpon>
+    </Content>
+    <Content Include="css\view.css">
+      <DependentUpon>view.less</DependentUpon>
+    </Content>
+    <Content Include="css\view.min.css">
+      <DependentUpon>view.css</DependentUpon>
+    </Content>
+    <Content Include="dialogs\Confirm.aspx" />
+    <Content Include="Error.aspx" />
+    <Content Include="Global.asax" />
+    <Content Include="images\favicon.ico" />
+    <Content Include="images\gear.png" />
+    <Content Include="images\treeview\document.png" />
+    <Content Include="images\treeview\folder.png" />
+    <Content Include="index.htm" />
+    <Content Include="js\api\ajaxqueue.js" />
+    <Content Include="js\api\checkbrowser.js" />
+    <Content Include="js\api\clientapi.js" />
+    <Content Include="js\api\notiftypes.js" />
+    <Content Include="js\api\export.js" />
+    <Content Include="js\controls\notifpanel.js" />
+    <Content Include="js\dialogs\confirm.js" />
+    <Content Include="js\dialogs\dialogs.js" />
+    <Content Include="js\api\viewhub.js" />
+    <Content Include="js\dialogs\calendar.js" />
+    <Content Include="js\controls\notifier.js" />
+    <Content Include="js\controls\popup.js" />
+    <Content Include="js\controls\tableheader.js" />
+    <Content Include="js\error.js" />
+    <Content Include="js\login.js" />
+    <Content Include="js\mastermain.js" />
+    <Content Include="js\api\eventtypes.js" />
+    <Content Include="js\controls\splitter.js" />
+    <Content Include="js\controls\treeview.js" />
+    <Content Include="js\mastermodal.js" />
+    <Content Include="js\common\searchform.js" />
+    <Content Include="lib\bootstrap\css\bootstrap-theme.css" />
+    <Content Include="lib\bootstrap\css\bootstrap-theme.min.css" />
+    <Content Include="lib\bootstrap\css\bootstrap.css" />
+    <Content Include="lib\bootstrap\css\bootstrap.min.css" />
+    <Content Include="lib\bootstrap\fonts\glyphicons-halflings-regular.svg" />
+    <Content Include="lib\bootstrap\js\bootstrap.js" />
+    <Content Include="lib\bootstrap\js\bootstrap.min.js" />
+    <Content Include="lib\bootstrap\js\npm.js" />
+    <Content Include="lib\font-awesome\css\font-awesome.css" />
+    <Content Include="lib\font-awesome\css\font-awesome.min.css" />
+    <Content Include="lib\font-awesome\fonts\fontawesome-webfont.svg" />
+    <Content Include="lib\jquery\jquery.js" />
+    <Content Include="lib\jquery\jquery.min.js" />
+    <Content Include="js\api\utils.js" />
+    <Content Include="js\view.js" />
+    <Content Include="lang\ScadaWeb.en-GB.xml" />
+    <Content Include="lang\ScadaWeb.ru-RU.xml" />
+    <Content Include="lib\open-sans\css\open-sans.css" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-300.svg" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-300italic.svg" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-600.svg" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-600italic.svg" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-700.svg" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-700italic.svg" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-800.svg" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-800italic.svg" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-italic.svg" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-regular.svg" />
+    <Content Include="lib\pdfmake\pdfmake.min.js" />
+    <Content Include="lib\pdfmake\vfs_fonts.js" />
+    <Content Include="Login.aspx" />
+    <Content Include="ClientApiSvc.svc" />
+    <Content Include="NoView.aspx" />
+    <Content Include="plugins\ChartPro\ChartCnls.aspx" />
+    <Content Include="plugins\ChartPro\ChartExport.aspx" />
+    <Content Include="plugins\ChartPro\ChartPeriod.aspx" />
+    <Content Include="plugins\ChartPro\ChartPeriodRolling.aspx" />
+    <Content Include="plugins\ChartPro\ChartPro.aspx" />
+    <Content Include="plugins\ChartPro\ChartSvc.svc" />
+    <Content Include="plugins\ChartPro\css\chartcnls.css" />
+    <Content Include="plugins\ChartPro\css\chartcnls.min.css" />
+    <Content Include="plugins\ChartPro\css\chartexport.css" />
+    <Content Include="plugins\ChartPro\css\chartexport.min.css" />
+    <Content Include="plugins\ChartPro\css\chartperiod.css" />
+    <Content Include="plugins\ChartPro\css\chartperiod.min.css" />
+    <Content Include="plugins\ChartPro\css\chartpro.css" />
+    <Content Include="plugins\ChartPro\css\chartpro.min.css" />
+    <Content Include="plugins\ChartPro\css\chartproform.css" />
+    <Content Include="plugins\ChartPro\css\chartproform.min.css" />
+    <Content Include="plugins\ChartPro\js\chartcnls.js" />
+    <Content Include="plugins\ChartPro\js\chartdialog.js" />
+    <Content Include="plugins\ChartPro\js\chartexport.js" />
+    <Content Include="plugins\ChartPro\js\chartexportform.js" />
+    <Content Include="plugins\ChartPro\js\chartperiod.js" />
+    <Content Include="plugins\ChartPro\js\chartpro.js" />
+    <Content Include="plugins\ChartPro\js\chartproform.js" />
+    <Content Include="plugins\ChartPro\lang\PlgChartPro.en-GB.xml" />
+    <Content Include="plugins\ChartPro\lang\PlgChartPro.ru-RU.xml" />
+    <Content Include="plugins\ChartPro\lib\filesaver\FileSaver.min.js" />
+    <Content Include="plugins\ChartPro\lib\hammer\hammer.min.js" />
+    <Content Include="plugins\Chart\Chart.aspx" />
+    <Content Include="plugins\Chart\css\chart.css" />
+    <Content Include="plugins\Chart\css\chart.min.css" />
+    <Content Include="plugins\Chart\css\chartform.css" />
+    <Content Include="plugins\Chart\css\chartform.min.css" />
+    <Content Include="plugins\Chart\css\cnllist.css" />
+    <Content Include="plugins\Chart\css\cnllist.min.css" />
+    <Content Include="plugins\Chart\css\mindatarep.css" />
+    <Content Include="plugins\Chart\css\mindatarep.min.css" />
+    <Content Include="plugins\Chart\css\selectcnls.css" />
+    <Content Include="plugins\Chart\css\selectcnls.min.css" />
+    <Content Include="plugins\Chart\DayDataRep.aspx" />
+    <Content Include="plugins\Chart\HourDataRep.aspx" />
+    <Content Include="plugins\Chart\js\chart.js" />
+    <Content Include="plugins\Chart\js\chartdialog.js" />
+    <Content Include="plugins\Chart\js\chartform.js" />
+    <Content Include="plugins\Chart\js\mindatarep.js" />
+    <Content Include="plugins\Chart\js\selectcnls.js" />
+    <Content Include="plugins\Chart\lang\PlgChart.en-GB.xml" />
+    <Content Include="plugins\Chart\lang\PlgChart.ru-RU.xml" />
+    <Content Include="plugins\Chart\MinDataRep.aspx" />
+    <Content Include="plugins\Chart\MinDataRepOut.aspx" />
+    <Content Include="plugins\Chart\SelectCnls.aspx" />
+    <Content Include="plugins\Chart\templates\MinDataRep.xml" />
+    <Content Include="plugins\Config\4GConfig.aspx" />
+    <Content Include="plugins\Config\css\plugins.css" />
+    <Content Include="plugins\Config\css\plugins.min.css" />
+    <Content Include="plugins\Config\css\webconfig.css" />
+    <Content Include="plugins\Config\css\webconfig.min.css" />
+    <Content Include="plugins\Config\DatabaseConfig.aspx" />
+    <Content Include="plugins\Config\DatabaseConfig1.aspx" />
+    <Content Include="plugins\Config\DatabaseConfig2.aspx" />
+    <Content Include="plugins\Config\DatabaseConfig3.aspx" />
+    <Content Include="plugins\Config\DatabaseConfig4.aspx" />
+    <Content Include="plugins\Config\DatabaseConfig5.aspx" />
+    <Content Include="plugins\Config\DatabaseConfig6.aspx" />
+    <Content Include="plugins\Config\IP_MACConfig.aspx" />
+    <Content Include="plugins\Config\js\plugins.js" />
+    <Content Include="plugins\Config\lang\PlgConfig.en-GB.xml" />
+    <Content Include="plugins\Config\lang\PlgConfig.ru-RU.xml" />
+    <Content Include="plugins\Config\NetworkConfig.aspx" />
+    <Content Include="plugins\Config\Plugins.aspx" />
+    <Content Include="plugins\Config\Report_ParameterConfig.aspx" />
+    <Content Include="plugins\Config\RunStatus.aspx" />
+    <Content Include="plugins\Config\SystemConfig.aspx" />
+    <Content Include="plugins\Config\UserConfig.aspx" />
+    <Content Include="plugins\Config\UserConfig1.aspx" />
+    <Content Include="plugins\Config\UserConfig2.aspx" />
+    <Content Include="plugins\Config\WebConfig.aspx" />
+    <Content Include="plugins\Config\WebConfig2.aspx" />
+    <Content Include="plugins\Config\WebConfig3.aspx" />
+    <Content Include="plugins\Config\WifiConfig.aspx" />
+    <Content Include="plugins\Dashboard\css\curdatawidget.css" />
+    <Content Include="plugins\Dashboard\css\curdatawidget.min.css" />
+    <Content Include="plugins\Dashboard\css\dashboard.css" />
+    <Content Include="plugins\Dashboard\css\dashboard.min.css" />
+    <Content Include="plugins\Dashboard\css\dashboardlist.css" />
+    <Content Include="plugins\Dashboard\css\dashboardlist.min.css" />
+    <Content Include="plugins\Dashboard\css\dashboardview.css" />
+    <Content Include="plugins\Dashboard\css\dashboardview.min.css" />
+    <Content Include="plugins\Dashboard\CurDataWidget.aspx" />
+    <Content Include="plugins\Dashboard\Dashboard.aspx" />
+    <Content Include="plugins\Dashboard\DashboardList.aspx" />
+    <Content Include="plugins\Dashboard\DashboardSvc.svc" />
+    <Content Include="plugins\Dashboard\DashboardView.aspx" />
+    <Content Include="plugins\Dashboard\images\dashboardicon.png" />
+    <Content Include="plugins\Dashboard\js\curdatawidget.js" />
+    <Content Include="plugins\Dashboard\js\dashboard.js" />
+    <Content Include="plugins\Dashboard\lang\PlgDashboard.en-GB.xml" />
+    <Content Include="plugins\Dashboard\lang\PlgDashboard.ru-RU.xml" />
+    <Content Include="plugins\Registration\css\registration.css" />
+    <Content Include="plugins\Registration\css\registration.min.css" />
+    <Content Include="plugins\Registration\css\registrationnm.css" />
+    <Content Include="plugins\Registration\css\registrationnm.min.css" />
+    <Content Include="plugins\Registration\CtrlRegistration.ascx" />
+    <Content Include="plugins\Registration\js\registration.js" />
+    <Content Include="plugins\Registration\lang\PlgRegistration.en-GB.xml" />
+    <Content Include="plugins\Registration\lang\PlgRegistration.ru-RU.xml" />
+    <Content Include="plugins\Registration\Registration.aspx" />
+    <Content Include="plugins\Registration\RegistrationNM.aspx" />
+    <Content Include="plugins\SchBasicComp\css\basiccomp.css" />
+    <Content Include="plugins\SchBasicComp\css\basiccomp.min.css" />
+    <Content Include="plugins\SchBasicComp\js\basiccomprender.js" />
+    <Content Include="plugins\SchBasicComp\lang\PlgSchBasicComp.en-GB.xml" />
+    <Content Include="plugins\SchBasicComp\lang\PlgSchBasicComp.ru-RU.xml" />
+    <Content Include="plugins\SchemeEditor\css\editor.css" />
+    <Content Include="plugins\SchemeEditor\css\editor.min.css" />
+    <Content Include="plugins\SchemeEditor\editor.html" />
+    <Content Include="plugins\SchemeEditor\js\editablescheme.js" />
+    <Content Include="plugins\SchemeEditor\js\editor.js" />
+    <Content Include="plugins\SchemeEditor\js\showalert.js" />
+    <Content Include="plugins\Scheme\css\schemeform.css" />
+    <Content Include="plugins\Scheme\css\schemeform.min.css" />
+    <Content Include="plugins\Scheme\images\loading.gif" />
+    <Content Include="plugins\Scheme\images\schemeicon.png" />
+    <Content Include="plugins\Scheme\js\schemecommon.js" />
+    <Content Include="plugins\Scheme\js\schemeform.js" />
+    <Content Include="plugins\Scheme\js\schememodel.js" />
+    <Content Include="plugins\Scheme\js\schemerender.js" />
+    <Content Include="plugins\Scheme\lang\PlgScheme.en-GB.xml" />
+    <Content Include="plugins\Scheme\lang\PlgScheme.ru-RU.xml" />
+    <Content Include="plugins\Scheme\lang\ScadaScheme.en-GB.xml" />
+    <Content Include="plugins\Scheme\lang\ScadaScheme.ru-RU.xml" />
+    <Content Include="plugins\Scheme\Scheme.aspx" />
+    <Content Include="plugins\Scheme\SchemeSvc.svc" />
+    <Content Include="plugins\SchExtraComp\css\extracomp.css" />
+    <Content Include="plugins\SchExtraComp\css\extracomp.min.css" />
+    <Content Include="plugins\SchExtraComp\images\01 vertical pump.svg" />
+    <Content Include="plugins\SchExtraComp\images\02 pump and motor.svg" />
+    <Content Include="plugins\SchExtraComp\images\03 barrel.svg" />
+    <Content Include="plugins\SchExtraComp\images\04 tank.svg" />
+    <Content Include="plugins\SchExtraComp\images\05 motor.svg" />
+    <Content Include="plugins\SchExtraComp\images\06 centrifugal pump.svg" />
+    <Content Include="plugins\SchExtraComp\images\07 spherical tank.svg" />
+    <Content Include="plugins\SchExtraComp\images\08 valve.svg" />
+    <Content Include="plugins\SchExtraComp\images\09 cylindrical tank.svg" />
+    <Content Include="plugins\SchExtraComp\images\10 genset.svg" />
+    <Content Include="plugins\SchExtraComp\images\11 hydraulic press.svg" />
+    <Content Include="plugins\SchExtraComp\images\gauge-back.svg" />
+    <Content Include="plugins\SchExtraComp\images\gauge-pointer.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert00.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert10.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert100.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert20.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert30.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert40.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert50.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert60.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert70.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert80.svg" />
+    <Content Include="plugins\SchExtraComp\images\progress_vert90.svg" />
+    <Content Include="plugins\SchExtraComp\js\extracomprender.js" />
+    <Content Include="plugins\SchExtraComp\lang\PlgSchExtraComp.en-GB.xml" />
+    <Content Include="plugins\SchExtraComp\lang\PlgSchExtraComp.ru-RU.xml" />
+    <Content Include="plugins\Store\css\plugininfo.css" />
+    <Content Include="plugins\Store\css\plugininfo.min.css" />
+    <Content Include="plugins\Store\css\store.css" />
+    <Content Include="plugins\Store\css\store.min.css" />
+    <Content Include="plugins\Store\css\storepublic.css" />
+    <Content Include="plugins\Store\css\storepublic.min.css" />
+    <Content Include="plugins\Store\js\plugininfo.js" />
+    <Content Include="plugins\Store\js\store.js" />
+    <Content Include="plugins\Store\js\storecommon.js" />
+    <Content Include="plugins\Store\lang\PlgStore.en-GB.xml" />
+    <Content Include="plugins\Store\lang\PlgStore.ru-RU.xml" />
+    <Content Include="plugins\Store\PluginInfo.aspx" />
+    <Content Include="plugins\Store\Store.aspx" />
+    <Content Include="plugins\Store\StorePublic.aspx" />
+    <Content Include="plugins\Table\Command.aspx" />
+    <Content Include="plugins\Table\css\command.css" />
+    <Content Include="plugins\Table\css\command.min.css" />
+    <Content Include="plugins\Table\css\eventack.css" />
+    <Content Include="plugins\Table\css\eventack.min.css" />
+    <Content Include="plugins\Table\css\events.css" />
+    <Content Include="plugins\Table\css\events.min.css" />
+    <Content Include="plugins\Table\css\table.css" />
+    <Content Include="plugins\Table\css\table.min.css" />
+    <Content Include="plugins\Table\css\tablecommon.css" />
+    <Content Include="plugins\Table\css\tablecommon.min.css" />
+    <Content Include="plugins\Table\EventAck.aspx" />
+    <Content Include="plugins\Table\Events.aspx" />
+    <Content Include="plugins\Table\EventsRepOut.aspx" />
+    <Content Include="plugins\Table\HourDataRepOut.aspx" />
+    <Content Include="plugins\Table\images\quantityicons\ca.png" />
+    <Content Include="plugins\Table\images\quantityicons\clock.png" />
+    <Content Include="plugins\Table\images\quantityicons\conn.png" />
+    <Content Include="plugins\Table\images\quantityicons\cr.png" />
+    <Content Include="plugins\Table\images\quantityicons\event.png" />
+    <Content Include="plugins\Table\images\quantityicons\f.png" />
+    <Content Include="plugins\Table\images\quantityicons\fi.png" />
+    <Content Include="plugins\Table\images\quantityicons\fire.png" />
+    <Content Include="plugins\Table\images\quantityicons\g.png" />
+    <Content Include="plugins\Table\images\quantityicons\guard.png" />
+    <Content Include="plugins\Table\images\quantityicons\h.png" />
+    <Content Include="plugins\Table\images\quantityicons\i.png" />
+    <Content Include="plugins\Table\images\quantityicons\k.png" />
+    <Content Include="plugins\Table\images\quantityicons\l.png" />
+    <Content Include="plugins\Table\images\quantityicons\lamp.png" />
+    <Content Include="plugins\Table\images\quantityicons\m.png" />
+    <Content Include="plugins\Table\images\quantityicons\n.png" />
+    <Content Include="plugins\Table\images\quantityicons\p.png" />
+    <Content Include="plugins\Table\images\quantityicons\pa.png" />
+    <Content Include="plugins\Table\images\quantityicons\pr.png" />
+    <Content Include="plugins\Table\images\quantityicons\q.png" />
+    <Content Include="plugins\Table\images\quantityicons\quantity.png" />
+    <Content Include="plugins\Table\images\quantityicons\s.png" />
+    <Content Include="plugins\Table\images\quantityicons\switch.png" />
+    <Content Include="plugins\Table\images\quantityicons\t.png" />
+    <Content Include="plugins\Table\images\quantityicons\temp.png" />
+    <Content Include="plugins\Table\images\quantityicons\u.png" />
+    <Content Include="plugins\Table\images\quantityicons\v.png" />
+    <Content Include="plugins\Table\images\quantityicons\wa.png" />
+    <Content Include="plugins\Table\images\quantityicons\water.png" />
+    <Content Include="plugins\Table\images\quantityicons\wr.png" />
+    <Content Include="plugins\Table\images\tableicon.png" />
+    <Content Include="plugins\Table\js\cmddialog.js" />
+    <Content Include="plugins\Table\js\command.js" />
+    <Content Include="plugins\Table\js\eventack.js" />
+    <Content Include="plugins\Table\js\eventackdialog.js" />
+    <Content Include="plugins\Table\js\events.js" />
+    <Content Include="plugins\Table\js\table.js" />
+    <Content Include="plugins\Table\js\tablecommon.js" />
+    <Content Include="plugins\Table\lang\ScadaTable.en-GB.xml" />
+    <Content Include="plugins\Table\lang\ScadaTable.ru-RU.xml" />
+    <Content Include="plugins\Table\sounds\event.mp3" />
+    <Content Include="plugins\Table\Table.aspx" />
+    <Content Include="plugins\Table\templates\EventsRep.xml" />
+    <Content Include="plugins\Table\templates\HourDataRep.xml" />
+    <Content Include="plugins\WebPage\css\webpage.css" />
+    <Content Include="plugins\WebPage\css\webpage.min.css" />
+    <Content Include="plugins\WebPage\images\loading.gif" />
+    <Content Include="plugins\WebPage\images\webpageicon.png" />
+    <Content Include="plugins\WebPage\Landing.aspx" />
+    <Content Include="plugins\WebPage\lang\PlgWebPage.en-GB.xml" />
+    <Content Include="plugins\WebPage\lang\PlgWebPage.ru-RU.xml" />
+    <Content Include="Reports.aspx" />
+    <Content Include="sounds\notif_info.mp3" />
+    <Content Include="sounds\notif_warning.mp3" />
+    <Content Include="sounds\notif_error.mp3" />
+    <Content Include="User.aspx" />
+    <Content Include="View.aspx" />
+    <Content Include="ViewFrame.aspx" />
+    <Content Include="Web.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="About.aspx.cs">
+      <DependentUpon>About.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="About.aspx.designer.cs">
+      <DependentUpon>About.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="dialogs\Calendar.aspx.cs">
+      <DependentUpon>Calendar.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="dialogs\Calendar.aspx.designer.cs">
+      <DependentUpon>Calendar.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="dialogs\Confirm.aspx.cs">
+      <DependentUpon>Confirm.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="dialogs\Confirm.aspx.designer.cs">
+      <DependentUpon>Confirm.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Error.aspx.cs">
+      <DependentUpon>Error.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Error.aspx.designer.cs">
+      <DependentUpon>Error.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Global.asax.cs">
+      <DependentUpon>Global.asax</DependentUpon>
+    </Compile>
+    <Compile Include="Login.aspx.cs">
+      <DependentUpon>Login.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Login.aspx.designer.cs">
+      <DependentUpon>Login.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="MasterMain.Master.cs">
+      <DependentUpon>MasterMain.Master</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="MasterMain.Master.designer.cs">
+      <DependentUpon>MasterMain.Master</DependentUpon>
+    </Compile>
+    <Compile Include="MasterModal.Master.cs">
+      <DependentUpon>MasterModal.Master</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="MasterModal.Master.designer.cs">
+      <DependentUpon>MasterModal.Master</DependentUpon>
+    </Compile>
+    <Compile Include="NoView.aspx.cs">
+      <DependentUpon>NoView.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="NoView.aspx.designer.cs">
+      <DependentUpon>NoView.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Reports.aspx.cs">
+      <DependentUpon>Reports.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Reports.aspx.designer.cs">
+      <DependentUpon>Reports.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="User.aspx.cs">
+      <DependentUpon>User.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="User.aspx.designer.cs">
+      <DependentUpon>User.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="View.aspx.cs">
+      <DependentUpon>View.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="View.aspx.designer.cs">
+      <DependentUpon>View.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ViewFrame.aspx.cs">
+      <DependentUpon>ViewFrame.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ViewFrame.aspx.designer.cs">
+      <DependentUpon>ViewFrame.aspx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="MasterMain.Master" />
+    <Content Include="css\common\globalvar.less" />
+    <Content Include="css\login.less" />
+    <Content Include="css\controls\notifier.less" />
+    <Content Include="css\controls\popup.less" />
+    <Content Include="css\dialogs\calendar.less" />
+    <Content Include="css\controls\tableheader.less" />
+    <Content Include="css\about.less" />
+    <Content Include="css\error.less" />
+    <Content Include="css\common\contentform.less" />
+    <Content Include="css\controls\splitter.less" />
+    <Content Include="css\common\modalform.less" />
+    <Content Include="css\dialogs\confirm.less" />
+    <Content Include="css\common\plainform.less" />
+    <Content Include="css\controls\notifpanel.less" />
+    <None Include="css\mastermain.less" />
+    <None Include="compilerconfig.json" />
+    <None Include="compilerconfig.json.defaults">
+      <DependentUpon>compilerconfig.json</DependentUpon>
+    </None>
+    <Content Include="lib\bootstrap\css\bootstrap-theme.css.map" />
+    <Content Include="lib\bootstrap\css\bootstrap-theme.min.css.map" />
+    <Content Include="lib\bootstrap\css\bootstrap.css.map" />
+    <Content Include="lib\bootstrap\css\bootstrap.min.css.map" />
+    <Content Include="lib\bootstrap\fonts\glyphicons-halflings-regular.eot" />
+    <Content Include="lib\bootstrap\fonts\glyphicons-halflings-regular.ttf" />
+    <Content Include="lib\bootstrap\fonts\glyphicons-halflings-regular.woff" />
+    <Content Include="lib\bootstrap\fonts\glyphicons-halflings-regular.woff2" />
+    <Content Include="lib\jquery\jquery.min.map" />
+    <Content Include="lib\font-awesome\fonts\fontawesome-webfont.eot" />
+    <Content Include="lib\font-awesome\fonts\fontawesome-webfont.ttf" />
+    <Content Include="lib\font-awesome\fonts\fontawesome-webfont.woff" />
+    <Content Include="lib\font-awesome\fonts\fontawesome-webfont.woff2" />
+    <Content Include="lib\font-awesome\fonts\FontAwesome.otf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-300.eot" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-300.ttf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-300.woff" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-300.woff2" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-300italic.eot" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-300italic.ttf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-300italic.woff" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-300italic.woff2" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-600.eot" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-600.ttf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-600.woff" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-600.woff2" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-600italic.eot" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-600italic.ttf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-600italic.woff" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-600italic.woff2" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-700.eot" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-700.ttf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-700.woff" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-700.woff2" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-700italic.eot" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-700italic.ttf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-700italic.woff" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-700italic.woff2" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-800.eot" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-800.ttf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-800.woff" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-800.woff2" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-800italic.eot" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-800italic.ttf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-800italic.woff" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-800italic.woff2" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-italic.eot" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-italic.ttf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-italic.woff" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-italic.woff2" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-regular.eot" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-regular.ttf" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-regular.woff" />
+    <Content Include="lib\open-sans\fonts\open-sans-v13-latin-ext_cyrillic_latin_cyrillic-ext_greek-ext_vietnamese_greek-regular.woff2" />
+    <Content Include="css\controls\treeview.less" />
+    <Content Include="css\view.less" />
+    <Content Include="css\noview.less" />
+    <Content Include="css\user.less" />
+    <Content Include="css\reports.less" />
+    <Content Include="MasterModal.Master" />
+    <Content Include="css\mastermodal.less" />
+    <Content Include="css\common\searchform.less" />
+    <Content Include="plugins\ChartPro\css\chartcnls.less" />
+    <Content Include="plugins\ChartPro\css\chartexport.less" />
+    <Content Include="plugins\ChartPro\css\chartperiod.less" />
+    <Content Include="plugins\ChartPro\css\chartpro.less" />
+    <Content Include="plugins\ChartPro\css\chartproform.less" />
+    <Content Include="plugins\ChartPro\web.config" />
+    <Content Include="plugins\Chart\css\chart.less" />
+    <Content Include="plugins\Chart\css\chartform.less" />
+    <Content Include="plugins\Chart\css\cnllist.less" />
+    <Content Include="plugins\Chart\css\mindatarep.less" />
+    <Content Include="plugins\Chart\css\selectcnls.less" />
+    <Content Include="plugins\Config\css\plugins.less" />
+    <Content Include="plugins\Config\css\webconfig.less" />
+    <Content Include="plugins\Dashboard\css\curdatawidget.less" />
+    <Content Include="plugins\Dashboard\css\dashboard.less" />
+    <Content Include="plugins\Dashboard\css\dashboardlist.less" />
+    <Content Include="plugins\Dashboard\css\dashboardview.less" />
+    <Content Include="plugins\Dashboard\Web.config" />
+    <Content Include="plugins\Registration\css\registration.less" />
+    <Content Include="plugins\Registration\css\registrationnm.less" />
+    <Content Include="plugins\SchBasicComp\css\basiccomp.less" />
+    <Content Include="plugins\SchemeEditor\css\editor.less" />
+    <Content Include="plugins\Scheme\css\scheme.less" />
+    <Content Include="plugins\Scheme\css\schemeform.less" />
+    <Content Include="plugins\Scheme\web.config" />
+    <Content Include="plugins\SchExtraComp\css\extracomp.less" />
+    <Content Include="plugins\Store\css\plugininfo.less" />
+    <Content Include="plugins\Store\css\store.less" />
+    <Content Include="plugins\Store\css\storepublic.less" />
+    <Content Include="plugins\Table\css\command.less" />
+    <Content Include="plugins\Table\css\eventack.less" />
+    <Content Include="plugins\Table\css\events.less" />
+    <Content Include="plugins\Table\css\table.less" />
+    <Content Include="plugins\Table\css\tablecommon.less" />
+    <Content Include="plugins\WebPage\css\webpage.less" />
+    <None Include="packages.config" />
+    <None Include="Properties\PublishProfiles\MainProfile.pubxml" />
+    <None Include="Web.Debug.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </None>
+    <None Include="Web.Release.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="log\" />
+    <Folder Include="storage\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ScadaData\ScadaData\ScadaData.csproj">
+      <Project>{c5dc293f-13ca-435f-a7db-4ba91639c292}</Project>
+      <Name>ScadaData</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\OpenPlugins\PlgChartCommon\PlgChartCommon.csproj">
+      <Project>{827ac062-9c5e-429f-abbf-368e84cec9b7}</Project>
+      <Name>PlgChartCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\OpenPlugins\PlgChart\PlgChart.csproj">
+      <Project>{72afaed2-953d-4939-a828-8ec8a63ab19f}</Project>
+      <Name>PlgChart</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\OpenPlugins\PlgConfig\PlgConfig.csproj">
+      <Project>{ba16503a-0e79-42c1-94c7-f690a0da145e}</Project>
+      <Name>PlgConfig</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\OpenPlugins\PlgMonitor\PlgMonitor.csproj">
+      <Project>{3a48fd69-7f01-4562-b9d7-e4984da03ba9}</Project>
+      <Name>PlgMonitor</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\OpenPlugins\PlgWebPage\PlgWebPage.csproj">
+      <Project>{cc838844-d847-4230-b0b8-1747f4ca080b}</Project>
+      <Name>PlgWebPage</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ScadaScheme\PlgSchBasicComp\PlgSchBasicComp.csproj">
+      <Project>{85bd72f3-a9fc-4f6f-be3a-5a045cf734ae}</Project>
+      <Name>PlgSchBasicComp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ScadaScheme\PlgScheme\PlgScheme.csproj">
+      <Project>{36cbf606-7f85-4e46-bc7a-c86cacf675b2}</Project>
+      <Name>PlgScheme</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ScadaTable\PlgTableCommon\PlgTableCommon.csproj">
+      <Project>{f0dd8f7e-f741-47b3-925c-10b05f0112a7}</Project>
+      <Name>PlgTableCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ScadaTable\PlgTable\PlgTable.csproj">
+      <Project>{7ae30e67-d10e-44b9-ac7a-81e21c8839e8}</Project>
+      <Name>PlgTable</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ScadaWebCommon\ScadaWebCommon.csproj">
+      <Project>{baf45c4f-1be3-4810-9ea6-3b53894e32bf}</Project>
+      <Name>ScadaWebCommon</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" Condition="false" />
+  <ProjectExtensions>
+    <VisualStudio>
+      <FlavorProperties GUID="{349c5851-65df-11da-9384-00065b846f21}">
+        <WebProjectProperties>
+          <UseIIS>False</UseIIS>
+          <AutoAssignPort>True</AutoAssignPort>
+          <DevelopmentServerPort>51221</DevelopmentServerPort>
+          <DevelopmentServerVPath>/</DevelopmentServerVPath>
+          <IISUrl>http://localhost:51221/</IISUrl>
+          <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl>
+          </CustomServerUrl>
+          <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
+        </WebProjectProperties>
+      </FlavorProperties>
+    </VisualStudio>
+  </ProjectExtensions>
+  <Import Project="..\packages\BuildWebCompiler.1.10.304\build\BuildWebCompiler.targets" Condition="Exists('..\packages\BuildWebCompiler.1.10.304\build\BuildWebCompiler.targets')" />
+  <Import Project="..\..\..\packages\BuildWebCompiler.1.10.304\build\BuildWebCompiler.targets" Condition="Exists('..\..\..\packages\BuildWebCompiler.1.10.304\build\BuildWebCompiler.targets')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

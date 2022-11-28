@@ -1,0 +1,207 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{0978C09D-9F0C-4242-8646-FA8EB90FEFB9}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Scada.Server.Shell</RootNamespace>
+    <AssemblyName>ScadaServerShell</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\ScadaServerShell.xml</DocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WinControl">
+      <HintPath>..\..\..\Library\WinControl.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Code\ArcType.cs" />
+    <Compile Include="Code\ServerShellUtils.cs" />
+    <Compile Include="Code\ServerMessage.cs" />
+    <Compile Include="Code\ServerEnvironment.cs" />
+    <Compile Include="Code\ServerShell.cs" />
+    <Compile Include="Code\ServerShellPhrases.cs" />
+    <Compile Include="Forms\FrmArchive.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmArchive.Designer.cs">
+      <DependentUpon>FrmArchive.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmCommonParams.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmCommonParams.Designer.cs">
+      <DependentUpon>FrmCommonParams.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmEventTable.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmEventTable.designer.cs">
+      <DependentUpon>FrmEventTable.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmGenCommand.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmGenCommand.designer.cs">
+      <DependentUpon>FrmGenCommand.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmGenData.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmGenData.Designer.cs">
+      <DependentUpon>FrmGenData.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmGenerator.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmGenerator.Designer.cs">
+      <DependentUpon>FrmGenerator.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmGenEvent.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmGenEvent.Designer.cs">
+      <DependentUpon>FrmGenEvent.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmModules.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmModules.Designer.cs">
+      <DependentUpon>FrmModules.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmSaveParams.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmSaveParams.Designer.cs">
+      <DependentUpon>FrmSaveParams.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmStats.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmStats.Designer.cs">
+      <DependentUpon>FrmStats.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FrmSnapshotTable.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FrmSnapshotTable.designer.cs">
+      <DependentUpon>FrmSnapshotTable.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ScadaAgent\ScadaAgentCommon.UI\ScadaAgentCommon.UI.csproj">
+      <Project>{bb116ef0-eaaf-4ebf-a3a1-0870b7c4ca2b}</Project>
+      <Name>ScadaAgentCommon.UI</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ScadaAgent\ScadaAgentCommon\ScadaAgentCommon.csproj">
+      <Project>{b2f7cdb0-e692-40f3-ae8b-8bc366ec52cb}</Project>
+      <Name>ScadaAgentCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ScadaAgent\ScadaAgentConnector\ScadaAgentConnector.csproj">
+      <Project>{1e1b3570-9512-4515-81dd-3778ea772b19}</Project>
+      <Name>ScadaAgentConnector</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\ScadaData\ScadaData\ScadaData.csproj">
+      <Project>{c5dc293f-13ca-435f-a7db-4ba91639c292}</Project>
+      <Name>ScadaData</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ScadaServerCommon\ScadaServerCommon.csproj">
+      <Project>{3ca67403-5b85-489a-b7b4-81d682b23146}</Project>
+      <Name>ScadaServerCommon</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Lang\ScadaServer.en-GB.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Lang\ScadaServer.ru-RU.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="Resources\server_params.png" />
+    <None Include="Resources\server_archive.png" />
+    <None Include="Resources\server_stats.png" />
+    <None Include="Resources\server_save.png" />
+    <None Include="Resources\server_module.png" />
+    <None Include="Resources\server_generator.png" />
+    <None Include="Resources\server_event.png" />
+    <None Include="Resources\server_data.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Forms\FrmArchive.resx">
+      <DependentUpon>FrmArchive.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmCommonParams.resx">
+      <DependentUpon>FrmCommonParams.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmEventTable.resx">
+      <DependentUpon>FrmEventTable.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmGenCommand.resx">
+      <DependentUpon>FrmGenCommand.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmGenData.resx">
+      <DependentUpon>FrmGenData.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmGenerator.resx">
+      <DependentUpon>FrmGenerator.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmGenEvent.resx">
+      <DependentUpon>FrmGenEvent.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmModules.resx">
+      <DependentUpon>FrmModules.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmSaveParams.resx">
+      <DependentUpon>FrmSaveParams.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmStats.resx">
+      <DependentUpon>FrmStats.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\FrmSnapshotTable.resx">
+      <DependentUpon>FrmSnapshotTable.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PlgStoreDictionaries>
+  <Dictionary key="Scada.Web.Plugins.PlgStoreSpec">
+    <Phrase key="DownloadPluginsMenuItem">Скачать</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Store.WFrmPluginInfo">
+    <Phrase key="this">Информация о плагине</Phrase>
+    <Phrase key="lblGeneralTab">Основное</Phrase>
+    <Phrase key="lblScreenshotsTab">Скриншоты</Phrase>
+    <Phrase key="lblDescrHdr">Описание</Phrase>
+    <Phrase key="lblPriceHdr">Цена</Phrase>
+    <Phrase key="hlBuy">Нажмите сюда, чтобы купить</Phrase>
+    <Phrase key="lblAuthorHdr">Автор</Phrase>
+    <Phrase key="lblUrlHdr">Веб-страницы</Phrase>
+    <Phrase key="hlHome">Домашняя страница</Phrase>
+    <Phrase key="hlDoc">Документация</Phrase>
+    <Phrase key="lblDownloadHdr">Скачать</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Store.WFrmPluginInfo.Js">
+    <Phrase key="GetPluginInfoError">Не удалось получить информацию о плагине</Phrase>
+    <Phrase key="FreePrice">Бесплатно</Phrase>
+    <Phrase key="PersonalPrice">Личная </Phrase>
+    <Phrase key="BusinessPrice">Бизнес </Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Store.WFrmStore">
+    <Phrase key="this">Скачать плагины</Phrase>
+    <Phrase key="lblTitle">Скачать плагины</Phrase>
+    <Phrase key="NameCol">Наименование</Phrase>
+    <Phrase key="DescrCol">Описание</Phrase>
+    <Phrase key="PriceCol">Цена</Phrase>
+    <Phrase key="AuthorCol">Автор</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Store.WFrmStore.Js">
+    <Phrase key="GetPluginsError">Не удалось получить список плагинов</Phrase>
+    <Phrase key="NoPlugins">Плагины не найдены</Phrase>
+    <Phrase key="PluginNew">Новый</Phrase>
+    <Phrase key="PluginInfoBtn">Информация</Phrase>
+    <Phrase key="FreePrice">Бесплатно</Phrase>
+    <Phrase key="PersonalPrice">Личная </Phrase>
+    <Phrase key="BusinessPrice">Бизнес </Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Store.WFrmStorePublic">
+    <Phrase key="this">Репозиторий модулей Rapid SCADA</Phrase>
+    <Phrase key="lblHeader">Репозиторий модулей Rapid SCADA</Phrase>
+  </Dictionary>
+</PlgStoreDictionaries>

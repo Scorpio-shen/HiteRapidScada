@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<DevTemplate>
+  <Elems>
+    <Elem name="D0" type="WORD" addr="D0" comment="D0" rttask_type="FLOAT" />
+  </Elems>
+  <!--读写为同一种配置-->
+  <!--<Cmds>
+    <Cmd name="D0" type="WORD" addr="D0" comment="D0" rttask_type="FLOAT" />
+  </Cmds>-->
+</DevTemplate>

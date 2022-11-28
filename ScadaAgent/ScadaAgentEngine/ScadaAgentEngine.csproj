@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Scada.Agent.Engine</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>C:\GIT\rapidscada\scada\ScadaAgent\ScadaAgentEngine\ScadaAgentEngine.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Log\Log.Std\Log.Std.csproj" />
+    <ProjectReference Include="..\..\ScadaData\ScadaData.Std\ScadaData.Std.csproj" />
+    <ProjectReference Include="..\ScadaAgentCommon\ScadaAgentCommon.csproj" />
+  </ItemGroup>
+
+</Project>

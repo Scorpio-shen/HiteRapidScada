@@ -1,0 +1,1 @@
+﻿<%@ ServiceHost Language="C#" Debug="true" Service="Scada.Web.Plugins.Dashboard.DashboardSvc" CodeBehind="DashboardSvc.svc.cs" %>

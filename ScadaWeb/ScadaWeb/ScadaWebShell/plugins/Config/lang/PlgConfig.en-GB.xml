@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PlgConfigDictionaries>
+  <Dictionary key="Scada.Web.Plugins.Config.WFrmPlugins">
+    <Phrase key="this">Installed Plugins</Phrase>
+    <Phrase key="lblTitle">系统当前已安装的插件(可配置)</Phrase>
+    <Phrase key="NameCol">Name</Phrase>
+    <Phrase key="DescrCol">Description</Phrase>
+    <Phrase key="StateCol">State</Phrase>
+    <Phrase key="ActivateBtn">Activate</Phrase>
+    <Phrase key="DeactivateBtn">Deactivate</Phrase>
+    <Phrase key="InactiveState">Inactive</Phrase>
+    <Phrase key="ActiveState">Active</Phrase>
+    <Phrase key="NotLoadedState">NotLoaded</Phrase>
+    <Phrase key="PluginActivated">Plugin activated successfully.</Phrase>
+    <Phrase key="PluginDeactivated">Plugin dectivated successfully.</Phrase>
+    <Phrase key="PluginVersion">Version </Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Config.WFrmWebConfig">
+    <Phrase key="this">Web Application Configuration</Phrase>
+	  <Phrase key="lblTitle_Database">Database Configuration</Phrase>
+	  <Phrase key="lblTitle_User">Database Configuration</Phrase>
+    <Phrase key="lblTitle_Web_1">Web Application Configuration</Phrase>
+	  <Phrase key="lblTitle_Web_2">Web Server Configuration(预留页面)</Phrase>
+	  <Phrase key="lblTitle_Web_3">Web API Configuration(预留页面)</Phrase>
+    <Phrase key="lblConnection">Connection to Server</Phrase>
+    <Phrase key="lblServerHost">Server</Phrase>
+    <Phrase key="lblServerPort">Port</Phrase>
+    <Phrase key="lblServerTimeout">Timeout</Phrase>
+    <Phrase key="txtServerTimeoutUnit">ms</Phrase>
+    <Phrase key="lblServerUser">User</Phrase>
+    <Phrase key="lblServerPwd">Password</Phrase>
+    <Phrase key="lblServerPwdHelp">Leave blank to keep unchanged.</Phrase>
+    <Phrase key="lblCommonParams">Application Parameters</Phrase>
+    <Phrase key="lblCulture">Culture</Phrase>
+    <Phrase key="lblCultureHelp">Example: en-GB. Empty is the default.</Phrase>
+    <Phrase key="lblDataRefrRate">Data refresh rate</Phrase>
+    <Phrase key="lbltxtDataRefrRateUnit">ms</Phrase>
+    <Phrase key="lblArcRefrRate">Archive refresh rate</Phrase>
+    <Phrase key="lblArcRefrRateUnit">ms</Phrase>
+    <Phrase key="lblDispEventCnt">Display event count</Phrase>
+    <Phrase key="lblChartGap">Chart gap</Phrase>
+    <Phrase key="lblChartGapUnit">sec</Phrase>
+    <Phrase key="lblStartPage">Start page</Phrase>
+    <Phrase key="lblStartPageHelp">Example: ~/plugins/MyPlugin/MyPage.aspx</Phrase>
+    <Phrase key="lblCmdEnabled">Enable commands</Phrase>
+    <Phrase key="lblCmdPassword">Require password to send command</Phrase>
+    <Phrase key="lblRemEnabled">Allow to remember logged on user</Phrase>
+    <Phrase key="lblViewsFromBase">Load view settings from the database</Phrase>
+    <Phrase key="lblShareStats">Share depersonalized stats with the developers</Phrase>
+    <Phrase key="lblChartScript">Chart plugin</Phrase>
+    <Phrase key="lblCmdScript">Command plugin</Phrase>
+    <Phrase key="lblEventAckScript">Acknowledgement plugin</Phrase>
+    <Phrase key="lblUserProfile">User profile plugin</Phrase>
+    <Phrase key="btnSave">Save Configuration</Phrase>
+    <Phrase key="UnknownPlugin">Unknown plugin</Phrase>
+    <Phrase key="IncorrectFields">The following fields are incorrect:</Phrase>
+    <Phrase key="ConfigSaved">Configuration saved successfully.</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.PlgConfigSpec">
+    <Phrase key="WebConfigMenuItem_1">Web Application配置</Phrase>
+	  <Phrase key="WebConfigMenuItem_2">Web Service配置</Phrase>
+	  <Phrase key="WebConfigMenuItem_3">Web API及云协议配置</Phrase>
+	  <Phrase key="RunStatusMenuItem">运行状态</Phrase>
+	  <Phrase key="NetworkConfigMenuItem">网络参数配置</Phrase>
+	  <Phrase key="WifiConfigMenuItem">Wifi模块配置</Phrase>
+	  <Phrase key="_4GConfigMenuItem">4G通讯模块配置</Phrase>
+	  <Phrase key="UserConfigMenuItem_1">用户参数管理</Phrase>
+	  <Phrase key="UserConfigMenuItem_2">权限管理</Phrase>
+	  <Phrase key="DatabaseConfigMenuItem_1">数据库参数模块</Phrase>
+	  <Phrase key="DatabaseConfigMenuItem_2">数据库节点[1]配置表</Phrase>
+	  <Phrase key="DatabaseConfigMenuItem_3">数据库节点[2]配置表</Phrase>
+	  <Phrase key="DatabaseConfigMenuItem_4">数据库节点[3]配置表</Phrase>
+	  <Phrase key="DatabaseConfigMenuItem_5">数据库节点[4]配置表</Phrase>
+	  <Phrase key="DatabaseConfigMenuItem_6">数据库节点[5]配置表</Phrase>
+	  <Phrase key="Report_ParameterConfigMenuItem">报表及变量模块</Phrase>
+	  <Phrase key="SystemConfigMenuItem">系统工具</Phrase>
+	  <Phrase key="IP_MACConfigMenuItem">IP与MAC参数</Phrase>
+
+
+
+	  <Phrase key="InstalledPluginsMenuItem">已安装插件管理</Phrase>
+  </Dictionary>
+</PlgConfigDictionaries>

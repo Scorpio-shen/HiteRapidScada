@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PlgDashboardDictionaries>
+  <Dictionary key="Scada.Web.Plugins.Dashboard">
+    <Phrase key="LoadDashboardListError">Error loading dashboard list</Phrase>
+    <Phrase key="LoadDashboardError">Error loading dashboard configuration</Phrase>
+    <Phrase key="LoadDashboardNameError">Error loading dashboard name</Phrase>
+    <Phrase key="InvalidDashboardKey">Invalid dashboard key.</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Dashboard.WFrmCurDataWidget.Js">
+    <Phrase key="LoadError">Error loading data</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Dashboard.WFrmDashboard">
+    <Phrase key="btnExportPdf">Export to PDF</Phrase>
+    <Phrase key="DashboardNotFound">Dashboard with the specified key not found.</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Dashboard.WFrmDashboard.Js">
+    <Phrase key="ReceiveDashboardError">Error receiving dashboard configuration</Phrase>
+    <Phrase key="NoWidgetsToExport">No widgets support export to PDF</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.Dashboard.WFrmDashboardList">
+    <Phrase key="this">Dashboards</Phrase>
+    <Phrase key="lblTitle">Dashboards</Phrase>
+    <Phrase key="lblNoDashboards">No dashboards available</Phrase>
+  </Dictionary>
+  <Dictionary key="Scada.Web.Plugins.PlgDashboardSpec">
+    <Phrase key="DashboardsMenuItem">Dashboards</Phrase>
+  </Dictionary>
+</PlgDashboardDictionaries>
