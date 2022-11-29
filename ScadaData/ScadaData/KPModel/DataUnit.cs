@@ -81,11 +81,20 @@ namespace Scada.KPModel
             }
         }
 
+        protected byte canwrite;
         /// <summary>
         /// 是否支持写入(0只可读,1只可写，2可读可写)
         /// </summary>
         [DisplayName("是否支持写入")]
-        public byte CanWrite { get; set; }
+        public virtual byte CanWrite
+        {
+            get => canwrite;
+            set
+            {
+                canwrite = value;
+                OnPropertyChanged(nameof(CanWrite));
+            }
+        }
         #endregion
 
         public event PropertyChangedEventHandler PropertyChanged;

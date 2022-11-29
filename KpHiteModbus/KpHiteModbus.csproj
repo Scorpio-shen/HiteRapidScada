@@ -35,9 +35,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\HslCommunication.11.2.1\lib\net451\HslCommunication.dll</HintPath>
     </Reference>
-    <Reference Include="KpSiemens">
-      <HintPath>..\OpenKPs\KpSiemens\obj\Debug\KpSiemens.dll</HintPath>
-    </Reference>
     <Reference Include="Log, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Log\Log\bin\Debug\Log.dll</HintPath>
@@ -143,4 +140,9 @@
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>if exist "C:\SCADA\ScadaComm\KP" (
+copy "$(TargetFileName)" "C:\SCADA\ScadaComm\KP\"
+)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

@@ -64,14 +64,23 @@ namespace KpSiemens.Siemens.Model
         }
 
 
-        private bool canwritebool;
         public bool CanWriteBool
         {
-            get => canwritebool;
+            get => CanWrite == 2;
             set
             {
-                canwritebool = value;
+                CanWrite = (byte)(value ? 2 : 0);
                 OnPropertyChanged(nameof(CanWriteBool));
+            }
+        }
+
+        public override byte CanWrite
+        {
+            get => canwrite;
+            set
+            {
+                canwrite = value;
+                OnPropertyChanged(nameof(CanWrite));
             }
         }
 
