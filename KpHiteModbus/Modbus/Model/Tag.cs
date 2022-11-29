@@ -20,7 +20,7 @@ namespace KpHiteModbus.Modbus.Model
         }
 
 
-        public static Tag CreateNewTag(int tagID = default, string tagname = "", DataTypeEnum dataType = DataTypeEnum.Byte, RegisterTypeEnum registerType = RegisterTypeEnum.HoldingRegisters, string address = "", byte canwrite = 1,int length = default)
+        public static Tag CreateNewTag(int tagID = default, string tagname = "", DataTypeEnum dataType = DataTypeEnum.Byte, RegisterTypeEnum registerType = RegisterTypeEnum.HoldingRegisters, string address = "", bool canwrite = false,int length = default)
         {
             return new Tag()
             {
@@ -28,7 +28,7 @@ namespace KpHiteModbus.Modbus.Model
                 Name = tagname,
                 DataType = dataType,
                 Address = address,
-                CanWrite = canwrite,
+                CanWrite = (byte)(canwrite ? 2 : 0),
                 RegisterType = registerType
             };
         }
@@ -65,6 +65,16 @@ namespace KpHiteModbus.Modbus.Model
         public dynamic Data { get; set; }
 
         public RegisterTypeEnum RegisterType { get; set; }
+
+        public bool CanWriteBool
+        {
+            get => CanWrite == 2;
+            set
+            {
+                CanWrite = (byte)(value ? 2 : 0);
+                OnPropertyChanged(nameof(CanWriteBool));
+            }
+        }
         #endregion
 
 

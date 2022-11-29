@@ -1,5 +1,6 @@
 ﻿using KpSiemens.Siemens.Model;
 using KpSiemens.Siemens.ViewModel;
+using Scada.KPModel.Extend;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -61,23 +62,15 @@ namespace KpSiemens.Siemens.View
         {
             if (options == null)
                 return;
-            txtIPAddress.DataBindings.Clear();
-            //txtPort.DataBindings.Clear();
-            //txtRack.DataBindings.Clear();
-            //txtSlot.DataBindings.Clear();
-            cbxPLCType.DataBindings.Clear();
-            //txtConnectionType.DataBindings.Clear();
-            //txtLocalTASP.DataBindings.Clear();
-            //txtDestTASP.DataBindings.Clear();
+            txtIPAddress.AddDataBindings(ConnectionOptions, nameof(ConnectionOptions.IPAddress));
+            cbxPLCType.AddDataBindings(ConnectionOptions, nameof(ConnectionOptions.SiemensPLCTypeEnum));
 
-            txtIPAddress.DataBindings.Add(nameof(txtIPAddress.Text), ConnectionOptions, nameof(ConnectionOptions.IPAddress));
-            //txtPort.DataBindings.Add(nameof(txtPort.Text), ConnectionOptions, nameof(ConnectionOptions.Port));
-            //txtRack.DataBindings.Add(nameof(txtRack.Text), ConnectionOptions, nameof(ConnectionOptions.Rack));
-            //txtSlot.DataBindings.Add(nameof(txtSlot.Text), ConnectionOptions, nameof(ConnectionOptions.Slot));
-            cbxPLCType.DataBindings.Add(nameof(cbxPLCType.SelectedValue), ConnectionOptions, nameof(ConnectionOptions.SiemensPLCTypeEnum));
-            //txtConnectionType.DataBindings.Add(nameof(txtConnectionType.Text), ConnectionOptions, nameof(ConnectionOptions.ConnectionType));
-            //txtLocalTASP.DataBindings.Add(nameof(txtLocalTASP.Text), ConnectionOptions, nameof(ConnectionOptions.LocalTSAP));
-            //txtDestTASP.DataBindings.Add(nameof(txtDestTASP.Text), ConnectionOptions, nameof(ConnectionOptions.DestTASP));
+
+            //txtIPAddress.DataBindings.Clear();
+            //cbxPLCType.DataBindings.Clear();
+
+            //txtIPAddress.DataBindings.Add(nameof(txtIPAddress.Text), ConnectionOptions, nameof(ConnectionOptions.IPAddress),false,DataSourceUpdateMode.OnPropertyChanged);
+            //cbxPLCType.DataBindings.Add(nameof(cbxPLCType.SelectedValue), ConnectionOptions, nameof(ConnectionOptions.SiemensPLCTypeEnum), false, DataSourceUpdateMode.OnPropertyChanged);
         }
 
         private void cbxPLCType_SelectedIndexChanged(object sender, EventArgs e)

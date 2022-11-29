@@ -1,16 +1,12 @@
-﻿using KpHiteModbus.Modbus.Model.EnumType;
+﻿using KpHiteModbus.Modbus.Extend;
+using KpHiteModbus.Modbus.Model.EnumType;
 using Scada;
 using Scada.Extend;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO.Ports;
-using System.Linq;
-using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 
 namespace KpHiteModbus.Modbus.Model
 {
@@ -36,6 +32,7 @@ namespace KpHiteModbus.Modbus.Model
             {
                 connectiontype = value;
                 OnPropertyChanged(nameof(ConnectionType));
+                OnPropertyChanged(nameof(ConsoleParamsStr));
             }
         }
 
@@ -47,6 +44,30 @@ namespace KpHiteModbus.Modbus.Model
             {
                 modbusmode = value;
                 OnPropertyChanged(nameof(ModbusMode));
+                OnPropertyChanged(nameof(ConsoleParamsStr));
+            }
+        }
+
+        public string ConsoleParamsStr
+        {
+            get
+            {
+                StringBuilder sb = new StringBuilder();
+                if(ConnectionType == ModbusConnectionTypeEnum.SerialPort)
+                {
+                    sb.AppendLine($"串口名:{PortName}");
+                    sb.AppendLine($"波特率:{BaudRate}");
+                    sb.AppendLine($"数据位:{DataBits}");
+                    sb.AppendLine($"停止位:{StopBits.GetDescription()}");
+                    sb.AppendLine($"校验位:{Parity.GetDescription()}");
+                }
+                else
+                {
+                    sb.AppendLine($"IP地址:{IPAddress}");
+                    sb.AppendLine($"端口:{Port}");
+                }
+
+                return sb.ToString();
             }
         }
         #endregion
@@ -60,6 +81,7 @@ namespace KpHiteModbus.Modbus.Model
             {
                 ipaddress = value;
                 OnPropertyChanged(nameof(IPAddress));
+                OnPropertyChanged(nameof(ConsoleParamsStr));
             }
         }
 
@@ -71,6 +93,7 @@ namespace KpHiteModbus.Modbus.Model
             {
                 port = value;
                 OnPropertyChanged(nameof(Port));
+                OnPropertyChanged(nameof(ConsoleParamsStr));
             }
         }
         #endregion
@@ -84,6 +107,7 @@ namespace KpHiteModbus.Modbus.Model
             {
                 portname = value;
                 OnPropertyChanged(nameof(PortName));
+                OnPropertyChanged(nameof(ConsoleParamsStr));
             }
         }
 
@@ -95,6 +119,7 @@ namespace KpHiteModbus.Modbus.Model
             {
                 baudrate = value;
                 OnPropertyChanged(nameof(BaudRate));
+                OnPropertyChanged(nameof(ConsoleParamsStr));
             }
         }
 
@@ -106,6 +131,7 @@ namespace KpHiteModbus.Modbus.Model
             {
                 databits = value;
                 OnPropertyChanged(nameof(DataBits));
+                OnPropertyChanged(nameof(ConsoleParamsStr));
             }
         }
 
@@ -117,6 +143,7 @@ namespace KpHiteModbus.Modbus.Model
             {
                 stopbits = value;
                 OnPropertyChanged(nameof(StopBits));
+                OnPropertyChanged(nameof(ConsoleParamsStr));
             }
         }
 
@@ -128,6 +155,7 @@ namespace KpHiteModbus.Modbus.Model
             {
                 parity = value;
                 OnPropertyChanged(nameof(Parity));
+                OnPropertyChanged(nameof(ConsoleParamsStr));
             }
         }
         #endregion

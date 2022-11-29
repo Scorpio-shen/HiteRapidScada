@@ -111,7 +111,7 @@ namespace KpSiemens.Siemens.View
             lblDbNum.Visible = numDbNum.Visible = SiemensTagGroup.MemoryType == MemoryTypeEnum.DB;
             numDbNum.Value = SiemensTagGroup.DBNum < 1 ? 1 : SiemensTagGroup.DBNum;
             numTagCount.Value = SiemensTagGroup.TagCount;
-            txtMaxAddressLength.Text = SiemensTagGroup.MaxAddressLength.ToString();
+            txtMaxAddressLength.Text = SiemensTagGroup.MaxRequestByteLength.ToString();
         }
 
         private void BindTagGroupTags(SiemensTagGroup group)
@@ -309,7 +309,7 @@ namespace KpSiemens.Siemens.View
                 else
                     requestLength = dataLength;
 
-                if (requestLength > SiemensTagGroup.MaxAddressLength)
+                if (requestLength > SiemensTagGroup.MaxRequestByteLength)
                 {
                     //超出最大地址限制
                     ScadaUiUtils.ShowError(TempleteKeyString.RangeOutOfMaxRequestLengthErrorMsg);

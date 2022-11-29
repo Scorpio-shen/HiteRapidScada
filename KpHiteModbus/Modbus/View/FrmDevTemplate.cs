@@ -11,7 +11,7 @@ namespace KpHiteModbus.Modbus.View
 {
     public partial class FrmDevTemplate : Form
     {
-        const string NewFileName = "KpSiemens_NewTemplate.xml";
+        const string NewFileName = "KpHiteModbus_NewTemplate.xml";
         string _fileName;                                   //载入已定义模板时文件名称或者新建的模板文件名称
         AppDirs _appDirs;
         DeviceTemplate deviceTemplate;                      //模板文件
@@ -68,6 +68,8 @@ namespace KpHiteModbus.Modbus.View
                 ctrlConfig.ConnectionOptions = deviceTemplate.CreateOptions();
                 FillTree();
             }
+
+
         }
 
         private void FrmDevTemplate_FormClosing(object sender, FormClosingEventArgs e)
@@ -274,11 +276,6 @@ namespace KpHiteModbus.Modbus.View
                 }
             }
         }
-
-        private void ctrlPLCConfig_PLCConfigChanged(object sender, ModbusConfigChangedEventArgs e)
-        {
-            Modified = true;
-        }
         #endregion
 
         #region 存储配置
@@ -389,8 +386,7 @@ namespace KpHiteModbus.Modbus.View
             var registerType = tagGroup.RegisterType;
             return $"{groupName} ({registerType})";
         }
-        #endregion
 
-        
+        #endregion
     }
 }

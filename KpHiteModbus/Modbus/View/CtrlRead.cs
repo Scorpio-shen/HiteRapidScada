@@ -2,6 +2,7 @@
 using KpHiteModbus.Modbus.Model;
 using KpHiteModbus.Modbus.Model.EnumType;
 using Scada.Helper;
+using Scada.KPModel.Extend;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
@@ -100,11 +101,19 @@ namespace KpHiteModbus.Modbus.View
         {
             if (ModbusTagGroup == null)
                 return;
-            txtGroupName.Text = ModbusTagGroup.Name;
-            chkActive.Checked = ModbusTagGroup.Active;
-            cbxRegisterType.SelectedValue = ModbusTagGroup.RegisterType;
-            numTagCount.Value = ModbusTagGroup.TagCount;
-            txtMaxAddressLength.Text = ModbusTagGroup.MaxAddressLength.ToString();
+
+            txtGroupName.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.Name));
+            chkActive.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.Active));
+            cbxRegisterType.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.RegisterType));
+            numTagCount.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.TagCount));
+            txtMaxAddressLength.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.MaxRequestByteLength));
+            txtRquestLength.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.RequestLength));
+
+            //txtGroupName.Text = ModbusTagGroup.Name;
+            //chkActive.Checked = ModbusTagGroup.Active;
+            //cbxRegisterType.SelectedValue = ModbusTagGroup.RegisterType;
+            //numTagCount.Value = ModbusTagGroup.TagCount;
+            //txtMaxAddressLength.Text = ModbusTagGroup.MaxRequestByteLength.ToString();
         }
 
         private void BindTagGroupTags(ModbusTagGroup group)
@@ -250,7 +259,7 @@ namespace KpHiteModbus.Modbus.View
                 else
                     requestLength = dataLength;
 
-                if (requestLength > ModbusTagGroup.MaxAddressLength)
+                if (requestLength > ModbusTagGroup.MaxRequestByteLength)
                 {
                     //超出最大地址限制
                     ScadaUiUtils.ShowError(TempleteKeyString.RangeOutOfMaxRequestLengthErrorMsg);

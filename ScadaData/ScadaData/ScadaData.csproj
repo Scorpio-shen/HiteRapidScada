@@ -128,6 +128,7 @@
     <Compile Include="Data\Tables\TableRelation.cs" />
     <Compile Include="KPModel\DIService\DIModbusService\ModbusServiceExtend.cs" />
     <Compile Include="KPModel\DIService\DIServiceHelper.cs" />
+    <Compile Include="KPModel\Extend\ControlExtend.cs" />
     <Compile Include="KPModel\Extend\EnumHelper.cs" />
     <Compile Include="KPModel\Extend\StringExtendMethod.cs" />
     <Compile Include="FileListener.cs" />

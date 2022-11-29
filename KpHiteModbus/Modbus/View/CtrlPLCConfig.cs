@@ -1,5 +1,7 @@
 ﻿using KpHiteModbus.Modbus.Model;
 using KpHiteModbus.Modbus.Model.EnumType;
+using Scada.Extend;
+using Scada.KPModel.Extend;
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
@@ -36,7 +38,7 @@ namespace KpHiteModbus.Modbus.View
             //Combobox绑定数据源
             var keyValueConnectionEnums = new Dictionary<string, ModbusConnectionTypeEnum>();
             foreach (ModbusConnectionTypeEnum type in Enum.GetValues(typeof(ModbusConnectionTypeEnum)))
-                keyValueConnectionEnums.Add(type.ToString(), type);
+                keyValueConnectionEnums.Add(type.GetDescription(), type);
 
             BindingSource bindingSource = new BindingSource();
             bindingSource.DataSource = keyValueConnectionEnums;
@@ -51,10 +53,10 @@ namespace KpHiteModbus.Modbus.View
                 keyValueModeEnums.Add(type.ToString(), type);
 
             BindingSource bindingSource2 = new BindingSource();
-            bindingSource.DataSource = keyValueModeEnums;
+            bindingSource2.DataSource = keyValueModeEnums;
             cbxMode.DataSource = bindingSource2;
             cbxMode.DisplayMember = "Key";
-            //cbxMode.ValueMember = "Value";
+            cbxMode.ValueMember = "Value";
 
         }
 
@@ -62,10 +64,10 @@ namespace KpHiteModbus.Modbus.View
         {
             if (options == null)
                 return;
-
-            txtStation.DataBindings.Add(nameof(txtStation.Text), options, nameof(options.Station));
-            cbxConnectionType.DataBindings.Add(nameof(cbxConnectionType.SelectedValue), options, nameof(options.ConnectionType));
-            cbxMode.DataBindings.Add(nameof(cbxMode.SelectedValue), options, nameof(options.ModbusMode));
+            txtStation.AddDataBindings( options, nameof(options.Station));
+            txtParams.AddDataBindings(options, nameof(options.ConsoleParamsStr));
+            cbxConnectionType.AddDataBindings( options, nameof(options.ConnectionType));
+            cbxMode.AddDataBindings( options, nameof(options.ModbusMode));
         }
 
         private void OnConfigChanged(object sender)
@@ -79,7 +81,7 @@ namespace KpHiteModbus.Modbus.View
         #region 控件事件
         private void btnParamSetting_Click(object sender, EventArgs e)
         {
-            FrmParaSet frm = new FrmParaSet(ConnectionOptions);
+            FrmParaSet frm = new FrmParaSet(ConnectionOptions,OnConfigChanged);
             frm.StartPosition = FormStartPosition.CenterParent;
             frm.ShowDialog();
         }
@@ -97,6 +99,21 @@ namespace KpHiteModbus.Modbus.View
             if (IsShowProps)
                 return;
 
+            var connectionType = cbxConnectionType.SelectedValue as ModbusConnectionTypeEnum?;
+            if(connectionType == null)
+                return;
+            switch (connectionType)
+            {
+                case ModbusConnectionTypeEnum.SerialPort:
+                case ModbusConnectionTypeEnum.RTUASCIIOverUdp:
+                case ModbusConnectionTypeEnum.RTUASCIIOverTcp:
+                    cbxMode.Enabled = true;
+                    break;
+                case ModbusConnectionTypeEnum.TcpIP:
+                case ModbusConnectionTypeEnum.Udp:
+                    cbxMode.Enabled = false;
+                    break;
+            }
             OnConfigChanged(sender);
         }
 

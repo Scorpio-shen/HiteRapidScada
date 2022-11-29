@@ -134,7 +134,16 @@ namespace KpHiteModbus.Modbus.Model
 
         public ConnectionOptions CreateOptions()
         {
-            var option = new ConnectionOptions();
+            var option = new ConnectionOptions()
+            {
+                Station = 1,
+                IPAddress = "127.0.0.1",
+                Port = 502,
+                BaudRate = 9600,
+                DataBits = 8,
+                Parity = System.IO.Ports.Parity.None,
+                StopBits = System.IO.Ports.StopBits.One,
+            };
             ConnectionOptions = option;
             return option;
         }

@@ -55,6 +55,7 @@
     <Compile Include="KpHideModbusView.cs" />
     <Compile Include="KpHiteModbusLogic.cs" />
     <Compile Include="Modbus\Extend\DataTypeEnumExtend.cs" />
+    <Compile Include="Modbus\Model\FunctionCode.cs" />
     <Compile Include="Modbus\Model\ModbusConfigChangedEventHandler.cs" />
     <Compile Include="Modbus\Model\ConnectionOptions.cs" />
     <Compile Include="Modbus\Model\DeviceTemplate.cs" />

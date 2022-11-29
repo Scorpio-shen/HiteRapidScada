@@ -30,6 +30,8 @@
         {
             this.components = new System.ComponentModel.Container();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.txtRquestLength = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
             this.txtMaxAddressLength = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.btnAddRange = new System.Windows.Forms.Button();
@@ -59,6 +61,8 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.txtRquestLength);
+            this.groupBox1.Controls.Add(this.label5);
             this.groupBox1.Controls.Add(this.txtMaxAddressLength);
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.btnAddRange);
@@ -78,10 +82,26 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "参数配置";
             // 
+            // txtRquestLength
+            // 
+            this.txtRquestLength.Location = new System.Drawing.Point(321, 64);
+            this.txtRquestLength.Name = "txtRquestLength";
+            this.txtRquestLength.Size = new System.Drawing.Size(76, 21);
+            this.txtRquestLength.TabIndex = 17;
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(226, 67);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(89, 12);
+            this.label5.TabIndex = 16;
+            this.label5.Text = "请求寄存器长度";
+            // 
             // txtMaxAddressLength
             // 
             this.txtMaxAddressLength.Enabled = false;
-            this.txtMaxAddressLength.Location = new System.Drawing.Point(300, 63);
+            this.txtMaxAddressLength.Location = new System.Drawing.Point(471, 64);
             this.txtMaxAddressLength.Name = "txtMaxAddressLength";
             this.txtMaxAddressLength.Size = new System.Drawing.Size(65, 21);
             this.txtMaxAddressLength.TabIndex = 15;
@@ -89,7 +109,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(241, 61);
+            this.label2.Location = new System.Drawing.Point(412, 61);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(53, 24);
             this.label2.TabIndex = 14;
@@ -97,7 +117,7 @@
             // 
             // btnAddRange
             // 
-            this.btnAddRange.Location = new System.Drawing.Point(414, 59);
+            this.btnAddRange.Location = new System.Drawing.Point(554, 23);
             this.btnAddRange.Name = "btnAddRange";
             this.btnAddRange.Size = new System.Drawing.Size(87, 29);
             this.btnAddRange.TabIndex = 12;
@@ -122,7 +142,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(242, 31);
+            this.label4.Location = new System.Drawing.Point(274, 33);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(41, 12);
             this.label4.TabIndex = 8;
@@ -130,7 +150,7 @@
             // 
             // numTagCount
             // 
-            this.numTagCount.Location = new System.Drawing.Point(289, 27);
+            this.numTagCount.Location = new System.Drawing.Point(321, 29);
             this.numTagCount.Name = "numTagCount";
             this.numTagCount.Size = new System.Drawing.Size(76, 21);
             this.numTagCount.TabIndex = 7;
@@ -290,5 +310,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn dgvTagStringLength;
         private System.Windows.Forms.DataGridViewTextBoxColumn dgvTagAddress;
         private System.Windows.Forms.DataGridViewCheckBoxColumn dgvTagCanWrite;
+        private System.Windows.Forms.TextBox txtRquestLength;
+        private System.Windows.Forms.Label label5;
     }
 }

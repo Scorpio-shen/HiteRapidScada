@@ -71,7 +71,7 @@ namespace Scada.KPModel
         /// <summary>
         /// 最大地址长度（限制配置点时防止超出最大地址长度）
         /// </summary>
-        public abstract double MaxAddressLength { get; set; }
+        public abstract double MaxRequestByteLength { get; set; }
         #endregion
 
         #region 抽象或虚方法

@@ -1,6 +1,7 @@
 ﻿using KpHiteModbus.Modbus.Model;
 using Scada.Extend;
 using Scada.KPModel.Attributes;
+using System.IO.Ports;
 
 namespace KpHiteModbus.Modbus.Extend
 {
@@ -18,6 +19,40 @@ namespace KpHiteModbus.Modbus.Extend
                 return attr.ByteCount;
             else
                 return default;
+        }
+
+        public static string GetDescription(this Parity parity)
+        {
+            string desc = "无";
+            switch (parity)
+            {
+                case Parity.Even:
+                    desc = "偶";
+                    break;
+                case Parity.Odd:
+                    desc = "奇";
+                    break;
+            }
+
+            return desc;    
+        }
+
+        public static string GetDescription(this StopBits stopBits)
+        {
+            string desc = "1";
+            switch (stopBits)
+            {
+                case StopBits.One:
+                    break;
+                    case StopBits.Two:
+                    desc = "2";
+                    break;
+                case StopBits.OnePointFive:
+                    desc = "1.5";
+                    break;
+            }
+
+            return desc;
         }
     }
 }

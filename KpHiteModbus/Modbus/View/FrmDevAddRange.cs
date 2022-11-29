@@ -1,5 +1,6 @@
 ﻿using KpHiteModbus.Modbus.Model;
 using KpHiteModbus.Modbus.ViewModel;
+using Scada.KPModel.Extend;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
@@ -35,22 +36,31 @@ namespace KpHiteModbus.Modbus.View
             cbxDataType.ValueMember = "Value";
 
             //控件绑定
-            txtNameReplace.DataBindings.Add(nameof(txtNameReplace.Text), ViewModel, nameof(ViewModel.NameReplace));
-            numNameStartIndex.DataBindings.Add(nameof(numNameStartIndex.Value),ViewModel, nameof(ViewModel.NameStartIndex));
-            txtStartAddress.DataBindings.Add(nameof(txtStartAddress.Text), ViewModel, nameof(ViewModel.StartAddress));
-            numAddressIncrement.DataBindings.Add(nameof(numAddressIncrement.Value), ViewModel, nameof(ViewModel.AddressIncrement));
-            numTagCount.DataBindings.Add(nameof(numTagCount.Value),ViewModel, nameof(ViewModel.TagCount));
-            cbxDataType.DataBindings.Add(nameof(cbxDataType.SelectedValue), ViewModel, nameof(ViewModel.DataType));
-            lblAddressOutput.DataBindings.Add(nameof(lblAddressOutput.Text),ViewModel,nameof(ViewModel.AddressOutput));
-            lblNameOutput.DataBindings.Add(nameof(lblNameOutput.Text), ViewModel, nameof(ViewModel.NameOutput));
-            txtLength.DataBindings.Add(nameof(txtLength.Text), ViewModel, nameof(ViewModel.Length));
-            chkCanWrite.DataBindings.Add(nameof(chkCanWrite.Checked), ViewModel, nameof(ViewModel.CanWrite));
+            txtNameReplace.AddDataBindings(ViewModel, nameof(ViewModel.NameReplace));
+            txtLength.AddDataBindings(ViewModel, nameof(ViewModel.Length));
+            numNameStartIndex.AddDataBindings(ViewModel, nameof(ViewModel.NameStartIndex));
+            txtStartAddress.AddDataBindings( ViewModel, nameof(ViewModel.StartAddress));
+            numAddressIncrement.AddDataBindings(ViewModel, nameof(ViewModel.AddressIncrement));
+            numTagCount.AddDataBindings( ViewModel, nameof(ViewModel.TagCount));
+            cbxDataType.AddDataBindings(ViewModel, nameof(ViewModel.DataType));
+            lblAddressOutput.AddDataBindings(ViewModel, nameof(ViewModel.AddressOutput));
+            lblNameOutput.AddDataBindings(ViewModel, nameof(ViewModel.NameOutput));
+            txtLength.AddDataBindings(ViewModel, nameof(ViewModel.Length));
+            chkCanWrite.AddDataBindings(ViewModel, nameof(ViewModel.CanWrite));
+
 
             var registerType = _modbusTagGroup.RegisterType;
             if (registerType == RegisterTypeEnum.Coils || registerType == RegisterTypeEnum.HoldingRegisters)
+            {
                 chkCanWrite.Enabled = true;
+                chkCanWrite.Visible = true;
+            }
             else
+            {
                 chkCanWrite.Enabled = false;
+                chkCanWrite.Visible = false;
+            }
+                
         }
 
         private void btnConfirm_Click(object sender, EventArgs e)
@@ -130,7 +140,7 @@ namespace KpHiteModbus.Modbus.View
                 }
                 else
                     address = ViewModel.StartAddress + ViewModel.AddressIncrement * i;
-                Tag tag = Model.Tag.CreateNewTag(tagname: name, dataType: ViewModel.DataType, registerType: _modbusTagGroup.RegisterType, address: address.ToString(), canwrite: (byte)(ViewModel.CanWrite ? 1 : 0),length: ViewModel.Length);
+                Tag tag = Model.Tag.CreateNewTag(tagname: name, dataType: ViewModel.DataType, registerType: _modbusTagGroup.RegisterType, address: address.ToString(), canwrite:ViewModel.CanWrite,length: ViewModel.Length);
                 result.Add(tag);
             }
 

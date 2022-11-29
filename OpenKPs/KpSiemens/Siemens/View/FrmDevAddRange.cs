@@ -1,6 +1,7 @@
 ﻿using KpSiemens.Siemens.Extend;
 using KpSiemens.Siemens.Model;
 using KpSiemens.Siemens.ViewModel;
+using Scada.KPModel.Extend;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
@@ -39,16 +40,27 @@ namespace KpSiemens.Siemens.View
             cbxDataType.ValueMember = "Value";
 
             //控件绑定
-            txtNameReplace.DataBindings.Add(nameof(txtNameReplace.Text), ViewModel, nameof(ViewModel.NameReplace));
-            numNameStartIndex.DataBindings.Add(nameof(numNameStartIndex.Value),ViewModel, nameof(ViewModel.NameStartIndex));
-            txtStartAddress.DataBindings.Add(nameof(txtStartAddress.Text), ViewModel, nameof(ViewModel.StartAddress));
-            numAddressIncrement.DataBindings.Add(nameof(numAddressIncrement.Value), ViewModel, nameof(ViewModel.AddressIncrement));
-            numTagCount.DataBindings.Add(nameof(numTagCount.Value),ViewModel, nameof(ViewModel.TagCount));
-            cbxDataType.DataBindings.Add(nameof(cbxDataType.SelectedValue), ViewModel, nameof(ViewModel.DataType));
-            chkCanWrite.DataBindings.Add(nameof(chkCanWrite.Checked), ViewModel, nameof(ViewModel.CanWrite));
-            lblAddressOutput.DataBindings.Add(nameof(lblAddressOutput.Text),ViewModel,nameof(ViewModel.AddressOutput));
-            lblNameOutput.DataBindings.Add(nameof(lblNameOutput.Text), ViewModel, nameof(ViewModel.NameOutput));
-            txtLength.DataBindings.Add(nameof(txtLength.Text), ViewModel, nameof(ViewModel.Length));
+            txtNameReplace.AddDataBindings(ViewModel, nameof(ViewModel.NameReplace));
+            numNameStartIndex.AddDataBindings( ViewModel, nameof(ViewModel.NameStartIndex));
+            txtStartAddress.AddDataBindings(ViewModel, nameof(ViewModel.StartAddress));
+            numAddressIncrement.AddDataBindings(ViewModel, nameof(ViewModel.AddressIncrement));
+            numTagCount.AddDataBindings(ViewModel, nameof(ViewModel.TagCount));
+            cbxDataType.AddDataBindings(ViewModel, nameof(ViewModel.DataType));
+            chkCanWrite.AddDataBindings(ViewModel, nameof(ViewModel.CanWrite));
+            lblAddressOutput.AddDataBindings(ViewModel, nameof(ViewModel.AddressOutput));
+            lblNameOutput.AddDataBindings( ViewModel, nameof(ViewModel.NameOutput));
+            txtLength.AddDataBindings(ViewModel, nameof(ViewModel.Length));
+
+            //txtNameReplace.DataBindings.Add(nameof(txtNameReplace.Text), ViewModel, nameof(ViewModel.NameReplace));
+            //numNameStartIndex.DataBindings.Add(nameof(numNameStartIndex.Value),ViewModel, nameof(ViewModel.NameStartIndex));
+            //txtStartAddress.DataBindings.Add(nameof(txtStartAddress.Text), ViewModel, nameof(ViewModel.StartAddress));
+            //numAddressIncrement.DataBindings.Add(nameof(numAddressIncrement.Value), ViewModel, nameof(ViewModel.AddressIncrement));
+            //numTagCount.DataBindings.Add(nameof(numTagCount.Value),ViewModel, nameof(ViewModel.TagCount));
+            //cbxDataType.DataBindings.Add(nameof(cbxDataType.SelectedValue), ViewModel, nameof(ViewModel.DataType));
+            //chkCanWrite.DataBindings.Add(nameof(chkCanWrite.Checked), ViewModel, nameof(ViewModel.CanWrite));
+            //lblAddressOutput.DataBindings.Add(nameof(lblAddressOutput.Text),ViewModel,nameof(ViewModel.AddressOutput));
+            //lblNameOutput.DataBindings.Add(nameof(lblNameOutput.Text), ViewModel, nameof(ViewModel.NameOutput));
+            //txtLength.DataBindings.Add(nameof(txtLength.Text), ViewModel, nameof(ViewModel.Length));
 
             if (_siemensTagGroup.MemoryType == MemoryTypeEnum.I)
                 chkCanWrite.Enabled = false;

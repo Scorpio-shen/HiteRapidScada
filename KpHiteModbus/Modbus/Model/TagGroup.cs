@@ -1,4 +1,5 @@
-﻿using Scada;
+﻿using KpHiteModbus.Modbus.Extend;
+using Scada;
 using Scada.Extend;
 using Scada.KPModel;
 using System;
@@ -22,8 +23,8 @@ namespace KpHiteModbus.Modbus.Model
 
         public ModbusTagGroup(RegisterTypeEnum registerType)
         {
-            RegisterType = registerType;
             Tags = new List<Tag>();
+            RegisterType = registerType;
             Active = true;
             StartKpTagIndex = -1;
         }
@@ -44,7 +45,31 @@ namespace KpHiteModbus.Modbus.Model
             }
         }
         private void SetRegisterType(RegisterTypeEnum registerType) => Tags.ForEach(t => t.RegisterType = registerType);
-        public override double MaxAddressLength { get; set; }
+        private double maxrequestbytelength;
+
+        /// <summary>
+        /// 限制一组Tag最大请求数据字节长度
+        /// </summary>
+        public override double MaxRequestByteLength
+        {
+            get
+            {
+                if(maxrequestbytelength <= 0)
+                    maxrequestbytelength = TagGroupDefaultValues.MaxAddressLength;
+                return maxrequestbytelength;
+            }
+            set => maxrequestbytelength = value;
+        }
+
+        private int requestlength;
+        /// <summary>
+        /// 请求寄存器个数
+        /// </summary>
+        public int RequestLength
+        {
+            get => requestlength;
+            set=> requestlength = value;
+        }
         #endregion
 
         #region 载入存储Xml
@@ -57,9 +82,10 @@ namespace KpHiteModbus.Modbus.Model
             StartKpTagIndex = tagElem.GetAttrAsInt("StartKpTagIndex");
             Active = tagElem.GetAttrAsBool("Active",true);
             RegisterType = tagElem.GetAttrAsEnum("RegisterType", RegisterTypeEnum.HoldingRegisters);
-            MaxAddressLength = tagElem.GetAttrAsDouble("MaxAddressLength");
-            if(MaxAddressLength == 0)
-                MaxAddressLength = TagGroupDefaultValues.MaxAddressLength;
+            MaxRequestByteLength = tagElem.GetAttrAsDouble("MaxRequestByteLength");
+            RequestLength = tagElem.GetAttrAsInt("RequestLength");
+            if(MaxRequestByteLength == 0)
+                MaxRequestByteLength = TagGroupDefaultValues.MaxAddressLength;
 
             XmlNodeList nodes = tagElem.SelectNodes("Tag");
             int maxTagCount = MaxTagCount;
@@ -70,20 +96,38 @@ namespace KpHiteModbus.Modbus.Model
                     break;
 
                 var tagID = element.GetAttrAsInt("TagID");
-                var name = tagElem.GetAttribute("Name");
-                var dataType = tagElem.GetAttrAsEnum("DataType", DataTypeEnum.Bool);
-                var address = tagElem.GetAttrAsString("Address");
-                var length = tagElem.GetAttrAsInt("Length");
-                var canwrite = tagElem.GetAttrAsString("CanWrite").ToByte();
-                var tag = Tag.CreateNewTag(tagID:tagID, tagname:name,dataType:dataType,registerType:RegisterType,address:address,canwrite:canwrite,length:length);
+                var name = element.GetAttribute("Name");
+                var dataType = element.GetAttrAsEnum("DataType", DataTypeEnum.Bool);
+                var address = element.GetAttrAsString("Address");
+                var length = element.GetAttrAsInt("Length");
+                var canwrite = element.GetAttrAsString("CanWrite").ToByte();
+                var tag = Tag.CreateNewTag(tagID:tagID, tagname:name,dataType:dataType,registerType:RegisterType,address:address,canwrite: canwrite > 0, length:length);
                 Tags.Add(tag);
             }
 
         }
 
-        public override void SaveToXml(XmlElement xmlElement)
+        public override void SaveToXml(XmlElement tagGroupElement)
         {
-            throw new NotImplementedException();
+            if(tagGroupElement == null)
+                throw new ArgumentNullException("TagGroupElement");
+
+            tagGroupElement.SetAttribute("Name", Name);
+            tagGroupElement.SetAttribute("StartKpTagIndex", StartKpTagIndex);
+            tagGroupElement.SetAttribute("Active", Active);
+            tagGroupElement.SetAttribute("RegisterType", RegisterType);
+            tagGroupElement.SetAttribute("MaxRequestByteLength", MaxRequestByteLength);
+            tagGroupElement.SetAttribute("RequestLength", RequestLength);
+            foreach (Tag tag in Tags)
+            {
+                XmlElement tagElem = tagGroupElement.AppendElem("Tag");
+                tagElem.SetAttribute("TagID", tag.TagID);
+                tagElem.SetAttribute("Name", tag.Name);
+                tagElem.SetAttribute("DataType", tag.DataType);
+                tagElem.SetAttribute("Address", tag.Address);
+                tagElem.SetAttribute("Length", tag.Length);
+                tagElem.SetAttribute("CanWrite", tag.CanWrite);
+            }
         }
         #endregion
 
@@ -102,7 +146,7 @@ namespace KpHiteModbus.Modbus.Model
 
             var model = GetRequestModel();
             //验证是否超出最大地址限制
-            if (model.Length > MaxAddressLength)
+            if (model.Length > MaxRequestByteLength)
             {
                 Tags.Clear();
                 Tags.AddRange(tagsOld);
@@ -114,7 +158,68 @@ namespace KpHiteModbus.Modbus.Model
 
         public TagGroupRequestModel GetRequestModel()
         {
-            throw new Exception();
+            var model = new TagGroupRequestModel();
+            var functionCode = GetFunctionCode(RegisterType);
+            model.Address = $"x={RegisterType};{StartAddress}";
+            if (TagCount == 0)
+                model.Length = 0;
+            else
+            {
+                var tag = Tags.Last();
+                if (double.TryParse(tag.Address, out double address))
+                {
+                    model.Length = (ushort)(address + tag.DataType.GetByteCount());
+                    if (tag.Length > 0)
+                        model.Length += (ushort)tag.Length;
+                }
+                else
+                    model.Length = 0;
+            }
+
+            return model;
+        }
+
+        private byte GetFunctionCode(RegisterTypeEnum register,bool iswrite = false,bool ismultiple = true)
+        {
+            byte code = default;
+            if (!iswrite)
+            {
+                switch (register)
+                {
+                    case RegisterTypeEnum.Coils:
+                        code = FunctionCodes.ReadCoils;
+                        break;
+                    case RegisterTypeEnum.DiscretesInputs:
+                        code = FunctionCodes.ReadDiscreteInputs;
+                        break;
+                    case RegisterTypeEnum.HoldingRegisters:
+                        code = FunctionCodes.ReadHoldingRegisters;
+                        break;
+                    case RegisterTypeEnum.InputRegisters:
+                        code = FunctionCodes.ReadInputRegisters;
+                        break;
+                }
+            }
+            else
+            {
+                switch (register)
+                {
+                    case RegisterTypeEnum.Coils:
+                        if (!ismultiple)
+                            code = FunctionCodes.WriteSingleCoil;
+                        else
+                            code = FunctionCodes.WriteMultipleCoils;
+                        break;
+                    case RegisterTypeEnum.HoldingRegisters:
+                        if (!ismultiple)
+                            code = FunctionCodes.WriteSingleRegister;
+                        else
+                            code = FunctionCodes.WriteMultipleRegisters;
+                        break;
+                }
+            }
+
+            return code;
         }
         #endregion
 

@@ -29,9 +29,9 @@
         private void InitializeComponent()
         {
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.cbxMode = new System.Windows.Forms.ComboBox();
             this.txtParams = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
-            this.cbxMode = new System.Windows.Forms.ComboBox();
             this.btnParamSetting = new System.Windows.Forms.Button();
             this.label7 = new System.Windows.Forms.Label();
             this.cbxConnectionType = new System.Windows.Forms.ComboBox();
@@ -42,9 +42,9 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.cbxMode);
             this.groupBox1.Controls.Add(this.txtParams);
             this.groupBox1.Controls.Add(this.label2);
-            this.groupBox1.Controls.Add(this.cbxMode);
             this.groupBox1.Controls.Add(this.btnParamSetting);
             this.groupBox1.Controls.Add(this.label7);
             this.groupBox1.Controls.Add(this.cbxConnectionType);
@@ -57,6 +57,14 @@
             this.groupBox1.TabIndex = 13;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "PLC参数配置";
+            // 
+            // cbxMode
+            // 
+            this.cbxMode.FormattingEnabled = true;
+            this.cbxMode.Location = new System.Drawing.Point(401, 30);
+            this.cbxMode.Name = "cbxMode";
+            this.cbxMode.Size = new System.Drawing.Size(126, 20);
+            this.cbxMode.TabIndex = 23;
             // 
             // txtParams
             // 
@@ -77,22 +85,12 @@
             this.label2.TabIndex = 21;
             this.label2.Text = "模式";
             // 
-            // cbxMode
-            // 
-            this.cbxMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbxMode.FormattingEnabled = true;
-            this.cbxMode.Location = new System.Drawing.Point(401, 31);
-            this.cbxMode.Name = "cbxMode";
-            this.cbxMode.Size = new System.Drawing.Size(126, 20);
-            this.cbxMode.TabIndex = 20;
-            this.cbxMode.SelectedIndexChanged += new System.EventHandler(this.cbxMode_SelectedIndexChanged);
-            // 
             // btnParamSetting
             // 
             this.btnParamSetting.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(225)))), ((int)(((byte)(225)))), ((int)(((byte)(225)))));
             this.btnParamSetting.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(173)))), ((int)(((byte)(173)))), ((int)(((byte)(173)))));
             this.btnParamSetting.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnParamSetting.Location = new System.Drawing.Point(545, 24);
+            this.btnParamSetting.Location = new System.Drawing.Point(551, 24);
             this.btnParamSetting.Name = "btnParamSetting";
             this.btnParamSetting.Size = new System.Drawing.Size(111, 30);
             this.btnParamSetting.TabIndex = 19;
@@ -159,7 +157,7 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button btnParamSetting;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.ComboBox cbxMode;
         private System.Windows.Forms.TextBox txtParams;
+        private System.Windows.Forms.ComboBox cbxMode;
     }
 }
