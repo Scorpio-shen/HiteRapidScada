@@ -21,6 +21,9 @@ namespace KpHiteModbus.Modbus.View
         public event ModbusConfigChangedEventHandler TagGroupChanged;
         private ModbusTagGroup tagGroup;
         private ComboBox comboBox;
+
+        BindingSource bindSourceDataTypeOnlyBool;
+        BindingSource bindSourceDataTypeExceptBool;
         public ModbusTagGroup ModbusTagGroup
         {
             get => tagGroup;
@@ -76,13 +79,19 @@ namespace KpHiteModbus.Modbus.View
             dgvTags.AutoGenerateColumns = false;
 
             comboBox = new ComboBox();
-            Dictionary<string, DataTypeEnum> keyValueDataTypeEnums = new Dictionary<string, DataTypeEnum>();
-            foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
-                keyValueDataTypeEnums.Add(type.ToString(), type);
+            Dictionary<string, DataTypeEnum> keyValueDataTypeEnumsOnlyBool = new Dictionary<string, DataTypeEnum>();
+            keyValueDataTypeEnumsOnlyBool.Add(DataTypeEnum.Bool.ToString(), DataTypeEnum.Bool);
+            bindSourceDataTypeOnlyBool = new BindingSource();
+            bindSourceDataTypeOnlyBool.DataSource = keyValueDataTypeEnumsOnlyBool;
 
-            BindingSource bindingSourceDataType = new BindingSource();
-            bindingSourceDataType.DataSource = keyValueDataTypeEnums;
-            comboBox.DataSource = bindingSourceDataType;
+            Dictionary<string, DataTypeEnum> keyValueDataTypeEnumsExceptBool = new Dictionary<string, DataTypeEnum>();
+            foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
+                if(type != DataTypeEnum.Bool)
+                    keyValueDataTypeEnumsExceptBool.Add(type.ToString(), type);
+            bindSourceDataTypeExceptBool = new BindingSource();
+            bindSourceDataTypeExceptBool.DataSource = keyValueDataTypeEnumsExceptBool;
+
+            comboBox.DataSource = bindSourceDataTypeExceptBool;
             comboBox.DisplayMember = "Key";
             comboBox.ValueMember = "Value";
 
@@ -219,6 +228,30 @@ namespace KpHiteModbus.Modbus.View
             var registerType = cbxRegisterType.SelectedValue as RegisterTypeEnum?;
             if (registerType == null)
                 return;
+
+            //根据不同的类型使能读写属性列
+            if(registerType == RegisterTypeEnum.Coils)
+            {
+                comboBox.DataSource = bindSourceDataTypeOnlyBool;
+                dgvTagCanWrite.ReadOnly = false;
+            }
+            else if(registerType == RegisterTypeEnum.DiscretesInputs)
+            {
+                comboBox.DataSource = bindSourceDataTypeOnlyBool;
+                dgvTagCanWrite.ReadOnly = true;
+            }
+            else if(registerType == RegisterTypeEnum.HoldingRegisters)
+            {
+                comboBox.DataSource = bindSourceDataTypeExceptBool;
+                dgvTagCanWrite.ReadOnly = false;
+            }
+            else
+            {
+                comboBox.DataSource = bindSourceDataTypeExceptBool;
+                dgvTagCanWrite.ReadOnly = true;
+            }
+
+            RefreshDataGridView();
             if (IsShowTagGroup)
                 return;
             OnTagGroupChanged(sender, ModifyType.RegisterType);
@@ -233,6 +266,7 @@ namespace KpHiteModbus.Modbus.View
 
             //界面显示刷新
             numTagCount.Value = ModbusTagGroup.TagCount;
+            RefreshDataGridView();
         }
 
         private void dgvTags_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
@@ -371,7 +405,7 @@ namespace KpHiteModbus.Modbus.View
                 }
                 //界面显示刷新
                 numTagCount.Value = ModbusTagGroup.TagCount;
-                OnTagGroupChanged(null, ModifyType.TagCount);
+                RefreshDataGridView();
             }
             catch(Exception ex)
             {

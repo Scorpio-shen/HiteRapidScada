@@ -40,11 +40,53 @@ namespace KpHiteModbus.Modbus.Model
             get=>registerType;
             set
             {
+                var oldType = registerType;
                 registerType = value;
-                SetRegisterType(registerType);
+                
+                SetRegisterType(registerType,oldType);
             }
         }
-        private void SetRegisterType(RegisterTypeEnum registerType) => Tags.ForEach(t => t.RegisterType = registerType);
+        private void SetRegisterType(RegisterTypeEnum registerType,RegisterTypeEnum oldType)
+        {
+            if(TagCount > 0)
+            {
+                var newType = registerType;
+                bool setBool = false;
+                bool setUShort = false;
+                bool setReadWritefalse = false;
+                if(oldType == RegisterTypeEnum.Coils || oldType == RegisterTypeEnum.DiscretesInputs)
+                {
+                    if(newType == RegisterTypeEnum.InputRegisters || newType == RegisterTypeEnum.HoldingRegisters)
+                    {
+                        //切换寄存器类型,数据类型变更ushort
+                        setUShort = true;
+                    }
+                }
+                else
+                {
+                    if(newType == RegisterTypeEnum.Coils || newType == RegisterTypeEnum.DiscretesInputs)
+                    {
+                        //切换寄存器类型,数据类型变更bool
+                        setBool = true;
+                    }
+                }
+                //不允许写入
+                if(newType == RegisterTypeEnum.DiscretesInputs || newType == RegisterTypeEnum.InputRegisters)
+                    setReadWritefalse = true;
+
+
+                Tags.ForEach(t =>
+                {
+                    if (setBool)
+                        t.DataType = DataTypeEnum.Bool;
+                    else if (setUShort)
+                        t.DataType = DataTypeEnum.UShort;
+                    if (setReadWritefalse)
+                        t.CanWriteBool = false;
+                    t.RegisterType = registerType;
+                });
+            }
+        }
         private double maxrequestbytelength;
 
         /// <summary>

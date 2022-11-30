@@ -13,7 +13,9 @@ namespace KpHiteModbus.Modbus.View
     {
         FrmDevAddRangeViewModel ViewModel { get; set; }
         readonly ModbusTagGroup _modbusTagGroup;
-       
+        BindingSource bindSourceDataTypeOnlyBool;
+        BindingSource bindSourceDataTypeExceptBool;
+
         public FrmDevAddRange(ModbusTagGroup modbusTagGroup)
         {
             InitializeComponent();
@@ -24,14 +26,31 @@ namespace KpHiteModbus.Modbus.View
 
         private void InitControl()
         {
-            //绑定存储器类
-            Dictionary<string, DataTypeEnum> keyValueDataTypeEnums = new Dictionary<string, DataTypeEnum>();
-            foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
-                keyValueDataTypeEnums.Add(type.ToString(), type);
+            Dictionary<string, DataTypeEnum> keyValueDataTypeEnumsOnlyBool = new Dictionary<string, DataTypeEnum>();
+            keyValueDataTypeEnumsOnlyBool.Add(DataTypeEnum.Bool.ToString(), DataTypeEnum.Bool);
+            bindSourceDataTypeOnlyBool = new BindingSource();
+            bindSourceDataTypeOnlyBool.DataSource = keyValueDataTypeEnumsOnlyBool;
 
-            BindingSource bindingSourceDataType = new BindingSource();
-            bindingSourceDataType.DataSource = keyValueDataTypeEnums;
-            cbxDataType.DataSource = bindingSourceDataType;
+            Dictionary<string, DataTypeEnum> keyValueDataTypeEnumsExceptBool = new Dictionary<string, DataTypeEnum>();
+            foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
+                if (type != DataTypeEnum.Bool)
+                    keyValueDataTypeEnumsExceptBool.Add(type.ToString(), type);
+            bindSourceDataTypeExceptBool = new BindingSource();
+            bindSourceDataTypeExceptBool.DataSource = keyValueDataTypeEnumsExceptBool;
+
+            //绑定存储器类
+            //Dictionary<string, DataTypeEnum> keyValueDataTypeEnums = new Dictionary<string, DataTypeEnum>();
+            //foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
+            //    keyValueDataTypeEnums.Add(type.ToString(), type);
+
+            //BindingSource bindingSourceDataType = new BindingSource();
+            //bindingSourceDataType.DataSource = keyValueDataTypeEnums;
+
+            if (_modbusTagGroup.RegisterType == RegisterTypeEnum.Coils || _modbusTagGroup.RegisterType == RegisterTypeEnum.DiscretesInputs)
+                cbxDataType.DataSource = bindSourceDataTypeOnlyBool;
+            else
+                cbxDataType.DataSource = bindSourceDataTypeExceptBool;
+            //cbxDataType.DataSource = bindingSourceDataType;
             cbxDataType.DisplayMember = "Key";
             cbxDataType.ValueMember = "Value";
 

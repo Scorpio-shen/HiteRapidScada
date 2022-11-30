@@ -1,6 +1,8 @@
 ﻿using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using Scada.KPModel;
+using Scada.KPModel.Attributes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -258,25 +260,41 @@ namespace Scada.Helper
         private static Dictionary<string, string> GetPropertyByType<In>(bool isToExcel)
         {
             Dictionary<string, string> dict = new Dictionary<string, string>();
+            List<SortTemp> sortTemps = new List<SortTemp>();
+
             var type = typeof(In);
             try
             {
                 foreach (var item in type.GetProperties())
                 {
                     var displayName = item.GetCustomAttributes<DisplayNameAttribute>(false).FirstOrDefault();
+                    var sort = item.GetCustomAttribute<ExcelHeaderSortAttribute>(false); 
                     if (displayName != null)
                     {
-                        if (isToExcel)
+                        //if (isToExcel)
+                        //{
+                        //    dict.Add(item.Name, displayName.DisplayName);
+                        //}
+                        //else
+                        //{
+                        //    dict.Add(displayName.DisplayName, item.Name);
+                        //}
+                        if(sort != null)
                         {
-                            dict.Add(item.Name, displayName.DisplayName);
-                        }
-                        else
-                        {
-                            dict.Add(displayName.DisplayName, item.Name);
+                            var sortTemp = new SortTemp();
+                            sortTemp.SortIndex = sort.SortIndex;
+                            if(isToExcel)
+                                sortTemp.Sort = new KeyValuePair<string, string>(item.Name, displayName.DisplayName);
+                            else
+                                sortTemp.Sort = new KeyValuePair<string, string>(displayName.DisplayName, item.Name);
+
+                            sortTemps.Add(sortTemp);
                         }
                     }
 
                 }
+                var sortList = sortTemps.OrderBy(s => s.SortIndex);
+                dict = sortList.Select(s => s.Sort).ToDictionary(s => s.Key, s => s.Value);
             }
             catch (Exception e)
             {
@@ -492,6 +510,24 @@ namespace Scada.Helper
                                                 }
                                             }
                                         }
+                                        else if(item.PropertyType == typeof(byte))
+                                        {
+                                            try
+                                            {
+                                                byte value = default;
+                                                if (cell.CellType == CellType.String)
+                                                    value = Convert.ToByte(cell.ToString());
+                                                else
+                                                    value = Convert.ToByte(cell.NumericCellValue);
+
+                                                item.SetValue(t, value);
+
+                                            }
+                                            catch
+                                            {
+                                                throw new Exception($"byte:{cell}格式不正确");
+                                            }
+                                        }
                                     }
                                 }
                                 if (isAddList == false)
@@ -641,5 +677,11 @@ namespace Scada.Helper
             }
             return sheet;
         }
+    }
+
+    public class SortTemp
+    {
+        public int SortIndex { get; set; }
+        public KeyValuePair<string, string> Sort { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿
 using Scada.KPModel;
+using Scada.KPModel.Attributes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -28,7 +29,7 @@ namespace KpHiteModbus.Modbus.Model
                 Name = tagname,
                 DataType = dataType,
                 Address = address,
-                CanWrite = (byte)(canwrite ? 2 : 0),
+                CanWrite = (byte)(canwrite ? 1 : 0),
                 RegisterType = registerType
             };
         }
@@ -49,7 +50,8 @@ namespace KpHiteModbus.Modbus.Model
             }
         }
 
-
+        [DisplayName("数据类型")]
+        [ExcelHeaderSort(2)]
         public override string DataTypeDesc
         {
             get => DataType.ToString();
@@ -68,10 +70,10 @@ namespace KpHiteModbus.Modbus.Model
 
         public bool CanWriteBool
         {
-            get => CanWrite == 2;
+            get => CanWrite > 0;
             set
             {
-                CanWrite = (byte)(value ? 2 : 0);
+                CanWrite = (byte)(value ? 1 : 0);
                 OnPropertyChanged(nameof(CanWriteBool));
             }
         }

@@ -126,6 +126,7 @@
     <Compile Include="Data\Tables\TableFilter.cs" />
     <Compile Include="Data\Tables\TableIndex.cs" />
     <Compile Include="Data\Tables\TableRelation.cs" />
+    <Compile Include="KPModel\Attributes\ExcelHeaderSortAttribute.cs" />
     <Compile Include="KPModel\DIService\DIModbusService\ModbusServiceExtend.cs" />
     <Compile Include="KPModel\DIService\DIServiceHelper.cs" />
     <Compile Include="KPModel\Extend\ControlExtend.cs" />
@@ -141,7 +142,6 @@
     <Compile Include="ISettings.cs" />
     <Compile Include="KPModel\Attributes\DataTypeByteCountAttribute.cs" />
     <Compile Include="KPModel\DataUnit.cs" />
-    <Compile Include="KPModel\ExcelHeaderSortIndex.cs" />
     <Compile Include="KPModel\GroupUnit.cs" />
     <Compile Include="KPModel\InterFace\IDataUnit.cs" />
     <Compile Include="KPModel\RequestModel.cs" />

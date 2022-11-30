@@ -283,6 +283,7 @@ namespace KpSiemens.Siemens.View
             //}
             //界面显示刷新
             numTagCount.Value = siemensTagGroup.TagCount;
+            RefreshDataGridView();
         }
 
         private void dgvTags_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
@@ -421,7 +422,7 @@ namespace KpSiemens.Siemens.View
                 }
                 //界面显示刷新
                 numTagCount.Value = siemensTagGroup.TagCount;
-                OnTagGroupChanged(null, ModifyType.TagCount);
+                RefreshDataGridView();
             }
             catch(Exception ex)
             {
