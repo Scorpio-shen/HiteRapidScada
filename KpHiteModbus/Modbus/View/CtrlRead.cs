@@ -116,7 +116,7 @@ namespace KpHiteModbus.Modbus.View
             cbxRegisterType.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.RegisterType));
             numTagCount.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.TagCount));
             txtMaxAddressLength.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.MaxRequestByteLength));
-            txtRquestLength.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.RequestLength));
+            //txtRquestLength.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.RequestLength));
 
             //txtGroupName.Text = ModbusTagGroup.Name;
             //chkActive.Checked = ModbusTagGroup.Active;

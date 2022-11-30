@@ -257,7 +257,14 @@ namespace KpSiemens.Siemens.Model
                 var tag = Tags.Last();
                 if (double.TryParse(tag.Address, out double address))
                 {
-                    model.Length = (ushort)(address + tag.DataType.GetByteCount());
+                    var length = address + tag.DataType.GetByteCount() - StartAddress;
+                    double dPart = length % 1; //小数部分
+                    int iPart = (int)length;   //整数部分
+
+                    model.Length += (ushort)iPart;
+
+                    if (dPart > 0)
+                        model.Length += 1;
                     if (tag.Length > 0)
                         model.Length += (ushort)tag.Length;
                 }

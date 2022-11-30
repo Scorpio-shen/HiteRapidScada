@@ -1,8 +1,10 @@
 ﻿using KpHiteModbus.Modbus.Extend;
 using Scada;
+using Scada.Data.Tables;
 using Scada.Extend;
 using Scada.KPModel;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -103,15 +105,15 @@ namespace KpHiteModbus.Modbus.Model
             set => maxrequestbytelength = value;
         }
 
-        private int requestlength;
-        /// <summary>
-        /// 请求寄存器个数
-        /// </summary>
-        public int RequestLength
-        {
-            get => requestlength;
-            set=> requestlength = value;
-        }
+        //private int requestlength;
+        ///// <summary>
+        ///// 请求寄存器个数
+        ///// </summary>
+        //public int RequestLength
+        //{
+        //    get => requestlength;
+        //    set=> requestlength = value;
+        //}
         #endregion
 
         #region 载入存储Xml
@@ -125,7 +127,7 @@ namespace KpHiteModbus.Modbus.Model
             Active = tagElem.GetAttrAsBool("Active",true);
             RegisterType = tagElem.GetAttrAsEnum("RegisterType", RegisterTypeEnum.HoldingRegisters);
             MaxRequestByteLength = tagElem.GetAttrAsDouble("MaxRequestByteLength");
-            RequestLength = tagElem.GetAttrAsInt("RequestLength");
+            //RequestLength = tagElem.GetAttrAsInt("RequestLength");
             if(MaxRequestByteLength == 0)
                 MaxRequestByteLength = TagGroupDefaultValues.MaxAddressLength;
 
@@ -159,7 +161,7 @@ namespace KpHiteModbus.Modbus.Model
             tagGroupElement.SetAttribute("Active", Active);
             tagGroupElement.SetAttribute("RegisterType", RegisterType);
             tagGroupElement.SetAttribute("MaxRequestByteLength", MaxRequestByteLength);
-            tagGroupElement.SetAttribute("RequestLength", RequestLength);
+            //tagGroupElement.SetAttribute("RequestLength", RequestLength);
             foreach (Tag tag in Tags)
             {
                 XmlElement tagElem = tagGroupElement.AppendElem("Tag");
@@ -202,17 +204,40 @@ namespace KpHiteModbus.Modbus.Model
         {
             var model = new TagGroupRequestModel();
             var functionCode = GetFunctionCode(RegisterType);
-            model.Address = $"x={RegisterType};{StartAddress}";
+            model.Address = $"x={functionCode};{StartAddress}";
             if (TagCount == 0)
                 model.Length = 0;
             else
             {
-                var tag = Tags.Last();
-                if (double.TryParse(tag.Address, out double address))
+                var tagLast = Tags.Last();
+                if (double.TryParse(tagLast.Address, out double address))
                 {
-                    model.Length = (ushort)(address + tag.DataType.GetByteCount());
-                    if (tag.Length > 0)
-                        model.Length += (ushort)tag.Length;
+                    var length = address - StartAddress;
+                    double dPart = length % 1; //小数部分
+                    int iPart = (int)length;   //整数部分 
+
+                    model.Length += (ushort)iPart;
+                    if (RegisterType == RegisterTypeEnum.Coils || RegisterType == RegisterTypeEnum.DiscretesInputs)
+                    {
+                        model.Length += 1;
+                    }
+                    else
+                    {
+                        model.Length += (ushort)iPart;
+                        //根据最后一个Tag的数据类型,占据的字节数
+                        var lastByteCount = tagLast.DataType.GetByteCount();
+                        if (tagLast.DataType == DataTypeEnum.String)
+                            lastByteCount += tagLast.Length;
+
+                        //除以2看需要几个寄存器
+                        var lastdPart = lastByteCount / 2;
+                        var lastiPart = lastByteCount % 2;
+
+                        model.Length += (ushort)lastdPart;
+                        if (lastiPart > 0)
+                            model.Length += 1;
+
+                    }
                 }
                 else
                     model.Length = 0;
@@ -221,7 +246,7 @@ namespace KpHiteModbus.Modbus.Model
             return model;
         }
 
-        private byte GetFunctionCode(RegisterTypeEnum register,bool iswrite = false,bool ismultiple = true)
+        public byte GetFunctionCode(RegisterTypeEnum register,bool iswrite = false,bool ismultiple = true)
         {
             byte code = default;
             if (!iswrite)
@@ -263,7 +288,85 @@ namespace KpHiteModbus.Modbus.Model
 
             return code;
         }
+
+        public byte GetFunctionCode(bool iswrite = false, bool ismultiple = true) => GetFunctionCode(RegisterType, iswrite, ismultiple);
         #endregion
 
+
+        public double? GetTagVal(int index)
+        {
+            double? result = null;
+            try
+            {
+                if (TagCount == 0 || index >= Tags.Count)
+                    return result;
+                var tag = Tags[index];
+                if (tag == null)
+                    return result;
+                if (Data == null || Data.Length == 0)
+                    return result;
+
+                double address = tag.Address.ToDouble() - StartAddress;
+                double dPart = address % 1; //小数部分
+                int iPart = (int)address;   //整数部分
+
+                if (tag.DataType == DataTypeEnum.Bool)
+                {
+                    if (Data.Length >= iPart + 1)
+                    {
+                        var bitArray = new BitArray(Data.Skip(iPart).Take(1).ToArray());
+                        if (iPart < 8)
+                        {
+                            int bitIndex = (int)(dPart * 10);
+                            result = bitArray.Get(bitIndex) ? 1.0 : 0.0;
+                        }
+                    }
+                    return result;
+                }
+                var byteCount = tag.DataType.GetByteCount();
+                if (Data.Length < iPart + byteCount)    //超出数据长度
+                    return result;
+                byte[] buf = Data.Skip(iPart).Take(byteCount).ToArray();
+                switch (tag.DataType)
+                {
+                    case DataTypeEnum.Byte:
+                        return buf[0];
+                    case DataTypeEnum.UShort:
+                        return BitConverter.ToUInt16(buf, 0);
+                    case DataTypeEnum.Short:
+                        return BitConverter.ToInt16(buf, 0);
+                    case DataTypeEnum.UInt:
+                        return BitConverter.ToUInt32(buf, 0);
+                    case DataTypeEnum.Int:
+                        return BitConverter.ToInt32(buf, 0);
+                    case DataTypeEnum.ULong:
+                        return BitConverter.ToUInt64(buf, 0);
+                    case DataTypeEnum.Long:
+                        return BitConverter.ToInt64(buf, 0);
+                    case DataTypeEnum.Float:
+                        return BitConverter.ToSingle(buf, 0);
+                    case DataTypeEnum.Double:
+                        return BitConverter.ToDouble(buf, 0);
+                    case DataTypeEnum.String:
+                        //取实际内容部分
+                        try
+                        {
+                            buf = Data.Skip(iPart + byteCount).Take(tag.Length).ToArray();
+                            var str = Encoding.ASCII.GetString(buf).TrimEnd('\0');
+                            return ScadaUtils.EncodeAscii(str);
+                        }
+                        catch
+                        {
+                            return null;
+                        }
+                }
+
+                return result;
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

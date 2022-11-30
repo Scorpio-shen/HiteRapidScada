@@ -17,7 +17,7 @@ namespace KpHiteModbus.Modbus.Model.EnumType
         Udp,
         [Description("RTUASCIIOverTcp")]
         RTUASCIIOverTcp,
-        [Description("RTUASCIIOverUdp")]
-        RTUASCIIOverUdp,
+        //[Description("RTUASCIIOverUdp")]
+        //RTUASCIIOverUdp,
     }
 }
