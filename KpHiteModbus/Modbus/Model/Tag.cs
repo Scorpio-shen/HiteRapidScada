@@ -30,7 +30,8 @@ namespace KpHiteModbus.Modbus.Model
                 DataType = dataType,
                 Address = address,
                 CanWrite = (byte)(canwrite ? 1 : 0),
-                RegisterType = registerType
+                RegisterType = registerType,
+                Length = length
             };
         }
 

@@ -23,6 +23,7 @@ namespace Scada.Comm.Devices
         private int activeTagGroupsCount;                           //Active的Group数
         private SiemensS7Net siemensS7Net;
 
+        bool IsConnected = false;
         public KpSiemensLogic(int number) : base(number)
         {
             ConnRequired = false;
@@ -161,17 +162,26 @@ namespace Scada.Comm.Devices
         /// </summary>
         public override void OnCommLineStart()
         {
+            ConnectServer();
+        }
+
+        private void ConnectServer()
+        {
             try
             {
+                if (IsConnected)
+                    return;
                 var option = deviceTemplate.ConnectionOptions;
                 siemensS7Net = new SiemensS7Net(option.SiemensPLCTypeEnum.ToHslSiemensPLCS(), option.IPAddress);
                 var result = siemensS7Net.ConnectServer();
                 if (!result.IsSuccess)
                     WriteToLog($"KpSiemensLogic_OnCommLineStart,连接PLC失败,{result.Message}");
+                IsConnected = result.IsSuccess;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 WriteToLog($"KpSiemensLogic_OnCommLineStart,连接PLC异常,{ex.Message}");
+                IsConnected = false;
             }
         }
         #endregion
@@ -228,6 +238,12 @@ namespace Scada.Comm.Devices
         {
             var model = tagGroup.GetRequestModel();
             WriteToLog($"开始请求数据,GroupName:{tagGroup.Name},寄存器类型:{tagGroup.MemoryType},起始地址:{model.Address},请求长度:{model.Length}");
+            if (!IsConnected)
+            {
+                WriteToLog($"KpSiemensLogic_RequestData,读取数据失败,未连接到设备,连接参数,{JsonConvert.SerializeObject(deviceTemplate.ConnectionOptions)}");
+                return false;
+            }
+
             try
             {
                 var result = siemensS7Net.Read(model.Address, model.Length);

@@ -65,6 +65,7 @@
             this.cbxMode.Name = "cbxMode";
             this.cbxMode.Size = new System.Drawing.Size(126, 20);
             this.cbxMode.TabIndex = 23;
+            this.cbxMode.SelectedIndexChanged += new System.EventHandler(this.cbxMode_SelectedIndexChanged);
             // 
             // txtParams
             // 

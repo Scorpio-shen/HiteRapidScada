@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Scada.KPModel.InterFace
 {
-    public interface IDataUnit : IComparable<DataUnit>, INotifyPropertyChanged, ICloneable
+    public interface IDataUnit : IComparable<IDataUnit>, INotifyPropertyChanged, ICloneable
     {
         #region 属性
         /// <summary>

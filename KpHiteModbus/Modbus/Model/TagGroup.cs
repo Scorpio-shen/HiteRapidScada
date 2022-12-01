@@ -189,8 +189,21 @@ namespace KpHiteModbus.Modbus.Model
             RefreshTagAddress();
 
             var model = GetRequestModel();
+            int byteCount = default;
             //验证是否超出最大地址限制
-            if (model.Length > MaxRequestByteLength)
+            if(RegisterType == RegisterTypeEnum.Coils || RegisterType == RegisterTypeEnum.DiscretesInputs)
+            {
+                //一个寄存器代表一个bit
+                byteCount = model.Length / 8;
+                if (model.Length % 8 > 0)
+                    byteCount += 1;
+            }
+            else
+            {
+                //一个寄存器表示两个byte
+                byteCount = model.Length * 2;
+            }
+            if (byteCount > MaxRequestByteLength)
             {
                 Tags.Clear();
                 Tags.AddRange(tagsOld);
@@ -212,30 +225,26 @@ namespace KpHiteModbus.Modbus.Model
                 var tagLast = Tags.Last();
                 if (double.TryParse(tagLast.Address, out double address))
                 {
-                    var length = address - StartAddress;
-                    double dPart = length % 1; //小数部分
-                    int iPart = (int)length;   //整数部分 
 
-                    model.Length += (ushort)iPart;
                     if (RegisterType == RegisterTypeEnum.Coils || RegisterType == RegisterTypeEnum.DiscretesInputs)
                     {
+                        var length = (ushort)(address - StartAddress);  //获取首尾长度间隔
+                        model.Length+= length;
                         model.Length += 1;
                     }
                     else
                     {
-                        model.Length += (ushort)iPart;
                         //根据最后一个Tag的数据类型,占据的字节数
                         var lastByteCount = tagLast.DataType.GetByteCount();
                         if (tagLast.DataType == DataTypeEnum.String)
                             lastByteCount += tagLast.Length;
 
+                        //获取总请求字节长度
+                        var length = address - StartAddress;
                         //除以2看需要几个寄存器
-                        var lastdPart = lastByteCount / 2;
-                        var lastiPart = lastByteCount % 2;
-
-                        model.Length += (ushort)lastdPart;
-                        if (lastiPart > 0)
-                            model.Length += 1;
+                        var regCount = (ushort)(lastByteCount / 2 + lastByteCount % 2);
+                        model.Length += (ushort)length;
+                        model.Length += regCount;
 
                     }
                 }
@@ -288,8 +297,6 @@ namespace KpHiteModbus.Modbus.Model
 
             return code;
         }
-
-        public byte GetFunctionCode(bool iswrite = false, bool ismultiple = true) => GetFunctionCode(RegisterType, iswrite, ismultiple);
         #endregion
 
 
@@ -306,62 +313,66 @@ namespace KpHiteModbus.Modbus.Model
                 if (Data == null || Data.Length == 0)
                     return result;
 
-                double address = tag.Address.ToDouble() - StartAddress;
-                double dPart = address % 1; //小数部分
-                int iPart = (int)address;   //整数部分
-
-                if (tag.DataType == DataTypeEnum.Bool)
+                int addressOffSet = (int)(tag.Address.ToDouble() - StartAddress); //地址偏移
+                if (RegisterType == RegisterTypeEnum.Coils || RegisterType == RegisterTypeEnum.DiscretesInputs)
                 {
-                    if (Data.Length >= iPart + 1)
+                    if(tag.DataType != DataTypeEnum.Bool)
+                        return result;
+
+                    //除以8
+                    var skipByte = addressOffSet / 8;
+                    var selectBit = addressOffSet % 8;
+                    if (skipByte + 1 > Data.Length)
+                        return result;
+                    var bitArray = new BitArray(Data.Skip(skipByte).Take(1).ToArray());
+                    result = bitArray[selectBit] ? 1d : 0d;
+                    return result;
+                }
+                else
+                {
+                    var skipByte = addressOffSet * 2;
+                    var byteCount = tag.DataType.GetByteCount();
+                    if(skipByte + byteCount > Data.Length) 
+                        return result;
+                    byte[] buf = Data.Skip(skipByte).Take(byteCount).Reverse().ToArray();
+                    switch (tag.DataType)
                     {
-                        var bitArray = new BitArray(Data.Skip(iPart).Take(1).ToArray());
-                        if (iPart < 8)
-                        {
-                            int bitIndex = (int)(dPart * 10);
-                            result = bitArray.Get(bitIndex) ? 1.0 : 0.0;
-                        }
+                        case DataTypeEnum.Byte:
+                            return buf[0];
+                        case DataTypeEnum.UShort:
+                            return BitConverter.ToUInt16(buf, 0);
+                        case DataTypeEnum.Short:
+                            return BitConverter.ToInt16(buf, 0);
+                        case DataTypeEnum.UInt:
+                            return BitConverter.ToUInt32(buf, 0);
+                        case DataTypeEnum.Int:
+                            return BitConverter.ToInt32(buf, 0);
+                        case DataTypeEnum.ULong:
+                            return BitConverter.ToUInt64(buf, 0);
+                        case DataTypeEnum.Long:
+                            return BitConverter.ToInt64(buf, 0);
+                        case DataTypeEnum.Float:
+                            return BitConverter.ToSingle(buf, 0);
+                        case DataTypeEnum.Double:
+                            return BitConverter.ToDouble(buf, 0);
+                        case DataTypeEnum.String:
+                            //取实际内容部分
+                            try
+                            {
+                                if(skipByte + byteCount + tag.Length > Data.Length) 
+                                    return result;
+                                buf = Data.Skip(skipByte + byteCount).Take(tag.Length).ToArray();
+                                var str = Encoding.ASCII.GetString(buf).TrimEnd('\0');
+                                return ScadaUtils.EncodeAscii(str);
+                            }
+                            catch
+                            {
+                                return null;
+                            }
                     }
                     return result;
                 }
-                var byteCount = tag.DataType.GetByteCount();
-                if (Data.Length < iPart + byteCount)    //超出数据长度
-                    return result;
-                byte[] buf = Data.Skip(iPart).Take(byteCount).ToArray();
-                switch (tag.DataType)
-                {
-                    case DataTypeEnum.Byte:
-                        return buf[0];
-                    case DataTypeEnum.UShort:
-                        return BitConverter.ToUInt16(buf, 0);
-                    case DataTypeEnum.Short:
-                        return BitConverter.ToInt16(buf, 0);
-                    case DataTypeEnum.UInt:
-                        return BitConverter.ToUInt32(buf, 0);
-                    case DataTypeEnum.Int:
-                        return BitConverter.ToInt32(buf, 0);
-                    case DataTypeEnum.ULong:
-                        return BitConverter.ToUInt64(buf, 0);
-                    case DataTypeEnum.Long:
-                        return BitConverter.ToInt64(buf, 0);
-                    case DataTypeEnum.Float:
-                        return BitConverter.ToSingle(buf, 0);
-                    case DataTypeEnum.Double:
-                        return BitConverter.ToDouble(buf, 0);
-                    case DataTypeEnum.String:
-                        //取实际内容部分
-                        try
-                        {
-                            buf = Data.Skip(iPart + byteCount).Take(tag.Length).ToArray();
-                            var str = Encoding.ASCII.GetString(buf).TrimEnd('\0');
-                            return ScadaUtils.EncodeAscii(str);
-                        }
-                        catch
-                        {
-                            return null;
-                        }
-                }
 
-                return result;
             }
             catch
             {

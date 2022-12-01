@@ -105,7 +105,7 @@ namespace KpHiteModbus.Modbus.View
             switch (connectionType)
             {
                 case ModbusConnectionTypeEnum.SerialPort:
-                case ModbusConnectionTypeEnum.RTUASCIIOverUdp:
+                //case ModbusConnectionTypeEnum.RTUASCIIOverUdp:
                 case ModbusConnectionTypeEnum.RTUASCIIOverTcp:
                     cbxMode.Enabled = true;
                     break;

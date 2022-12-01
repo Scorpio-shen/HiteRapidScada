@@ -66,7 +66,12 @@ namespace Scada.KPModel
                 if (double.TryParse(value, out double valueAddress))
                 {
                     if (valueAddress >= 0d)
+                    {
                         address = valueAddress.ToString();
+                        OnPropertyChanged(nameof(Address));
+
+                    }
+                        
                 }
             }
         }
@@ -121,7 +126,7 @@ namespace Scada.KPModel
             return MemberwiseClone();
         }
 
-        public virtual int CompareTo(DataUnit other)
+        public virtual int CompareTo(IDataUnit other)
         {
             if (double.TryParse(Address, out double currentAddress))
             {

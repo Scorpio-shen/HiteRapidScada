@@ -63,9 +63,35 @@ namespace Scada.Comm.Devices
                             lastCommSucc = true;
                             SetTagsData(tagGroup);
                         }
+
+                        FinishRequest();
+                        tryNum++;
+                    }
+
+                    if(lastCommSucc)
+                        tagGroupIndex++;
+                    else if(tryNum > 0)
+                    {
+                        while(tagGroupIndex < ActiveTagGroupCount)
+                        {
+                            tagGroup = modbustagGroupsActive[tagGroupIndex];
+                            if (tagGroup.TagCount > 0)
+                                InvalidateCurData(tagGroup.StartKpTagIndex, tagGroup.TagCount);
+                            tagGroupIndex++;
+                        }
                     }
                 }
             }
+            else
+            {
+                WriteToLog(Localization.UseRussian ?
+                    "Отсутствуют элементы для запроса" :
+                    "No elements for request");
+                Thread.Sleep(ReqParams.Delay);
+            }
+
+            // 状态刷新
+            CalcSessStats();
         }
 
 
@@ -100,8 +126,16 @@ namespace Scada.Comm.Devices
                     int tryNum = 0;
                     while (RequestNeeded(ref tryNum))
                     {
-                        if ()
+                        if (RequestWriteData(tag,tagGroup))
+                            lastCommSucc = true;
+                        FinishRequest();
+                        tryNum++;
                     }
+                }
+                else
+                {
+                    lastCommSucc= false;
+                    WriteToLog(CommPhrases.IllegalCommand);
                 }
 
             }
@@ -294,21 +328,61 @@ namespace Scada.Comm.Devices
         {
             if (tag.Data == null)
                 return false;
-            var address = string.Empty;
-            var functionCode = tagGroup.GetFunctionCode(true);
-            address =  $"x={functionCode};{tag.Address}";
 
-            WriteToLog($"开始写入数据,Name:{tag.Name},寄存器类型:{tag.RegisterType},地址:{tag.Address},写入值:{JsonConvert.SerializeObject(tag.Data)}");
+
+            var address =  $"{tag.Address}";
+            WriteToLog($"KpHiteModbusLogic_RequestWriteData,开始写入数据,Name:{tag.Name},寄存器类型:{tag.RegisterType},地址:{tag.Address},写入值:{JsonConvert.SerializeObject(tag.Data)}");
             try
             {
+                OperateResult operateResult = new OperateResult { IsSuccess = false};
                 switch (tag.DataType)
                 {
                     case DataTypeEnum.Bool:
-                        modbus.Write(address, (bool)tag.Data);
+                        var functionCode = tagGroup.GetFunctionCode(tagGroup.RegisterType, iswrite: true, ismultiple: true);
+                        address = $"x={functionCode};{tag.Address}";
+                        operateResult = modbus.Write(address,new bool[] { (bool)tag.Data });
                         break;
-                        case DataTypeEnum
+                    case DataTypeEnum.Byte:
+                        operateResult = modbus.Write(address,((byte)tag.Data));
+                        break;
+                    case DataTypeEnum.Short:
+                        operateResult = modbus.Write(address,(short)tag.Data);
+                        break;
+                    case DataTypeEnum.UShort:
+                        operateResult = modbus.Write(address,(ushort)tag.Data);
+                        break;
+                    case DataTypeEnum.Int:
+                        operateResult = modbus.Write(address,(int)tag.Data);
+                        break;
+                    case DataTypeEnum.UInt:
+                        operateResult = modbus.Write(address,(uint)tag.Data);
+                        break; 
+                    case DataTypeEnum.Long:
+                        operateResult = modbus.Write(address,(long)tag.Data);
+                        break; 
+                    case DataTypeEnum.ULong:
+                        operateResult = modbus.Write(address,(ulong)tag.Data);
+                        break;
+                    case DataTypeEnum.Float:
+                        operateResult = modbus.Write(address,(float)tag.Data);
+                        break;
+                    case DataTypeEnum.Double:
+                        operateResult = modbus.Write(address,(double)tag.Data);
+                        break;
+                    case DataTypeEnum.String:
+                        operateResult = modbus.Write(address,(string)tag.Data);
+                        break;
+                    default:
+                        operateResult.Message = $"未知数据类型,{tag.DataType}";
+                        break;
                 }
-                OperateResult result = modbus.Write
+                WriteToLog($"KpHiteModbusLogic_RequestWriteData,写入数据结束,Name:{tag.Name},写入结果:{operateResult.IsSuccess},Message:{operateResult.Message}");
+                return operateResult.IsSuccess;
+            }
+            catch(Exception ex)
+            {
+                WriteToLog($"KpHiteModbusLogic_RequestWriteData,写入数据异常,{ex.Message},StackTrace:{ex.StackTrace}");
+                return false;
             }
         }
         #endregion
