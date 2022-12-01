@@ -3,6 +3,7 @@ using KpSiemens.Siemens.Model;
 using KpSiemens.Siemens.ViewModel;
 using Scada.Extend;
 using Scada.Helper;
+using Scada.KPModel.Extend;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
@@ -105,6 +106,13 @@ namespace KpSiemens.Siemens.View
         {
             if (SiemensTagGroup == null)
                 return;
+            txtGroupName.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.Name));
+            chkActive.AddDataBindings(SiemensTagGroup,nameof(SiemensTagGroup.Active));
+            cbxMemoryType.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.MemoryType));
+            lblDbNum.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.DBNum));
+            numTagCount.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.TagCount));
+            lblDbNum.Visible = numDbNum.Visible = SiemensTagGroup.MemoryType == MemoryTypeEnum.DB;
+
             txtGroupName.Text = SiemensTagGroup.Name;
             chkActive.Checked = SiemensTagGroup.Active;
             cbxMemoryType.SelectedValue = SiemensTagGroup.MemoryType;
