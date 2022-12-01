@@ -1,14 +1,12 @@
 ﻿using Scada.KPModel.InterFace;
-using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 
 namespace Scada.KPModel
 {
-    public abstract class GroupUnit<T> where T : class,IDataUnit
+    public abstract class GroupUnit<T>:INotifyPropertyChanged  where T : class,IDataUnit 
     {
         #region 属性
         /// <summary>
@@ -18,7 +16,16 @@ namespace Scada.KPModel
         /// <summary>
         /// 点名
         /// </summary>
-        public string Name { get; set; }
+        private string name;
+        public string Name
+        {
+            get => name;
+            set
+            {
+                name = value;
+                OnPropertyChanged(nameof(Name));
+            }
+        }
         /// <summary>
         /// 起始地址
         /// </summary>
@@ -42,12 +49,30 @@ namespace Scada.KPModel
         /// <summary>
         /// 是否激活
         /// </summary>
-        public bool Active { get; set; }
+        private bool active;
+        public bool Active
+        {
+            get => active;
+            set
+            {
+                active = value;
+                OnPropertyChanged(nameof(Active));
+            }
+        }
 
+        private int dbnum = 1;
         /// <summary>
         /// DB块号
         /// </summary>
-        public int DBNum { get; set; } = 1;
+        public int DBNum
+        {
+            get => dbnum;
+            set
+            {
+                dbnum = value;
+                OnPropertyChanged(nameof(DBNum));
+            }
+        }
 
         /// <summary>
         /// 起始点在所有Group包含的Tag的起始索引
@@ -72,6 +97,13 @@ namespace Scada.KPModel
         /// 最大地址长度（限制配置点时防止超出最大地址长度）
         /// </summary>
         public abstract double MaxRequestByteLength { get; set; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public void OnPropertyChanged(string proName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(proName));
+        }
         #endregion
 
         #region 抽象或虚方法

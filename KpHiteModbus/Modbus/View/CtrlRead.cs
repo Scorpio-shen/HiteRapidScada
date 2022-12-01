@@ -116,7 +116,8 @@ namespace KpHiteModbus.Modbus.View
             cbxRegisterType.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.RegisterType));
             numTagCount.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.TagCount));
             txtMaxAddressLength.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.MaxRequestByteLength));
-            //txtRquestLength.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.RequestLength));
+
+            chkAllCanWrite.Checked = ModbusTagGroup.AllCanWrite;
 
             //txtGroupName.Text = ModbusTagGroup.Name;
             //chkActive.Checked = ModbusTagGroup.Active;
@@ -153,6 +154,10 @@ namespace KpHiteModbus.Modbus.View
             {
                 //地址变化需要对当前数组进行重新排序
                 ModbusTagGroup.RefreshTagAddress();
+            }
+            else if (e.PropertyName.Equals(nameof(tag.CanWriteBool)))
+            {
+                chkAllCanWrite.Checked = ModbusTagGroup.AllCanWrite;
             }
             TagGroupChanged?.Invoke(sender,new ModbusConfigChangedEventArgs
             {

@@ -111,15 +111,18 @@ namespace KpSiemens.Siemens.View
             cbxMemoryType.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.MemoryType));
             lblDbNum.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.DBNum));
             numTagCount.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.TagCount));
+            txtMaxAddressLength.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.MaxRequestByteLength));
+            //chkAllCanWrite.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.AllCanWrite));
             lblDbNum.Visible = numDbNum.Visible = SiemensTagGroup.MemoryType == MemoryTypeEnum.DB;
 
-            txtGroupName.Text = SiemensTagGroup.Name;
-            chkActive.Checked = SiemensTagGroup.Active;
-            cbxMemoryType.SelectedValue = SiemensTagGroup.MemoryType;
-            lblDbNum.Visible = numDbNum.Visible = SiemensTagGroup.MemoryType == MemoryTypeEnum.DB;
-            numDbNum.Value = SiemensTagGroup.DBNum < 1 ? 1 : SiemensTagGroup.DBNum;
-            numTagCount.Value = SiemensTagGroup.TagCount;
-            txtMaxAddressLength.Text = SiemensTagGroup.MaxRequestByteLength.ToString();
+            chkAllCanWrite.Checked = SiemensTagGroup.AllCanWrite;
+            //txtGroupName.Text = SiemensTagGroup.Name;
+            //chkActive.Checked = SiemensTagGroup.Active;
+            //cbxMemoryType.SelectedValue = SiemensTagGroup.MemoryType;
+            //lblDbNum.Visible = numDbNum.Visible = SiemensTagGroup.MemoryType == MemoryTypeEnum.DB;
+            //numDbNum.Value = SiemensTagGroup.DBNum < 1 ? 1 : SiemensTagGroup.DBNum;
+            //numTagCount.Value = SiemensTagGroup.TagCount;
+            //txtMaxAddressLength.Text = SiemensTagGroup.MaxRequestByteLength.ToString();
         }
 
         private void BindTagGroupTags(SiemensTagGroup group)
@@ -150,6 +153,10 @@ namespace KpSiemens.Siemens.View
             {
                 //地址变化需要对当前数组进行重新排序
                 siemensTagGroup.RefreshTagAddress();
+            }
+            else if (e.PropertyName.Equals(nameof(tag.CanWriteBool)))
+            {
+                chkAllCanWrite.Checked = SiemensTagGroup.AllCanWrite;
             }
             TagGroupChanged?.Invoke(sender, new TagGroupChangedEventArgs
             {
@@ -219,7 +226,7 @@ namespace KpSiemens.Siemens.View
                 return;
             if (IsShowTagGroup)
                 return;
-            SiemensTagGroup.Name =txtGroupName.Text;
+            //SiemensTagGroup.Name =txtGroupName.Text;
             //CtrlReadViewModel.GroupName = txtGroupName.Text; //Winform 虽然绑定了，但是得在焦点移开当前控件，Model里面的值才能变成textbox控件里的值,所以这里手动赋值
             OnTagGroupChanged(sender, ModifyType.GroupName);
         }
@@ -231,7 +238,8 @@ namespace KpSiemens.Siemens.View
             if (memoryType == null)
                 return;
             numDbNum.Visible = lblDbNum.Visible = memoryType == MemoryTypeEnum.DB;
-            SiemensTagGroup.MemoryType = (MemoryTypeEnum)memoryType;
+            if(SiemensTagGroup.MemoryType != memoryType)
+                SiemensTagGroup.MemoryType = (MemoryTypeEnum)memoryType;
 
             if(memoryType == MemoryTypeEnum.I)
             {
@@ -259,7 +267,7 @@ namespace KpSiemens.Siemens.View
                 return;
             if (IsShowTagGroup)
                 return;
-            SiemensTagGroup.DBNum = (int)numDbNum.Value;
+            //SiemensTagGroup.DBNum = (int)numDbNum.Value;
             OnTagGroupChanged(sender, ModifyType.DBNum);
 
         }
@@ -464,8 +472,7 @@ namespace KpSiemens.Siemens.View
                 ScadaUiUtils.ShowError($"导出异常,{ex.Message}");
             }
         }
-        #endregion
 
-        
+        #endregion
     }
 }

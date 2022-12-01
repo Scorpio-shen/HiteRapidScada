@@ -50,6 +50,7 @@ namespace KpSiemens.Siemens.Model
             {
                 memoryType = value;
                 SetMemoryType(memoryType);
+                OnPropertyChanged(nameof(MemoryType));
             }
         }
         /// <summary>

@@ -33,6 +33,14 @@ namespace KpHiteModbus.Modbus.Model
         #endregion
 
         #region 属性
+        /// <summary>
+        /// 是否全部支持写入
+        /// </summary>
+        public bool AllCanWrite
+        {
+            get => Tags?.Count > 0 && Tags.All(t => t.CanWrite > 0);
+        }
+
         private RegisterTypeEnum registerType;
         /// <summary>
         /// 寄存器类型
@@ -44,8 +52,8 @@ namespace KpHiteModbus.Modbus.Model
             {
                 var oldType = registerType;
                 registerType = value;
-                
                 SetRegisterType(registerType,oldType);
+                OnPropertyChanged(nameof(RegisterType));
             }
         }
         private void SetRegisterType(RegisterTypeEnum registerType,RegisterTypeEnum oldType)

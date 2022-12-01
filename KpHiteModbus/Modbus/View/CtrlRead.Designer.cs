@@ -28,7 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.txtMaxAddressLength = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
@@ -45,11 +44,12 @@
             this.dgvTagStringLength = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dgvTagAddress = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dgvTagCanWrite = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.cmsTags = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.cmsTags = new System.Windows.Forms.ContextMenuStrip();
             this.deleteTStripItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cbxRegisterType = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.bdsTags = new System.Windows.Forms.BindingSource(this.components);
+            this.bdsTags = new System.Windows.Forms.BindingSource();
+            this.chkAllCanWrite = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numTagCount)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvTags)).BeginInit();
@@ -59,6 +59,7 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.chkAllCanWrite);
             this.groupBox1.Controls.Add(this.txtMaxAddressLength);
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.btnAddRange);
@@ -250,6 +251,18 @@
             this.label1.TabIndex = 0;
             this.label1.Text = "寄存器类型";
             // 
+            // chkAllCanWrite
+            // 
+            this.chkAllCanWrite.AutoSize = true;
+            this.chkAllCanWrite.CheckAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.chkAllCanWrite.Location = new System.Drawing.Point(540, 30);
+            this.chkAllCanWrite.Name = "chkAllCanWrite";
+            this.chkAllCanWrite.Size = new System.Drawing.Size(72, 16);
+            this.chkAllCanWrite.TabIndex = 16;
+            this.chkAllCanWrite.Text = "全部勾选";
+            this.chkAllCanWrite.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
+            this.chkAllCanWrite.UseVisualStyleBackColor = true;
+            // 
             // CtrlRead
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -290,5 +303,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn dgvTagStringLength;
         private System.Windows.Forms.DataGridViewTextBoxColumn dgvTagAddress;
         private System.Windows.Forms.DataGridViewCheckBoxColumn dgvTagCanWrite;
+        private System.Windows.Forms.CheckBox chkAllCanWrite;
     }
 }
