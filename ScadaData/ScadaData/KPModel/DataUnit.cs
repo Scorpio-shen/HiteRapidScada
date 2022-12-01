@@ -1,4 +1,5 @@
-﻿using Scada.KPModel.InterFace;
+﻿using Scada.KPModel.Attributes;
+using Scada.KPModel.InterFace;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -19,6 +20,7 @@ namespace Scada.KPModel
         /// TagGroup中序号，组中唯一，按顺序排列
         /// </summary>
         [DisplayName("序号")]
+        [ExcelHeaderSort(0)]
         public int TagID
         {
             get => tagid;
@@ -34,6 +36,7 @@ namespace Scada.KPModel
         /// 点名
         /// </summary>
         [DisplayName("名称")]
+        [ExcelHeaderSort(1)]
         public string Name
         {
             get => name;
@@ -44,7 +47,8 @@ namespace Scada.KPModel
             }
         }
 
-        [DisplayName("数据类型")]
+        //[DisplayName("数据类型")]
+        //[ExcelHeaderSort(2)]
         public abstract string DataTypeDesc { get; set; }
 
         private string address;
@@ -52,6 +56,7 @@ namespace Scada.KPModel
         /// 地址
         /// </summary>
         [DisplayName("地址")]
+        [ExcelHeaderSort(3)]
 
         public string Address
         {
@@ -61,7 +66,12 @@ namespace Scada.KPModel
                 if (double.TryParse(value, out double valueAddress))
                 {
                     if (valueAddress >= 0d)
+                    {
                         address = valueAddress.ToString();
+                        OnPropertyChanged(nameof(Address));
+
+                    }
+                        
                 }
             }
         }
@@ -71,6 +81,7 @@ namespace Scada.KPModel
         /// 数据类型是string或其他数组类型加上长度
         /// </summary>
         [DisplayName("长度")]
+        [ExcelHeaderSort(4)]
         public int Length
         {
             get => length;
@@ -81,11 +92,21 @@ namespace Scada.KPModel
             }
         }
 
+        protected byte canwrite;
         /// <summary>
-        /// 是否支持写入(0只可读,1只可写，2可读可写)
+        /// 是否支持写入(0只可读,1可读可写)
         /// </summary>
         [DisplayName("是否支持写入")]
-        public byte CanWrite { get; set; }
+        [ExcelHeaderSort(5)]
+        public virtual byte CanWrite
+        {
+            get => canwrite;
+            set
+            {
+                canwrite = value;
+                OnPropertyChanged(nameof(CanWrite));
+            }
+        }
         #endregion
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -105,7 +126,7 @@ namespace Scada.KPModel
             return MemberwiseClone();
         }
 
-        public virtual int CompareTo(DataUnit other)
+        public virtual int CompareTo(IDataUnit other)
         {
             if (double.TryParse(Address, out double currentAddress))
             {

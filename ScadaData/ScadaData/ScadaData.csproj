@@ -44,8 +44,8 @@
     <Reference Include="Autofac, Version=3.5.0.0, Culture=neutral, PublicKeyToken=17863af14b0044da, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Autofac.3.5.2\lib\net40\Autofac.dll</HintPath>
     </Reference>
-    <Reference Include="HslCommunication, Version=11.2.1.0, Culture=neutral, PublicKeyToken=3d72ad3b6b5ec0e3, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\HslCommunication.11.2.1\lib\net451\HslCommunication.dll</HintPath>
+    <Reference Include="HslCommunication, Version=11.2.2.0, Culture=neutral, PublicKeyToken=3d72ad3b6b5ec0e3, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\HslCommunication.11.2.2\lib\net451\HslCommunication.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
       <HintPath>..\..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
@@ -126,8 +126,10 @@
     <Compile Include="Data\Tables\TableFilter.cs" />
     <Compile Include="Data\Tables\TableIndex.cs" />
     <Compile Include="Data\Tables\TableRelation.cs" />
+    <Compile Include="KPModel\Attributes\ExcelHeaderSortAttribute.cs" />
     <Compile Include="KPModel\DIService\DIModbusService\ModbusServiceExtend.cs" />
     <Compile Include="KPModel\DIService\DIServiceHelper.cs" />
+    <Compile Include="KPModel\Extend\ControlExtend.cs" />
     <Compile Include="KPModel\Extend\EnumHelper.cs" />
     <Compile Include="KPModel\Extend\StringExtendMethod.cs" />
     <Compile Include="FileListener.cs" />
@@ -140,7 +142,6 @@
     <Compile Include="ISettings.cs" />
     <Compile Include="KPModel\Attributes\DataTypeByteCountAttribute.cs" />
     <Compile Include="KPModel\DataUnit.cs" />
-    <Compile Include="KPModel\ExcelHeaderSortIndex.cs" />
     <Compile Include="KPModel\GroupUnit.cs" />
     <Compile Include="KPModel\InterFace\IDataUnit.cs" />
     <Compile Include="KPModel\RequestModel.cs" />

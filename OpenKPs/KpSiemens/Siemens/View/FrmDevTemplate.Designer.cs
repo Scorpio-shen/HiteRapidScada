@@ -30,7 +30,7 @@
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmDevTemplate));
-            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("变量集合");
+            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("变量集合");
             this.toolStrip = new System.Windows.Forms.ToolStrip();
             this.btnNew = new System.Windows.Forms.ToolStripButton();
             this.btnOpen = new System.Windows.Forms.ToolStripButton();
@@ -233,12 +233,12 @@
             this.treeView.ImageList = this.imageList;
             this.treeView.Location = new System.Drawing.Point(13, 18);
             this.treeView.Name = "treeView";
-            treeNode1.ImageKey = "group.png";
-            treeNode1.Name = "tagGroupNode";
-            treeNode1.SelectedImageKey = "group.png";
-            treeNode1.Text = "变量集合";
+            treeNode2.ImageKey = "group.png";
+            treeNode2.Name = "tagGroupNode";
+            treeNode2.SelectedImageKey = "group.png";
+            treeNode2.Text = "变量集合";
             this.treeView.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode1});
+            treeNode2});
             this.treeView.SelectedImageIndex = 0;
             this.treeView.ShowRootLines = false;
             this.treeView.Size = new System.Drawing.Size(249, 533);
@@ -295,7 +295,7 @@
             this.Name = "FrmDevTemplate";
             this.ShowIcon = false;
             this.ShowInTaskbar = false;
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "模板配置";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FrmDevTemplate_FormClosing);
             this.Load += new System.EventHandler(this.FrmDevTemplate_Load);

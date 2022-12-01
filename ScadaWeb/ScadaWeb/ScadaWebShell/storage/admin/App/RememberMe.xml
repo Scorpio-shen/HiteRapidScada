@@ -1,4 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <RememberMe>
   <Username>admin</Username>
+  <Credentials>
+    <BrowserID>6ac57267-d3f0-4a05-8f36-f94ad276b2a2</BrowserID>
+    <OneTimePassword>a4807b7d-c430-414e-aff7-5a6ab47afcb7</OneTimePassword>
+    <CreateDT>12/01/2022 17:34:57</CreateDT>
+  </Credentials>
 </RememberMe>

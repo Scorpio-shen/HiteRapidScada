@@ -72,31 +72,7 @@ namespace KpHiteModbus.Modbus.ViewModel
         }
         public string AddressOutput
         {
-            get
-            {
-                double address = StartAddress;
-                if (DataType == DataTypeEnum.Bool)
-                {
-                    for (int i = 0; i < TagCount; i++)
-                    {
-                        double dPart = Math.Round((address % 1),1); //小数部分
-                        int iPart = (int)address;
-                        if (dPart < 0.7)
-                            dPart += 0.1d;
-                        else
-                        {
-                            iPart++;
-                            dPart = 0.0d;
-                        }
-
-                        address = iPart + dPart;
-                    }
-
-                    return $"{StartAddress}~{address}";
-                }
-                else
-                    return $"{StartAddress}~{StartAddress + AddressIncrement * (TagCount-1)}";
-            }
+            get=> $"{StartAddress}~{StartAddress + AddressIncrement * (TagCount - 1)}";
         }
 
         private int length;

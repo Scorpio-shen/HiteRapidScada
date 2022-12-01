@@ -2,16 +2,12 @@
 using Scada;
 using Scada.Extend;
 using Scada.KPModel;
-using Scada.UI;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
-using static Scada.Comm.Devices.KPLogic;
 
 namespace KpSiemens.Siemens.Model
 {
@@ -59,7 +55,7 @@ namespace KpSiemens.Siemens.Model
         /// <summary>
         /// 最大地址长度（限制配置点时防止超出最大地址长度）
         /// </summary>
-        public override double MaxAddressLength { get; set; }
+        public override double MaxRequestByteLength { get; set; }
         #endregion
 
         #region 存储载入XML
@@ -73,9 +69,9 @@ namespace KpSiemens.Siemens.Model
             Active = tagGroupElement.GetAttrAsBool("Active", true);
             MemoryType = tagGroupElement.GetAttrAsEnum("MemoryType", MemoryTypeEnum.DB);
             DBNum = tagGroupElement.GetAttrAsInt("DBNum");
-            MaxAddressLength = tagGroupElement.GetAttrAsDouble("MaxAddressLength");
-            if (MaxAddressLength == 0)
-                MaxAddressLength = TagGroupDefaultValues.MaxAddressLength;
+            MaxRequestByteLength = tagGroupElement.GetAttrAsDouble("MaxRequestByteLength");
+            if (MaxRequestByteLength == 0)
+                MaxRequestByteLength = TagGroupDefaultValues.MaxAddressLength;
             XmlNodeList tagNodes = tagGroupElement.SelectNodes("Tag");
             int maxTagCount = MaxTagCount;
             MemoryTypeEnum memoryType = MemoryType;
@@ -106,7 +102,7 @@ namespace KpSiemens.Siemens.Model
             tagGroupElement.SetAttribute("StartKpTagIndex", StartKpTagIndex);
             tagGroupElement.SetAttribute("Name", Name);
             tagGroupElement.SetAttribute("DBNum", DBNum);
-            tagGroupElement.SetAttribute("MaxAddressLength", MaxAddressLength);
+            tagGroupElement.SetAttribute("MaxRequestByteLength", MaxRequestByteLength);
             foreach (Tag tag in Tags)
             {
                 XmlElement tagElem = tagGroupElement.AppendElem("Tag");
@@ -146,7 +142,7 @@ namespace KpSiemens.Siemens.Model
 
             var model = GetRequestModel();
             //验证是否超出最大地址限制
-            if (model.Length > MaxAddressLength)
+            if (model.Length > MaxRequestByteLength)
             {
                 Tags.Clear();
                 Tags.AddRange(tagsOld);
@@ -261,7 +257,14 @@ namespace KpSiemens.Siemens.Model
                 var tag = Tags.Last();
                 if (double.TryParse(tag.Address, out double address))
                 {
-                    model.Length = (ushort)(address + tag.DataType.GetByteCount());
+                    var length = address + tag.DataType.GetByteCount() - StartAddress;
+                    double dPart = length % 1; //小数部分
+                    int iPart = (int)length;   //整数部分
+
+                    model.Length += (ushort)iPart;
+
+                    if (dPart > 0)
+                        model.Length += 1;
                     if (tag.Length > 0)
                         model.Length += (ushort)tag.Length;
                 }

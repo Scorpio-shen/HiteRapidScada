@@ -22,16 +22,16 @@ namespace Scada.KPModel
         /// <summary>
         /// 起始地址
         /// </summary>
-        public virtual double StartAddress
+        public virtual int StartAddress
         {
             get
             {
-                double address = default;
+                int address = default;
                 if (Tags?.Count > 0)
                 {
                     var tag = Tags.FirstOrDefault();
                     if (!string.IsNullOrEmpty(tag.Address))
-                        double.TryParse(tag.Address, out address);
+                        int.TryParse(tag.Address, out address);
                 }
 
                 return address;
@@ -71,7 +71,7 @@ namespace Scada.KPModel
         /// <summary>
         /// 最大地址长度（限制配置点时防止超出最大地址长度）
         /// </summary>
-        public abstract double MaxAddressLength { get; set; }
+        public abstract double MaxRequestByteLength { get; set; }
         #endregion
 
         #region 抽象或虚方法

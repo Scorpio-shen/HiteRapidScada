@@ -80,7 +80,7 @@ namespace Scada.Comm.Devices
                     if(tag.DataType == DataTypeEnum.String)
                     {
                         //string类型设置格式类型
-                        inCnl.FormatID = BaseValues.Formats.UnicodeText;
+                        inCnl.FormatID = BaseValues.Formats.AsciiText;
                     }
 
                     inCnls.Add(inCnl);

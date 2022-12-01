@@ -1,5 +1,6 @@
 ﻿
 using Scada.KPModel;
+using Scada.KPModel.Attributes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,7 +21,7 @@ namespace KpHiteModbus.Modbus.Model
         }
 
 
-        public static Tag CreateNewTag(int tagID = default, string tagname = "", DataTypeEnum dataType = DataTypeEnum.Byte, RegisterTypeEnum registerType = RegisterTypeEnum.HoldingRegisters, string address = "", byte canwrite = 1,int length = default)
+        public static Tag CreateNewTag(int tagID = default, string tagname = "", DataTypeEnum dataType = DataTypeEnum.Byte, RegisterTypeEnum registerType = RegisterTypeEnum.HoldingRegisters, string address = "", bool canwrite = false,int length = default)
         {
             return new Tag()
             {
@@ -28,8 +29,9 @@ namespace KpHiteModbus.Modbus.Model
                 Name = tagname,
                 DataType = dataType,
                 Address = address,
-                CanWrite = canwrite,
-                RegisterType = registerType
+                CanWrite = (byte)(canwrite ? 1 : 0),
+                RegisterType = registerType,
+                Length = length
             };
         }
 
@@ -49,7 +51,8 @@ namespace KpHiteModbus.Modbus.Model
             }
         }
 
-
+        [DisplayName("数据类型")]
+        [ExcelHeaderSort(2)]
         public override string DataTypeDesc
         {
             get => DataType.ToString();
@@ -65,6 +68,16 @@ namespace KpHiteModbus.Modbus.Model
         public dynamic Data { get; set; }
 
         public RegisterTypeEnum RegisterType { get; set; }
+
+        public bool CanWriteBool
+        {
+            get => CanWrite > 0;
+            set
+            {
+                CanWrite = (byte)(value ? 1 : 0);
+                OnPropertyChanged(nameof(CanWriteBool));
+            }
+        }
         #endregion
 
 

@@ -31,18 +31,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HslCommunication, Version=11.2.1.0, Culture=neutral, PublicKeyToken=3d72ad3b6b5ec0e3, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\HslCommunication.11.2.1\lib\net451\HslCommunication.dll</HintPath>
-    </Reference>
-    <Reference Include="KpSiemens">
-      <HintPath>..\OpenKPs\KpSiemens\obj\Debug\KpSiemens.dll</HintPath>
+    <Reference Include="HslCommunication, Version=11.2.2.0, Culture=neutral, PublicKeyToken=3d72ad3b6b5ec0e3, processorArchitecture=MSIL">
+      <HintPath>..\packages\HslCommunication.11.2.2\lib\net451\HslCommunication.dll</HintPath>
     </Reference>
     <Reference Include="Log, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Log\Log\bin\Debug\Log.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL" />
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -58,6 +56,7 @@
     <Compile Include="KpHideModbusView.cs" />
     <Compile Include="KpHiteModbusLogic.cs" />
     <Compile Include="Modbus\Extend\DataTypeEnumExtend.cs" />
+    <Compile Include="Modbus\Model\FunctionCode.cs" />
     <Compile Include="Modbus\Model\ModbusConfigChangedEventHandler.cs" />
     <Compile Include="Modbus\Model\ConnectionOptions.cs" />
     <Compile Include="Modbus\Model\DeviceTemplate.cs" />
@@ -121,7 +120,9 @@
       <Name>ScadaData</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Modbus\View\CtrlPLCConfig.resx">
       <DependentUpon>CtrlPLCConfig.cs</DependentUpon>
@@ -143,4 +144,9 @@
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>if exist "C:\SCADA\ScadaComm\KP" (
+copy "$(TargetFileName)" "C:\SCADA\ScadaComm\KP\"
+)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

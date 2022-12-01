@@ -1,4 +1,5 @@
 ﻿using Scada.KPModel;
+using Scada.KPModel.Attributes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -50,8 +51,8 @@ namespace KpSiemens.Siemens.Model
                 OnPropertyChanged(nameof(DataType));
             }
         }
-
         [DisplayName("数据类型")]
+        [ExcelHeaderSort(2)]
         public override string DataTypeDesc
         {
             get => DataType.ToString();
@@ -64,14 +65,23 @@ namespace KpSiemens.Siemens.Model
         }
 
 
-        private bool canwritebool;
         public bool CanWriteBool
         {
-            get => canwritebool;
+            get => CanWrite > 0;
             set
             {
-                canwritebool = value;
+                CanWrite = (byte)(value ? 1 : 0);
                 OnPropertyChanged(nameof(CanWriteBool));
+            }
+        }
+
+        public override byte CanWrite
+        {
+            get => canwrite;
+            set
+            {
+                canwrite = value;
+                OnPropertyChanged(nameof(CanWrite));
             }
         }
 

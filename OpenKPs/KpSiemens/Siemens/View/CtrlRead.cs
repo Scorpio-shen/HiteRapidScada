@@ -3,6 +3,7 @@ using KpSiemens.Siemens.Model;
 using KpSiemens.Siemens.ViewModel;
 using Scada.Extend;
 using Scada.Helper;
+using Scada.KPModel.Extend;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
@@ -105,13 +106,20 @@ namespace KpSiemens.Siemens.View
         {
             if (SiemensTagGroup == null)
                 return;
+            txtGroupName.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.Name));
+            chkActive.AddDataBindings(SiemensTagGroup,nameof(SiemensTagGroup.Active));
+            cbxMemoryType.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.MemoryType));
+            lblDbNum.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.DBNum));
+            numTagCount.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.TagCount));
+            lblDbNum.Visible = numDbNum.Visible = SiemensTagGroup.MemoryType == MemoryTypeEnum.DB;
+
             txtGroupName.Text = SiemensTagGroup.Name;
             chkActive.Checked = SiemensTagGroup.Active;
             cbxMemoryType.SelectedValue = SiemensTagGroup.MemoryType;
             lblDbNum.Visible = numDbNum.Visible = SiemensTagGroup.MemoryType == MemoryTypeEnum.DB;
             numDbNum.Value = SiemensTagGroup.DBNum < 1 ? 1 : SiemensTagGroup.DBNum;
             numTagCount.Value = SiemensTagGroup.TagCount;
-            txtMaxAddressLength.Text = SiemensTagGroup.MaxAddressLength.ToString();
+            txtMaxAddressLength.Text = SiemensTagGroup.MaxRequestByteLength.ToString();
         }
 
         private void BindTagGroupTags(SiemensTagGroup group)
@@ -283,6 +291,7 @@ namespace KpSiemens.Siemens.View
             //}
             //界面显示刷新
             numTagCount.Value = siemensTagGroup.TagCount;
+            RefreshDataGridView();
         }
 
         private void dgvTags_CellValidating(object sender, DataGridViewCellValidatingEventArgs e)
@@ -309,7 +318,7 @@ namespace KpSiemens.Siemens.View
                 else
                     requestLength = dataLength;
 
-                if (requestLength > SiemensTagGroup.MaxAddressLength)
+                if (requestLength > SiemensTagGroup.MaxRequestByteLength)
                 {
                     //超出最大地址限制
                     ScadaUiUtils.ShowError(TempleteKeyString.RangeOutOfMaxRequestLengthErrorMsg);
@@ -421,7 +430,7 @@ namespace KpSiemens.Siemens.View
                 }
                 //界面显示刷新
                 numTagCount.Value = siemensTagGroup.TagCount;
-                OnTagGroupChanged(null, ModifyType.TagCount);
+                RefreshDataGridView();
             }
             catch(Exception ex)
             {

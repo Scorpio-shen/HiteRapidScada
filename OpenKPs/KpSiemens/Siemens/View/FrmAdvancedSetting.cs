@@ -1,4 +1,5 @@
 ﻿using KpSiemens.Siemens.Model;
+using Scada.KPModel.Extend;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -52,23 +53,33 @@ namespace KpSiemens.Siemens.View
 
             if (options == null)
                 return;
-            txtIPAddress.DataBindings.Clear();
-            txtPort.DataBindings.Clear();
-            txtRack.DataBindings.Clear();
-            txtSlot.DataBindings.Clear();
-            cbxPLCType.DataBindings.Clear();
-            txtConnectionType.DataBindings.Clear();
-            txtLocalTASP.DataBindings.Clear();
-            txtDestTASP.DataBindings.Clear();
+            txtIPAddress.AddDataBindings( options, nameof(options.IPAddress));
+            txtPort.AddDataBindings(options, nameof(options.Port));
+            txtRack.AddDataBindings(options, nameof(options.Rack));
+            txtSlot.AddDataBindings(options, nameof(options.Slot));
+            cbxPLCType.AddDataBindings(options, nameof(options.SiemensPLCTypeEnum));
+            txtConnectionType.AddDataBindings(options, nameof(options.ConnectionType));
+            txtLocalTASP.AddDataBindings(options, nameof(options.LocalTSAP));
+            txtDestTASP.AddDataBindings(options, nameof(options.DestTASP));
 
-            txtIPAddress.DataBindings.Add(nameof(txtIPAddress.Text), options, nameof(options.IPAddress));
-            txtPort.DataBindings.Add(nameof(txtPort.Text), options, nameof(options.Port));
-            txtRack.DataBindings.Add(nameof(txtRack.Text), options, nameof(options.Rack));
-            txtSlot.DataBindings.Add(nameof(txtSlot.Text), options, nameof(options.Slot));
-            cbxPLCType.DataBindings.Add(nameof(cbxPLCType.SelectedValue), options, nameof(options.SiemensPLCTypeEnum));
-            txtConnectionType.DataBindings.Add(nameof(txtConnectionType.Text), options, nameof(options.ConnectionType));
-            txtLocalTASP.DataBindings.Add(nameof(txtLocalTASP.Text), options, nameof(options.LocalTSAP));
-            txtDestTASP.DataBindings.Add(nameof(txtDestTASP.Text), options, nameof(options.DestTASP));
+
+            //txtIPAddress.DataBindings.Clear();
+            //txtPort.DataBindings.Clear();
+            //txtRack.DataBindings.Clear();
+            //txtSlot.DataBindings.Clear();
+            //cbxPLCType.DataBindings.Clear();
+            //txtConnectionType.DataBindings.Clear();
+            //txtLocalTASP.DataBindings.Clear();
+            //txtDestTASP.DataBindings.Clear();
+
+            //txtIPAddress.DataBindings.Add(nameof(txtIPAddress.Text), options, nameof(options.IPAddress), false, DataSourceUpdateMode.OnPropertyChanged);
+            //txtPort.DataBindings.Add(nameof(txtPort.Text), options, nameof(options.Port), false, DataSourceUpdateMode.OnPropertyChanged);
+            //txtRack.DataBindings.Add(nameof(txtRack.Text), options, nameof(options.Rack), false, DataSourceUpdateMode.OnPropertyChanged);
+            //txtSlot.DataBindings.Add(nameof(txtSlot.Text), options, nameof(options.Slot), false, DataSourceUpdateMode.OnPropertyChanged);
+            //cbxPLCType.DataBindings.Add(nameof(cbxPLCType.SelectedValue), options, nameof(options.SiemensPLCTypeEnum));
+            //txtConnectionType.DataBindings.Add(nameof(txtConnectionType.Text), options, nameof(options.ConnectionType));
+            //txtLocalTASP.DataBindings.Add(nameof(txtLocalTASP.Text), options, nameof(options.LocalTSAP));
+            //txtDestTASP.DataBindings.Add(nameof(txtDestTASP.Text), options, nameof(options.DestTASP));
         }
 
         private void ShowControlsByType(SiemensPLCTypeEnum plcType)

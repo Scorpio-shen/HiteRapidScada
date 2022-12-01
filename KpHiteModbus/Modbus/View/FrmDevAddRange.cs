@@ -1,5 +1,6 @@
 ﻿using KpHiteModbus.Modbus.Model;
 using KpHiteModbus.Modbus.ViewModel;
+using Scada.KPModel.Extend;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,9 @@ namespace KpHiteModbus.Modbus.View
     {
         FrmDevAddRangeViewModel ViewModel { get; set; }
         readonly ModbusTagGroup _modbusTagGroup;
-       
+        BindingSource bindSourceDataTypeOnlyBool;
+        BindingSource bindSourceDataTypeExceptBool;
+
         public FrmDevAddRange(ModbusTagGroup modbusTagGroup)
         {
             InitializeComponent();
@@ -23,34 +26,60 @@ namespace KpHiteModbus.Modbus.View
 
         private void InitControl()
         {
-            //绑定存储器类
-            Dictionary<string, DataTypeEnum> keyValueDataTypeEnums = new Dictionary<string, DataTypeEnum>();
-            foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
-                keyValueDataTypeEnums.Add(type.ToString(), type);
+            Dictionary<string, DataTypeEnum> keyValueDataTypeEnumsOnlyBool = new Dictionary<string, DataTypeEnum>();
+            keyValueDataTypeEnumsOnlyBool.Add(DataTypeEnum.Bool.ToString(), DataTypeEnum.Bool);
+            bindSourceDataTypeOnlyBool = new BindingSource();
+            bindSourceDataTypeOnlyBool.DataSource = keyValueDataTypeEnumsOnlyBool;
 
-            BindingSource bindingSourceDataType = new BindingSource();
-            bindingSourceDataType.DataSource = keyValueDataTypeEnums;
-            cbxDataType.DataSource = bindingSourceDataType;
+            Dictionary<string, DataTypeEnum> keyValueDataTypeEnumsExceptBool = new Dictionary<string, DataTypeEnum>();
+            foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
+                if (type != DataTypeEnum.Bool)
+                    keyValueDataTypeEnumsExceptBool.Add(type.ToString(), type);
+            bindSourceDataTypeExceptBool = new BindingSource();
+            bindSourceDataTypeExceptBool.DataSource = keyValueDataTypeEnumsExceptBool;
+
+            //绑定存储器类
+            //Dictionary<string, DataTypeEnum> keyValueDataTypeEnums = new Dictionary<string, DataTypeEnum>();
+            //foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
+            //    keyValueDataTypeEnums.Add(type.ToString(), type);
+
+            //BindingSource bindingSourceDataType = new BindingSource();
+            //bindingSourceDataType.DataSource = keyValueDataTypeEnums;
+
+            if (_modbusTagGroup.RegisterType == RegisterTypeEnum.Coils || _modbusTagGroup.RegisterType == RegisterTypeEnum.DiscretesInputs)
+                cbxDataType.DataSource = bindSourceDataTypeOnlyBool;
+            else
+                cbxDataType.DataSource = bindSourceDataTypeExceptBool;
+            //cbxDataType.DataSource = bindingSourceDataType;
             cbxDataType.DisplayMember = "Key";
             cbxDataType.ValueMember = "Value";
 
             //控件绑定
-            txtNameReplace.DataBindings.Add(nameof(txtNameReplace.Text), ViewModel, nameof(ViewModel.NameReplace));
-            numNameStartIndex.DataBindings.Add(nameof(numNameStartIndex.Value),ViewModel, nameof(ViewModel.NameStartIndex));
-            txtStartAddress.DataBindings.Add(nameof(txtStartAddress.Text), ViewModel, nameof(ViewModel.StartAddress));
-            numAddressIncrement.DataBindings.Add(nameof(numAddressIncrement.Value), ViewModel, nameof(ViewModel.AddressIncrement));
-            numTagCount.DataBindings.Add(nameof(numTagCount.Value),ViewModel, nameof(ViewModel.TagCount));
-            cbxDataType.DataBindings.Add(nameof(cbxDataType.SelectedValue), ViewModel, nameof(ViewModel.DataType));
-            lblAddressOutput.DataBindings.Add(nameof(lblAddressOutput.Text),ViewModel,nameof(ViewModel.AddressOutput));
-            lblNameOutput.DataBindings.Add(nameof(lblNameOutput.Text), ViewModel, nameof(ViewModel.NameOutput));
-            txtLength.DataBindings.Add(nameof(txtLength.Text), ViewModel, nameof(ViewModel.Length));
-            chkCanWrite.DataBindings.Add(nameof(chkCanWrite.Checked), ViewModel, nameof(ViewModel.CanWrite));
+            txtNameReplace.AddDataBindings(ViewModel, nameof(ViewModel.NameReplace));
+            txtLength.AddDataBindings(ViewModel, nameof(ViewModel.Length));
+            numNameStartIndex.AddDataBindings(ViewModel, nameof(ViewModel.NameStartIndex));
+            txtStartAddress.AddDataBindings( ViewModel, nameof(ViewModel.StartAddress));
+            numAddressIncrement.AddDataBindings(ViewModel, nameof(ViewModel.AddressIncrement));
+            numTagCount.AddDataBindings( ViewModel, nameof(ViewModel.TagCount));
+            cbxDataType.AddDataBindings(ViewModel, nameof(ViewModel.DataType));
+            lblAddressOutput.AddDataBindings(ViewModel, nameof(ViewModel.AddressOutput));
+            lblNameOutput.AddDataBindings(ViewModel, nameof(ViewModel.NameOutput));
+            txtLength.AddDataBindings(ViewModel, nameof(ViewModel.Length));
+            chkCanWrite.AddDataBindings(ViewModel, nameof(ViewModel.CanWrite));
+
 
             var registerType = _modbusTagGroup.RegisterType;
             if (registerType == RegisterTypeEnum.Coils || registerType == RegisterTypeEnum.HoldingRegisters)
+            {
                 chkCanWrite.Enabled = true;
+                chkCanWrite.Visible = true;
+            }
             else
+            {
                 chkCanWrite.Enabled = false;
+                chkCanWrite.Visible = false;
+            }
+                
         }
 
         private void btnConfirm_Click(object sender, EventArgs e)
@@ -113,24 +142,8 @@ namespace KpHiteModbus.Modbus.View
             for (int i = 0; i < ViewModel.TagCount; i++)
             {
                 var name = $"{ViewModel.NameReplace}{ViewModel.NameStartIndex + i}";
-
-                if (ViewModel.DataType == DataTypeEnum.Bool)
-                {
-                    double dPart = address % 1; //小数部分
-                    int iPart = (int)address;
-                    if (dPart < 0.7)
-                        dPart += 0.1d;
-                    else
-                    {
-                        iPart++;
-                        dPart = 0.0d;
-                    }
-
-                    address = iPart + dPart;
-                }
-                else
-                    address = ViewModel.StartAddress + ViewModel.AddressIncrement * i;
-                Tag tag = Model.Tag.CreateNewTag(tagname: name, dataType: ViewModel.DataType, registerType: _modbusTagGroup.RegisterType, address: address.ToString(), canwrite: (byte)(ViewModel.CanWrite ? 1 : 0),length: ViewModel.Length);
+                address = ViewModel.StartAddress + ViewModel.AddressIncrement * i;
+                Tag tag = Model.Tag.CreateNewTag(tagname: name, dataType: ViewModel.DataType, registerType: _modbusTagGroup.RegisterType, address: address.ToString(), canwrite:ViewModel.CanWrite,length: ViewModel.Length);
                 result.Add(tag);
             }
 
