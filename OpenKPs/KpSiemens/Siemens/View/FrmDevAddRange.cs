@@ -82,9 +82,9 @@ namespace KpSiemens.Siemens.View
             }
 
             //验证是否超出最大地址长度
-            if(!_siemensTagGroup.CheckAndAddTags(GetTags()))
+            if(!_siemensTagGroup.CheckAndAddTags(GetTags(),out string errorMsg))
             {
-                ScadaUiUtils.ShowError(TempleteKeyString.RangeOutOfMaxRequestLengthErrorMsg);
+                ScadaUiUtils.ShowError(errorMsg);
                 return;
             }
 

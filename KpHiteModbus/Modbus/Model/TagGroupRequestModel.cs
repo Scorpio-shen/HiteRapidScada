@@ -12,6 +12,6 @@ namespace KpHiteModbus.Modbus.Model
     /// </summary>
     public class TagGroupRequestModel : RequestModel
     {
-        
+        public int StartAddress { get; set; }
     }
 }

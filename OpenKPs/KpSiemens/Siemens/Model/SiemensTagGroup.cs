@@ -36,7 +36,7 @@ namespace KpSiemens.Siemens.Model
         /// </summary>
         public bool AllCanWrite
         {
-            get => Tags?.Count > 0 && Tags.All(t => t.CanWrite > 0);
+            get => Tags?.Count > 0 && Tags.All(t => t.CanWriteBool);
         }
 
         private MemoryTypeEnum memoryType;
@@ -129,8 +129,9 @@ namespace KpSiemens.Siemens.Model
         /// 批量添加Tags集合到当前group对象Tags集合中，超出了最大请求地址限制,则恢复成原有集合
         /// </summary>
         /// <param name="addTags"></param>
-        public override bool CheckAndAddTags(List<Tag> addTags,bool needClear = false)
+        public override bool CheckAndAddTags(List<Tag> addTags,out string errorMsg,bool needClear = false)
         {
+            errorMsg = string.Empty;
             //将原有对象先拷贝
             bool result = true;
             var tagsOld = new List<Tag>();
@@ -147,6 +148,7 @@ namespace KpSiemens.Siemens.Model
             {
                 Tags.Clear();
                 Tags.AddRange(tagsOld);
+                errorMsg = "数据超出范围!";
                 result = false;
             }
 

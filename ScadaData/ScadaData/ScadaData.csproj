@@ -141,10 +141,10 @@
     <Compile Include="KPModel\Helper\ExcelHelper.cs" />
     <Compile Include="ISettings.cs" />
     <Compile Include="KPModel\Attributes\DataTypeByteCountAttribute.cs" />
-    <Compile Include="KPModel\DataUnit.cs" />
-    <Compile Include="KPModel\GroupUnit.cs" />
+    <Compile Include="KPModel\Model\DataUnit.cs" />
+    <Compile Include="KPModel\Model\GroupUnit.cs" />
     <Compile Include="KPModel\InterFace\IDataUnit.cs" />
-    <Compile Include="KPModel\RequestModel.cs" />
+    <Compile Include="KPModel\Model\RequestModel.cs" />
     <Compile Include="Localization.cs" />
     <Compile Include="Data\Models\InCnlProps.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

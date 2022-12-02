@@ -1,5 +1,7 @@
 ﻿using HslCommunication;
 using HslCommunication.ModBus;
+using KpHiteModbus.Modbus;
+using KpHiteModbus.Modbus.Extend;
 using KpHiteModbus.Modbus.Model;
 using Newtonsoft.Json;
 using Scada.Data.Configuration;
@@ -21,6 +23,7 @@ namespace Scada.Comm.Devices
         protected DeviceTemplate deviceTemplate;
         private HashSet<int> floatSignals;
         private List<ModbusTagGroup> modbustagGroupsActive;
+        DispatchRequest dispatchRequest;
         IModbus modbus;
 
         int ActiveTagGroupCount
@@ -154,6 +157,8 @@ namespace Scada.Comm.Devices
             InitKPTags(tagGroups);
             modbustagGroupsActive = deviceTemplate.GetActiveTagGroups();
             CanSendCmd = deviceTemplate != null && deviceTemplate.CmdTagCount > 0;
+            //初始化分包请求类
+            dispatchRequest = new DispatchRequest(RequestUnitMethod);
         }
 
         public override void OnCommLineStart()
@@ -295,16 +300,20 @@ namespace Scada.Comm.Devices
         private bool RequestReadData(ModbusTagGroup tagGroup)
         {
             var model = tagGroup.GetRequestModel();
-            WriteToLog($"开始请求数据,GroupName:{tagGroup.Name},寄存器类型:{tagGroup.RegisterType},起始地址:{model.Address},请求长度:{model.Length}");
+            WriteToLog($"KpHiteModbusLogic_RequestReadData,开始请求数据,GroupName:{tagGroup.Name},寄存器类型:{tagGroup.RegisterType},起始地址:{model.Address},请求长度:{model.Length}");
 
             try
             {
-                var result = modbus.Read(model.Address,model.Length);
-                WriteToLog($"数据请求结束,IsSuccess:{result.IsSuccess},Message:{result.Message},Data:{result.Content.ToJsonString()}");
-                if(result.IsSuccess && result.Content?.Length > 0)
-                    tagGroup.Data = result.Content;
+                //当前寄存器时Coil或DI时进行分包操作
+                var result = dispatchRequest.Request(model, tagGroup.RegisterType, out string errorMsg);
+                WriteToLog($"KpHiteModbusLogic_RequestReadData,数据请求结束,Result:{result},Msg:{errorMsg}");
+                if (!result)
+                    return false;
 
-                return result.IsSuccess;
+                var responses = dispatchRequest.Response();
+                var responseResult = responses.SelectMany(r =>r.Buffer);
+                tagGroup.Data = responseResult.ToArray();
+                return true;
             }
             catch(Exception ex)
             {
@@ -312,6 +321,41 @@ namespace Scada.Comm.Devices
                 return false;
             }
         }
+
+        private void RequestUnitMethod(RequestUnit requestUnit)
+        {
+            try
+            {
+                var functionCode = requestUnit.RegisterType.GetFunctionCode(iswrite: false);
+                var address = $"x={functionCode};{requestUnit.StartAddress}";
+                WriteToLog($"KpHiteModbusLogic_RequestUnitMethod,开始请求,Index:{requestUnit.Index},Address:{address},RequestLength:{requestUnit.RequestLength}");
+                var result = modbus.Read(address, requestUnit.RequestLength);
+                if (result.IsSuccess)
+                    requestUnit.Buffer = result.Content;
+                else
+                {
+                    //失败的时候填充默认字节
+                    byte[] buffer;
+                    if (requestUnit.RegisterType == RegisterTypeEnum.DiscretesInputs || requestUnit.RegisterType == RegisterTypeEnum.Coils)
+                    {
+                        var byteCount = requestUnit.RequestLength / 8;
+                        var left = requestUnit.RequestLength % 8;
+                        buffer = new byte[byteCount + left > 0 ? 1 : 0];
+                    }
+                    else
+                        buffer = new byte[requestUnit.RequestLength * 2];
+
+                    requestUnit.Buffer = buffer;
+                }
+                WriteToLog($"KpHiteModbusLogic_RequestUnitMethod,请求结束,结果:{JsonConvert.SerializeObject(result)}");
+            }
+            catch(Exception ex )
+            {
+                WriteToLog($"KpHiteModbusLogic_RequestUnitMethod,数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
+            }
+        }
+
+
 
         private void SetTagsData(ModbusTagGroup tagGroup)
         {
@@ -338,7 +382,7 @@ namespace Scada.Comm.Devices
                 switch (tag.DataType)
                 {
                     case DataTypeEnum.Bool:
-                        var functionCode = tagGroup.GetFunctionCode(tagGroup.RegisterType, iswrite: true, ismultiple: true);
+                        var functionCode = tagGroup.RegisterType.GetFunctionCode(iswrite: true, ismultiple: true);
                         address = $"x={functionCode};{tag.Address}";
                         operateResult = modbus.Write(address,new bool[] { (bool)tag.Data });
                         break;

@@ -154,10 +154,6 @@ namespace KpSiemens.Siemens.View
                 //地址变化需要对当前数组进行重新排序
                 siemensTagGroup.RefreshTagAddress();
             }
-            else if (e.PropertyName.Equals(nameof(tag.CanWriteBool)))
-            {
-                chkAllCanWrite.Checked = SiemensTagGroup.AllCanWrite;
-            }
             TagGroupChanged?.Invoke(sender, new TagGroupChangedEventArgs
             {
                 ModifyType = ModifyType.Tags,
@@ -431,9 +427,9 @@ namespace KpSiemens.Siemens.View
                 var listTagsDouble = listTags.Where(t => double.TryParse(t.Address, out double val)).ToList();
                 //数据添加到对象
 
-                if (!siemensTagGroup.CheckAndAddTags(listTagsDouble,true))
+                if (!siemensTagGroup.CheckAndAddTags(listTagsDouble,out string errorMsg, true))
                 {
-                    ScadaUiUtils.ShowError(TempleteKeyString.RangeOutOfMaxRequestLengthErrorMsg);
+                    ScadaUiUtils.ShowError(errorMsg);
                     return;
                 }
                 //界面显示刷新

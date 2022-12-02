@@ -155,10 +155,6 @@ namespace KpHiteModbus.Modbus.View
                 //地址变化需要对当前数组进行重新排序
                 ModbusTagGroup.RefreshTagAddress();
             }
-            else if (e.PropertyName.Equals(nameof(tag.CanWriteBool)))
-            {
-                chkAllCanWrite.Checked = ModbusTagGroup.AllCanWrite;
-            }
             TagGroupChanged?.Invoke(sender,new ModbusConfigChangedEventArgs
             {
                 ChangeType = ModifyType.Tags,
@@ -403,9 +399,9 @@ namespace KpHiteModbus.Modbus.View
                 var listTagsDouble = listTags.Where(t => double.TryParse(t.Address, out double val)).ToList();
                 //数据添加到对象
 
-                if (!ModbusTagGroup.CheckAndAddTags(listTagsDouble, true))
+                if (!ModbusTagGroup.CheckAndAddTags(listTagsDouble, out string errorMsg,true))
                 {
-                    ScadaUiUtils.ShowError(TempleteKeyString.RangeOutOfMaxRequestLengthErrorMsg);
+                    ScadaUiUtils.ShowError(errorMsg);
                     return;
                 }
                 //界面显示刷新

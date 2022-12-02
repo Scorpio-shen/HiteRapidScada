@@ -161,7 +161,7 @@ namespace Scada.KPModel
         /// 批量添加Tags集合到当前group对象Tags集合中，超出了最大请求地址限制,则恢复成原有集合
         /// </summary>
         /// <param name="addTags"></param>
-        public abstract bool CheckAndAddTags(List<T> addTags, bool needClear = false);
+        public abstract bool CheckAndAddTags(List<T> addTags,out string errogMsg, bool needClear = false);
         #endregion
 
         #endregion

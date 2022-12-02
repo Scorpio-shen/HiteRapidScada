@@ -1118,5 +1118,17 @@ namespace Scada.Admin.App.Forms.Tables
                     EndEdit();
             }
         }
+
+        #region ws2022/12/02 添加辅助功能，设置输入通道和输出通道值相同
+        private void btnSetChannel_Click(object sender, EventArgs e)
+        {
+             foreach(InCnl item in baseTable.EnumerateItems())
+            {
+                item.CtrlCnlNum = item.CnlNum;
+            }
+        }
+        #endregion
+
+
     }
 }

@@ -55,7 +55,9 @@
   <ItemGroup>
     <Compile Include="KpHideModbusView.cs" />
     <Compile Include="KpHiteModbusLogic.cs" />
+    <Compile Include="Modbus\DispatchRequest.cs" />
     <Compile Include="Modbus\Extend\DataTypeEnumExtend.cs" />
+    <Compile Include="Modbus\Extend\RegisterTypeEnumExtend.cs" />
     <Compile Include="Modbus\Model\FunctionCode.cs" />
     <Compile Include="Modbus\Model\ModbusConfigChangedEventHandler.cs" />
     <Compile Include="Modbus\Model\ConnectionOptions.cs" />
@@ -66,11 +68,12 @@
     <Compile Include="Modbus\Model\EnumType\ModbusModeEnum.cs" />
     <Compile Include="Modbus\Model\EnumType\ReadWriteTypeEnum.cs" />
     <Compile Include="Modbus\Model\EnumType\RegisterTypeEnum.cs" />
+    <Compile Include="Modbus\Model\EnumType\ModbusRegisterMaxDefine.cs" />
     <Compile Include="Modbus\Model\Tag.cs" />
     <Compile Include="Modbus\Model\TagGroup.cs" />
     <Compile Include="Modbus\Model\TagGroupDefaultValues.cs" />
     <Compile Include="Modbus\Model\TagGroupRequestModel.cs" />
-    <Compile Include="Modbus\Model\TempleteKeyString.cs" />
+    <Compile Include="Modbus\Model\EnumType\TempleteKeyString.cs" />
     <Compile Include="Modbus\ViewModel\FrmDevAddRangeViewModel.cs" />
     <Compile Include="Modbus\View\CtrlPLCConfig.cs">
       <SubType>UserControl</SubType>

@@ -184,8 +184,9 @@ namespace KpHiteModbus.Modbus.Model
         #endregion
 
         #region 批量添加点集合
-        public override bool CheckAndAddTags(List<Tag> addTags, bool needClear = false)
+        public override bool CheckAndAddTags(List<Tag> addTags, out string errorMsg, bool needClear = false)
         {
+            errorMsg= string.Empty;
             //将原有对象先拷贝
             bool result = true;
             var tagsOld = new List<Tag>();
@@ -201,6 +202,12 @@ namespace KpHiteModbus.Modbus.Model
             //验证是否超出最大地址限制
             if(RegisterType == RegisterTypeEnum.Coils || RegisterType == RegisterTypeEnum.DiscretesInputs)
             {
+                //验证数据类型是否符合规范
+                if(addTags.Any(t=>t.DataType != DataTypeEnum.Bool))
+                {
+                    errorMsg = "存在不符合规范的数据类型!";
+                    return false;
+                }
                 //一个寄存器代表一个bit
                 byteCount = model.Length / 8;
                 if (model.Length % 8 > 0)
@@ -215,6 +222,7 @@ namespace KpHiteModbus.Modbus.Model
             {
                 Tags.Clear();
                 Tags.AddRange(tagsOld);
+                errorMsg = "数据超出范围!";
                 result = false;
             }
 
@@ -224,8 +232,9 @@ namespace KpHiteModbus.Modbus.Model
         public TagGroupRequestModel GetRequestModel()
         {
             var model = new TagGroupRequestModel();
-            var functionCode = GetFunctionCode(RegisterType);
+            var functionCode = RegisterType.GetFunctionCode();
             model.Address = $"x={functionCode};{StartAddress}";
+            model.StartAddress = StartAddress;
             if (TagCount == 0)
                 model.Length = 0;
             else
@@ -263,48 +272,7 @@ namespace KpHiteModbus.Modbus.Model
             return model;
         }
 
-        public byte GetFunctionCode(RegisterTypeEnum register,bool iswrite = false,bool ismultiple = true)
-        {
-            byte code = default;
-            if (!iswrite)
-            {
-                switch (register)
-                {
-                    case RegisterTypeEnum.Coils:
-                        code = FunctionCodes.ReadCoils;
-                        break;
-                    case RegisterTypeEnum.DiscretesInputs:
-                        code = FunctionCodes.ReadDiscreteInputs;
-                        break;
-                    case RegisterTypeEnum.HoldingRegisters:
-                        code = FunctionCodes.ReadHoldingRegisters;
-                        break;
-                    case RegisterTypeEnum.InputRegisters:
-                        code = FunctionCodes.ReadInputRegisters;
-                        break;
-                }
-            }
-            else
-            {
-                switch (register)
-                {
-                    case RegisterTypeEnum.Coils:
-                        if (!ismultiple)
-                            code = FunctionCodes.WriteSingleCoil;
-                        else
-                            code = FunctionCodes.WriteMultipleCoils;
-                        break;
-                    case RegisterTypeEnum.HoldingRegisters:
-                        if (!ismultiple)
-                            code = FunctionCodes.WriteSingleRegister;
-                        else
-                            code = FunctionCodes.WriteMultipleRegisters;
-                        break;
-                }
-            }
-
-            return code;
-        }
+        
         #endregion
 
 
