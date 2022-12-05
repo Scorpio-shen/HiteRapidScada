@@ -42,7 +42,7 @@ namespace KpHiteModbus.Modbus.Model
                     var tagGroup = new ModbusTagGroup();
                     tagGroup.LoadFromXml(tagGroupElem);
 
-                    if(tagGroup.TagCount > 0)
+                    if(tagGroup.TagCount >= 0)
                     {
                         TagGroups.Add(tagGroup);
                     }
@@ -154,7 +154,7 @@ namespace KpHiteModbus.Modbus.Model
             TagGroups.ForEach(t =>
             {
                 t.StartKpTagIndex = startIndex;
-                t.RefreshTagIndex();
+                t.SortTags();
                 startIndex += t.TagCount;
             });
         }

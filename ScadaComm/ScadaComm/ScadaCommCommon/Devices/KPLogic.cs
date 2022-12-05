@@ -47,18 +47,18 @@ namespace Scada.Comm.Devices
         /// </summary>
         protected const int LastSrezListSize = 10;
         /// <summary>
-        /// Размер списка последних событий КП
+        /// Размер списка последних событий КП      CPU最近事件列表的大小
         /// </summary>
         protected const int LastEventListSize = 10;
         /// <summary>
-        /// Размер списка последних команд ТУ
+        /// Размер списка последних команд ТУ        最后一组命令的大小
         /// </summary>
         protected const int LastCmdListSize = 10;
 
         private Connection conn;                  // соединение с физическим КП
-        private AppDirs appDirs;                  // директории приложения
+        private AppDirs appDirs;                  // директории приложения                                  应用程序目录
         private Log.WriteLineDelegate writeToLog; // метод записи в журнал линии связи
-        private volatile bool terminated;         // признак завершения работы линии связи
+        private volatile bool terminated;         // признак завершения работы линии связи      通信线路关闭标志
         private string caption;                   // обозначение КП
         private string sessText;                  // текст для вывода в журнал в начале сеанса опроса
         private string sendCmdText;               // текст для вывода в журнал при отправке команды ТУ
@@ -66,7 +66,7 @@ namespace Scada.Comm.Devices
         private int[] tagTableColLen;             // ширина столбцов таблицы значений тегов
 
         /// <summary>
-        /// Текущие данные тегов КП
+        /// 当前 KP 标签数据
         /// </summary>
         protected SrezTableLight.CnlData[] curData;
         /// <summary>
@@ -78,15 +78,15 @@ namespace Scada.Comm.Devices
         /// </summary>
         protected Dictionary<int, KPTag> tagsBySignal;
         /// <summary>
-        /// Список не переданных архивных срезов КП
+        /// Список не переданных архивных срезов КП         CP未传输的档案部分列表
         /// </summary>
         protected List<TagSrez> arcSrezList;
         /// <summary>
-        /// Список не переданных событий КП
+        /// Список не переданных событий КП                         未传输的 KP 事件列表
         /// </summary>
         protected List<KPEvent> eventList;
         /// <summary>
-        /// Список последних архивных срезов КП
+        /// Список последних архивных срезов КП                 KP最近的档案部分列表
         /// </summary>
         protected List<TagSrez> lastArcSrezList;
         /// <summary>
@@ -923,6 +923,7 @@ namespace Scada.Comm.Devices
 
         /// <summary>
         /// Потокобезопасно установить текущие данные тега КП и признак их изменения
+        /// 线程安全，用于设置当前 KP 标记数据及其更改标志
         /// </summary>
         protected void SetCurData(int tagIndex, double newVal, int newStat)
         {
@@ -931,6 +932,7 @@ namespace Scada.Comm.Devices
 
         /// <summary>
         /// Потокобезопасно установить текущие данные тега КП и признак их изменения
+        /// 有效数据，用于设置当前 KP 标记数据及其更改标志
         /// </summary>
         protected void SetCurData(int tagIndex, SrezTableLight.CnlData newData)
         {
@@ -964,7 +966,7 @@ namespace Scada.Comm.Devices
 
         /// <summary>
         /// Потокобезопасно установить текущие данные как недостоверные
-        /// 将当前数据设置为不可靠的线程
+        /// 将当前数据设置为无效数据
         /// </summary>
         protected void InvalidateCurData(int tagIndex, int tagCount)
         {
@@ -1248,6 +1250,7 @@ namespace Scada.Comm.Devices
 
         /// <summary>
         /// Установить текущие данные как недостоверные
+        /// 将当前数据设置为不可靠
         /// </summary>
         /// <remarks>Метод вызывается при обрыве соединения, если ConnRequired равно true</remarks>
         public virtual void InvalidateCurData()

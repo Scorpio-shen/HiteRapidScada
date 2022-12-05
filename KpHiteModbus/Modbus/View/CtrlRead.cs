@@ -73,8 +73,8 @@ namespace KpHiteModbus.Modbus.View
         private void InitControl()
         {
 
-            numTagCount.Maximum = ushort.MaxValue;
-            numTagCount.Minimum = 0;
+            //numTagCount.Maximum = ushort.MaxValue;
+            //numTagCount.Minimum = 0;
 
             dgvTags.AutoGenerateColumns = false;
 
@@ -114,7 +114,7 @@ namespace KpHiteModbus.Modbus.View
             txtGroupName.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.Name));
             chkActive.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.Active));
             cbxRegisterType.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.RegisterType));
-            numTagCount.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.TagCount));
+            lblTagCount.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.TagCount));
             txtMaxAddressLength.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.MaxRequestByteLength));
 
             chkAllCanWrite.Checked = ModbusTagGroup.AllCanWrite;
@@ -153,7 +153,7 @@ namespace KpHiteModbus.Modbus.View
             if (e.PropertyName.Equals(nameof(tag.Address)))
             {
                 //地址变化需要对当前数组进行重新排序
-                ModbusTagGroup.RefreshTagAddress();
+                ModbusTagGroup.RefreshTagIndex();
             }
             TagGroupChanged?.Invoke(sender,new ModbusConfigChangedEventArgs
             {
@@ -169,40 +169,48 @@ namespace KpHiteModbus.Modbus.View
         /// <summary>
         /// 刷新绑定datagridview数据源
         /// </summary>
-        public void RefreshDataGridView()
+        public void RefreshDataGridView(bool needResetBindTags = true)
         {
+            var index = dgvTags.FirstDisplayedScrollingRowIndex;
+            if (needResetBindTags)
+                bdsTags.ResetBindings(false);
             dgvTags.Invalidate();
+            if(index >= 0)
+                dgvTags.FirstDisplayedScrollingRowIndex = index;
         }
 
         #region 控件事件
-        private void NumTagCount_ValueChanged(object sender, EventArgs e)
-        {
-            if (ModbusTagGroup == null)
-                return;
-            if(IsShowTagGroup)  //只是展示属性部分,不走后面逻辑
-                return;
-            var oldTagCount = ModbusTagGroup.TagCount;
-            var newTagCount = (int)numTagCount.Value;
+        //private void NumTagCount_ValueChanged(object sender, EventArgs e)
+        //{
+        //    if (ModbusTagGroup == null)
+        //        return;
+        //    if(IsShowTagGroup)  //只是展示属性部分,不走后面逻辑
+        //        return;
+        //    var oldTagCount = ModbusTagGroup.TagCount;
+        //    var newTagCount = (int)numTagCount.Value;
 
-            if(oldTagCount < newTagCount)
-            {
-                for(int i = oldTagCount; i < newTagCount; i++)
-                {
-                    var tag = Model.Tag.CreateNewTag();
-                    ModbusTagGroup.Tags.Add(tag);
-                }
-            }
-            else if(oldTagCount > newTagCount)
-            {
-                for(int i = newTagCount; i < oldTagCount; i++)
-                {
-                    ModbusTagGroup.Tags.RemoveAt(i);
-                }
-            }
+        //    if(oldTagCount < newTagCount)
+        //    {
+        //        List<Tag> tempTags = new List<Tag>();
+        //        for(int i = oldTagCount; i < newTagCount; i++)
+        //        {
+        //            tempTags.Add(Model.Tag.CreateNewTag());
+        //        }
+
+        //        ModbusTagGroup.CheckAndAddTags(tempTags,out string errorMsg,)
+        //    }
+        //    else if(oldTagCount > newTagCount)
+        //    {
+        //        for(int i = newTagCount; i < oldTagCount; i++)
+        //        {
+        //            ModbusTagGroup.Tags.RemoveAt(i);
+        //        }
+        //    }
             
-            bdsTags.ResetBindings(false);
-            OnTagGroupChanged(sender, ModifyType.TagCount);
-        }
+        //    bdsTags.ResetBindings(false);
+        //    ModbusTagGroup.RefreshTagIndex();
+        //    OnTagGroupChanged(sender, ModifyType.TagCount);
+        //}
 
 
 
@@ -266,7 +274,6 @@ namespace KpHiteModbus.Modbus.View
                 return;
 
             //界面显示刷新
-            numTagCount.Value = ModbusTagGroup.TagCount;
             RefreshDataGridView();
         }
 
@@ -372,9 +379,9 @@ namespace KpHiteModbus.Modbus.View
             if (index >= dgvTags.RowCount)
                 return;
             dgvTags.Rows.RemoveAt(index);
-            numTagCount.Value = ModbusTagGroup.TagCount;
+            //numTagCount.Value = ModbusTagGroup.TagCount;
             //刷新地址显示
-            ModbusTagGroup.RefreshTagAddress();
+            ModbusTagGroup.RefreshTagIndex();
         }
         #endregion
 
@@ -405,7 +412,6 @@ namespace KpHiteModbus.Modbus.View
                     return;
                 }
                 //界面显示刷新
-                numTagCount.Value = ModbusTagGroup.TagCount;
                 RefreshDataGridView();
             }
             catch(Exception ex)

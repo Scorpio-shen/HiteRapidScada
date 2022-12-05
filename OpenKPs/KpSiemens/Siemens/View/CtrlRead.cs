@@ -75,8 +75,8 @@ namespace KpSiemens.Siemens.View
             numDbNum.Maximum = ushort.MaxValue;
             numDbNum.Minimum = 1;
 
-            numTagCount.Maximum = ushort.MaxValue;
-            numTagCount.Minimum = 0;
+            //numTagCount.Maximum = ushort.MaxValue;
+            //numTagCount.Minimum = 0;
 
             dgvTags.AutoGenerateColumns = false;
 
@@ -110,7 +110,7 @@ namespace KpSiemens.Siemens.View
             chkActive.AddDataBindings(SiemensTagGroup,nameof(SiemensTagGroup.Active));
             cbxMemoryType.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.MemoryType));
             lblDbNum.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.DBNum));
-            numTagCount.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.TagCount));
+            lblTagCount.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.TagCount));
             txtMaxAddressLength.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.MaxRequestByteLength));
             //chkAllCanWrite.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.AllCanWrite));
             lblDbNum.Visible = numDbNum.Visible = SiemensTagGroup.MemoryType == MemoryTypeEnum.DB;
@@ -152,7 +152,7 @@ namespace KpSiemens.Siemens.View
             if (e.PropertyName.Equals(nameof(tag.Address)))
             {
                 //地址变化需要对当前数组进行重新排序
-                siemensTagGroup.RefreshTagAddress();
+                siemensTagGroup.RefreshTagIndex();
             }
             TagGroupChanged?.Invoke(sender, new TagGroupChangedEventArgs
             {
@@ -168,40 +168,46 @@ namespace KpSiemens.Siemens.View
         /// <summary>
         /// 刷新绑定datagridview数据源
         /// </summary>
-        public void RefreshDataGridView()
+        public void RefreshDataGridView(bool needResetBindTags = true)
         {
+            if (needResetBindTags)
+                bdsTags.ResetBindings(false);
+            var index = dgvTags.FirstDisplayedScrollingRowIndex;
             dgvTags.Invalidate();
+            if (index >= 0)
+                dgvTags.FirstDisplayedScrollingRowIndex = index;
         }
 
         #region 控件事件
-        private void NumTagCount_ValueChanged(object sender, EventArgs e)
-        {
-            if (SiemensTagGroup == null)
-                return;
-            if(IsShowTagGroup)  //只是展示属性部分,不走后面逻辑
-                return;
-            var oldTagCount = SiemensTagGroup.TagCount;
-            var newTagCount = (int)numTagCount.Value;
+        //private void NumTagCount_ValueChanged(object sender, EventArgs e)
+        //{
+        //    if (SiemensTagGroup == null)
+        //        return;
+        //    if(IsShowTagGroup)  //只是展示属性部分,不走后面逻辑
+        //        return;
+        //    var oldTagCount = SiemensTagGroup.TagCount;
+        //    var newTagCount = (int)numTagCount.Value;
 
-            if(oldTagCount < newTagCount)
-            {
-                for(int i = oldTagCount; i < newTagCount; i++)
-                {
-                    var tag = Model.Tag.CreateNewTag();
-                    SiemensTagGroup.Tags.Add(tag);
-                }
-            }
-            else if(oldTagCount > newTagCount)
-            {
-                for(int i = newTagCount; i < oldTagCount; i++)
-                {
-                    SiemensTagGroup.Tags.RemoveAt(i);
-                }
-            }
+        //    if(oldTagCount < newTagCount)
+        //    {
+        //        for(int i = oldTagCount; i < newTagCount; i++)
+        //        {
+        //            var tag = Model.Tag.CreateNewTag();
+        //            SiemensTagGroup.Tags.Add(tag);
+        //        }
+        //    }
+        //    else if(oldTagCount > newTagCount)
+        //    {
+        //        for(int i = newTagCount; i < oldTagCount; i++)
+        //        {
+        //            SiemensTagGroup.Tags.RemoveAt(i);
+        //        }
+        //    }
             
-            bdsTags.ResetBindings(false);
-            OnTagGroupChanged(sender, ModifyType.TagCount);
-        }
+        //    bdsTags.ResetBindings(false);
+        //    SiemensTagGroup.RefreshTagIndex();
+        //    OnTagGroupChanged(sender, ModifyType.TagCount);
+        //}
 
         private void chkAllCanWrite_CheckedChanged(object sender, EventArgs e)
         {
@@ -212,7 +218,7 @@ namespace KpSiemens.Siemens.View
 
             bool canwrite = chkAllCanWrite.Checked;
             SiemensTagGroup.SetTagCanWrite(canwrite);
-            RefreshDataGridView();
+            RefreshDataGridView(false);
         }
 
 
@@ -244,7 +250,7 @@ namespace KpSiemens.Siemens.View
                 chkAllCanWrite.Enabled = false;
                 dgvTagCanWrite.ReadOnly = true;
 
-                RefreshDataGridView();
+                RefreshDataGridView(false);
             }
             else
             {
@@ -275,26 +281,7 @@ namespace KpSiemens.Siemens.View
             if (dialogResult == DialogResult.Cancel)
                 return;
 
-            //var tags = frm.GetTags();
-            //if(tags.Count == 0)
-            //    return;
-            ////将原有对象先拷贝
-            //var tagsOld = new List<Tag>();
-            //tagsOld.AddRange(SiemensTagGroup.Tags.Select(t => t.Clone() as Tag));
-
-            //siemensTagGroup.Tags.AddRange(tags);
-            //siemensTagGroup.RefreshTagAddress();
-
-            //var model = siemensTagGroup.GetRequestModel();
-            ////验证是否超出最大地址限制
-            //if(model.Length > SiemensTagGroup.MaxAddressLength)
-            //{
-            //    ScadaUiUtils.ShowError("不允许超过最大数据请求长度!");
-            //    siemensTagGroup.Tags.Clear();
-            //    siemensTagGroup.Tags.AddRange(tagsOld);
-            //}
             //界面显示刷新
-            numTagCount.Value = siemensTagGroup.TagCount;
             RefreshDataGridView();
         }
 
@@ -400,9 +387,10 @@ namespace KpSiemens.Siemens.View
             if (index >= dgvTags.RowCount)
                 return;
             dgvTags.Rows.RemoveAt(index);
-            numTagCount.Value = SiemensTagGroup.TagCount;
+            //numTagCount.Value = SiemensTagGroup.TagCount;
+            //lblTagCount.Text = SiemensTagGroup.TagCount.ToString();
             //刷新地址显示
-            siemensTagGroup.RefreshTagAddress();
+            siemensTagGroup.RefreshTagIndex();
         }
         #endregion
 
@@ -433,7 +421,6 @@ namespace KpSiemens.Siemens.View
                     return;
                 }
                 //界面显示刷新
-                numTagCount.Value = siemensTagGroup.TagCount;
                 RefreshDataGridView();
             }
             catch(Exception ex)

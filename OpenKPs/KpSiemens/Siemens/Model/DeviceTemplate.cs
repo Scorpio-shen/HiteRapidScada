@@ -42,7 +42,7 @@ namespace KpSiemens.Siemens.Model
                     var tagGroup = new SiemensTagGroup();
                     tagGroup.LoadFromXml(tagGroupElem);
 
-                    if(tagGroup.TagCount > 0)
+                    if(tagGroup.TagCount >= 0)
                     {
                         TagGroups.Add(tagGroup);
                     }
@@ -145,7 +145,7 @@ namespace KpSiemens.Siemens.Model
             TagGroups.ForEach(t =>
             {
                 t.StartKpTagIndex = startIndex;
-                t.RefreshTagIndex();
+                t.SortTags();
                 startIndex += t.TagCount;
             });
         }

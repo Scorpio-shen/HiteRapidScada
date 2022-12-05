@@ -206,7 +206,7 @@ namespace Scada.Comm.Devices
                 //初始话Tag和Command 点位顺序和地址
                 deviceTemplate.RefreshTagGroupIndex();
                 foreach(var tagGroup in deviceTemplate.TagGroups)
-                    tagGroup.RefreshTagAddress();
+                    tagGroup.RefreshTagIndex();
 
             }
 

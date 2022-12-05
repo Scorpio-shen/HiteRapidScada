@@ -30,6 +30,7 @@
         {
             this.components = new System.ComponentModel.Container();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.lblTagCount = new System.Windows.Forms.Label();
             this.txtMaxAddressLength = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.chkAllCanWrite = new System.Windows.Forms.CheckBox();
@@ -38,7 +39,6 @@
             this.numDbNum = new System.Windows.Forms.NumericUpDown();
             this.chkActive = new System.Windows.Forms.CheckBox();
             this.label4 = new System.Windows.Forms.Label();
-            this.numTagCount = new System.Windows.Forms.NumericUpDown();
             this.txtGroupName = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.dgvTags = new System.Windows.Forms.DataGridView();
@@ -55,7 +55,6 @@
             this.bdsTags = new System.Windows.Forms.BindingSource(this.components);
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numDbNum)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.numTagCount)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvTags)).BeginInit();
             this.cmsTags.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.bdsTags)).BeginInit();
@@ -63,6 +62,7 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.lblTagCount);
             this.groupBox1.Controls.Add(this.txtMaxAddressLength);
             this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.chkAllCanWrite);
@@ -71,7 +71,6 @@
             this.groupBox1.Controls.Add(this.numDbNum);
             this.groupBox1.Controls.Add(this.chkActive);
             this.groupBox1.Controls.Add(this.label4);
-            this.groupBox1.Controls.Add(this.numTagCount);
             this.groupBox1.Controls.Add(this.txtGroupName);
             this.groupBox1.Controls.Add(this.label3);
             this.groupBox1.Controls.Add(this.dgvTags);
@@ -84,6 +83,15 @@
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "参数配置";
+            // 
+            // lblTagCount
+            // 
+            this.lblTagCount.AutoSize = true;
+            this.lblTagCount.Location = new System.Drawing.Point(301, 68);
+            this.lblTagCount.Name = "lblTagCount";
+            this.lblTagCount.Size = new System.Drawing.Size(11, 12);
+            this.lblTagCount.TabIndex = 16;
+            this.lblTagCount.Text = "0";
             // 
             // txtMaxAddressLength
             // 
@@ -164,14 +172,6 @@
             this.label4.Size = new System.Drawing.Size(41, 12);
             this.label4.TabIndex = 8;
             this.label4.Text = "测点数";
-            // 
-            // numTagCount
-            // 
-            this.numTagCount.Location = new System.Drawing.Point(303, 64);
-            this.numTagCount.Name = "numTagCount";
-            this.numTagCount.Size = new System.Drawing.Size(76, 21);
-            this.numTagCount.TabIndex = 7;
-            this.numTagCount.ValueChanged += new System.EventHandler(this.NumTagCount_ValueChanged);
             // 
             // txtGroupName
             // 
@@ -296,7 +296,6 @@
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numDbNum)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.numTagCount)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvTags)).EndInit();
             this.cmsTags.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.bdsTags)).EndInit();
@@ -311,7 +310,6 @@
         private System.Windows.Forms.NumericUpDown numDbNum;
         private System.Windows.Forms.CheckBox chkActive;
         private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.NumericUpDown numTagCount;
         private System.Windows.Forms.TextBox txtGroupName;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.DataGridView dgvTags;
@@ -330,5 +328,6 @@
         private System.Windows.Forms.BindingSource bdsTags;
         private System.Windows.Forms.TextBox txtMaxAddressLength;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label lblTagCount;
     }
 }

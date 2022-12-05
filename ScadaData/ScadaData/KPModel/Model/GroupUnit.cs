@@ -125,7 +125,7 @@ namespace Scada.KPModel
         /// <summary>
         /// 刷新测点地址
         /// </summary>
-        public virtual void RefreshTagAddress()
+        public virtual void RefreshTagIndex()
         {
             if (StartKpTagIndex >= 1)
             {
@@ -135,25 +135,28 @@ namespace Scada.KPModel
                     tag.TagID = StartKpTagIndex + i;
                 }
             }
+
+            OnPropertyChanged(nameof(TagCount));
         }
         /// <summary>
         /// 刷新测点ID
         /// </summary>
-        public virtual void RefreshTagIndex()
+        public virtual void SortTags()
         {
             if (Tags == null || Tags.Count == 0)
                 return;
-            SortTags();
+            if (Tags?.Count > 0)
+                Tags.Sort();
         }
 
         /// <summary>
         /// 对测点进行排序
         /// </summary>
-        private void SortTags()
-        {
-            if (Tags?.Count > 0)
-                Tags.Sort();
-        }
+        //private void SortTags()
+        //{
+        //    if (Tags?.Count > 0)
+        //        Tags.Sort();
+        //}
         #endregion
 
         #region 批量添加点集合

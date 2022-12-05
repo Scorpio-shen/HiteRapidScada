@@ -272,7 +272,7 @@ namespace Scada.Comm.Engine
         public bool SendModData { get; private set; }
 
         /// <summary>
-        /// Получить период передачи на сервер всех данных КП, с
+        /// Получить период передачи на сервер всех данных КП, с    //获取CP所有数据的服务器传输周期，其中
         /// </summary>
         public int SendAllDataPer { get; private set; }
 

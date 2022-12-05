@@ -3,6 +3,7 @@ using Scada;
 using Scada.Data.Tables;
 using Scada.Extend;
 using Scada.KPModel;
+using Scada.KPModel.Model;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -195,11 +196,18 @@ namespace KpHiteModbus.Modbus.Model
             if (needClear)
                 Tags.Clear();
             Tags.AddRange(addTags);
-            RefreshTagAddress();
-
+            SortTags();
+            //验证是否超出最大点数限制
+            if ((TagCount + StartKpTagIndex > DefineMaxValues.MaxTagCount))
+            {
+                Tags.Clear();
+                Tags.AddRange(tagsOld);
+                errorMsg = "超出点数限制!";
+                result = false;
+            }
             var model = GetRequestModel();
             int byteCount = default;
-            //验证是否超出最大地址限制
+            //验证是否超出最大寄存器个数限制
             if(RegisterType == RegisterTypeEnum.Coils || RegisterType == RegisterTypeEnum.DiscretesInputs)
             {
                 //验证数据类型是否符合规范
@@ -225,7 +233,7 @@ namespace KpHiteModbus.Modbus.Model
                 errorMsg = "数据超出范围!";
                 result = false;
             }
-
+            RefreshTagIndex();
             return result;
         }
 
