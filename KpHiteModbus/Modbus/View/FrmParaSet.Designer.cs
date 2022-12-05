@@ -52,7 +52,6 @@
             // 
             // txtIPAddress
             // 
-            this.txtIPAddress.Enabled = false;
             this.txtIPAddress.Location = new System.Drawing.Point(76, 42);
             this.txtIPAddress.Name = "txtIPAddress";
             this.txtIPAddress.Size = new System.Drawing.Size(121, 21);

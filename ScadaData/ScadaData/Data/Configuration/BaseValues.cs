@@ -201,27 +201,27 @@ namespace Scada.Data.Configuration
         public static class CnlStatuses
         {
             /// <summary>
-            /// Не определён
+            /// Не определён //未定义
             /// </summary>
             public const int Undefined = 0;
             /// <summary>
-            /// Определён
+            /// Определён  //定义
             /// </summary>
             public const int Defined = 1;
             /// <summary>
-            /// Архивный
+            /// Архивный  //档案
             /// </summary>
             public const int Archival = 2;
             /// <summary>
-            /// Ошибка в формуле
+            /// Ошибка в формуле  //公式错误
             /// </summary>
             public const int FormulaError = 3;
             /// <summary>
-            /// Изменён
+            /// Изменён     //改变
             /// </summary>
             public const int Changed = 4;
             /// <summary>
-            /// Недостоверен
+            /// Недостоверен    //不可靠
             /// </summary>
             public const int Unreliable = 5;
 
