@@ -1,9 +1,4 @@
-﻿using Scada.KPModel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using KpCommon.Model;
 
 namespace KpHiteModbus.Modbus.Model
 {

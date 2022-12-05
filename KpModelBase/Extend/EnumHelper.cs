@@ -1,8 +1,9 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 
-namespace Scada.Extend
+namespace KpCommon.Extend
 {
     public static class EnumHelper
     {
@@ -30,7 +31,7 @@ namespace Scada.Extend
                 return null;
             }
 
-            T customAttribute = field.GetCustomAttribute<T>(inherit: false);
+            T customAttribute = field.GetCustomAttributes(typeof(T), inherit: false).FirstOrDefault() as T;
             
             return customAttribute;
         }

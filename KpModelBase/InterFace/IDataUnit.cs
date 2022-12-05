@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Scada.KPModel.InterFace
+namespace KpCommon.InterFace
 {
     public interface IDataUnit : IComparable<IDataUnit>, INotifyPropertyChanged, ICloneable
     {

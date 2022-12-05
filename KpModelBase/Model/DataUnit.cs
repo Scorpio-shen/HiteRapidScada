@@ -1,13 +1,8 @@
-﻿using Scada.KPModel.Attributes;
-using Scada.KPModel.InterFace;
-using System;
-using System.Collections.Generic;
+﻿using KpCommon.Attributes;
+using KpCommon.InterFace;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Scada.KPModel
+namespace KpCommon.Model
 {
     /// <summary>
     /// 通讯点最小单元

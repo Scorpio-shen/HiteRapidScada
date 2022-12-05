@@ -1,10 +1,10 @@
-﻿using Scada.KPModel.InterFace;
+﻿using KpCommon.InterFace;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Xml;
 
-namespace Scada.KPModel
+namespace KpCommon.Model
 {
     public abstract class GroupUnit<T>:INotifyPropertyChanged  where T : class,IDataUnit 
     {

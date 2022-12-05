@@ -1,9 +1,7 @@
-﻿using KpSiemens.Siemens.Extend;
+﻿using KpCommon.Extend;
+using KpCommon.Helper;
+using KpSiemens.Siemens.Extend;
 using KpSiemens.Siemens.Model;
-using KpSiemens.Siemens.ViewModel;
-using Scada.Extend;
-using Scada.Helper;
-using Scada.KPModel.Extend;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
@@ -12,8 +10,6 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace KpSiemens.Siemens.View

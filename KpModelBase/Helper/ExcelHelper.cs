@@ -1,18 +1,15 @@
-﻿using NPOI.HSSF.UserModel;
+﻿using KpCommon.Attributes;
+using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
-using Scada.KPModel;
-using Scada.KPModel.Attributes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Scada.Helper
+namespace KpCommon.Helper
 {
     public class ExcelHelper
     {
@@ -267,8 +264,8 @@ namespace Scada.Helper
             {
                 foreach (var item in type.GetProperties())
                 {
-                    var displayName = item.GetCustomAttributes<DisplayNameAttribute>(false).FirstOrDefault();
-                    var sort = item.GetCustomAttribute<ExcelHeaderSortAttribute>(false); 
+                    var displayName = item.GetCustomAttributes(typeof(DisplayNameAttribute),false).FirstOrDefault() as DisplayNameAttribute;
+                    var sort = item.GetCustomAttributes(typeof(ExcelHeaderSortAttribute),false).FirstOrDefault() as ExcelHeaderSortAttribute; 
                     if (displayName != null)
                     {
                         //if (isToExcel)
@@ -450,11 +447,11 @@ namespace Scada.Helper
                                                 if (cell.CellType == CellType.String)
                                                 {
                                                     var value = Convert.ToDateTime(cell.ToString());
-                                                    item.SetValue(t, value);
+                                                    item.SetValue(t, value,null);
                                                 }
                                                 else
                                                 {
-                                                    item.SetValue(t, cell.DateCellValue);
+                                                    item.SetValue(t, cell.DateCellValue,null);
                                                 }
                                             }
                                             catch
@@ -466,23 +463,23 @@ namespace Scada.Helper
                                         {
                                             try
                                             {
-                                                item.SetValue(t, Convert.ToInt32(cell.ToString()));
+                                                item.SetValue(t, Convert.ToInt32(cell.ToString()), null);
                                             }
                                             catch
                                             {
-                                                throw new Exception($"int{cell.ToString()}格式不正确!");
+                                                throw new Exception($"int{cell}格式不正确!");
                                             }
                                         }
                                         else if (item.PropertyType == typeof(string))
                                         {
                                             if (cell.CellType == CellType.String)
                                             {
-                                                item.SetValue(t, cell.ToString());
+                                                item.SetValue(t, cell.ToString(), null);
                                                 isAddList = IsAdd(name, string.IsNullOrEmpty(cell.ToString()));
                                             }
                                             else
                                             {
-                                                item.SetValue(t, cell.NumericCellValue.ToString());
+                                                item.SetValue(t, cell.NumericCellValue.ToString(), null);
                                             }
 
                                         }
@@ -501,7 +498,7 @@ namespace Scada.Helper
                                                     {
                                                         value = Convert.ToDecimal(cell.NumericCellValue);
                                                     }
-                                                    item.SetValue(t, value);
+                                                    item.SetValue(t, value, null);
                                                     isAddList = IsAdd(name, value == 0);
                                                 }
                                                 catch
@@ -520,7 +517,7 @@ namespace Scada.Helper
                                                 else
                                                     value = Convert.ToByte(cell.NumericCellValue);
 
-                                                item.SetValue(t, value);
+                                                item.SetValue(t, value, null);
 
                                             }
                                             catch
@@ -632,7 +629,7 @@ namespace Scada.Helper
                             var p = itemType.GetProperty(item.Key);//获取对应列名
                             if (p != null)
                             {
-                                var value = p.GetValue(data[i]);
+                                var value = p.GetValue(data[i],null);
                                 value = value == null ? string.Empty : value;
                                 ICell cell = row.CreateCell(j);
                                 cell.SetCellValue(value.ToString());

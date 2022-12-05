@@ -1,7 +1,7 @@
-﻿using KpHiteModbus.Modbus.Extend;
+﻿using KpCommon.Extend;
+using KpHiteModbus.Modbus.Extend;
 using KpHiteModbus.Modbus.Model.EnumType;
 using Scada;
-using Scada.Extend;
 using System;
 using System.ComponentModel;
 using System.IO.Ports;

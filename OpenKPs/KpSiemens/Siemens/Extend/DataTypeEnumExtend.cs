@@ -1,6 +1,6 @@
-﻿using KpSiemens.Siemens.Model;
-using Scada.Extend;
-using Scada.KPModel.Attributes;
+﻿using KpCommon.Attributes;
+using KpCommon.Extend;
+using KpSiemens.Siemens.Model;
 
 namespace KpSiemens.Siemens.Extend
 {

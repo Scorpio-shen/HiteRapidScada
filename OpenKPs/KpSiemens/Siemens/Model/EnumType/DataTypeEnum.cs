@@ -1,4 +1,4 @@
-﻿using Scada.KPModel.Attributes;
+﻿using KpCommon.Attributes;
 
 namespace KpSiemens.Siemens.Model
 {

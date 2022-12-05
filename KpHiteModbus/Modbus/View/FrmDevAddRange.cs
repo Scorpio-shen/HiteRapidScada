@@ -1,6 +1,6 @@
-﻿using KpHiteModbus.Modbus.Model;
+﻿using KpCommon.Extend;
+using KpHiteModbus.Modbus.Model;
 using KpHiteModbus.Modbus.ViewModel;
-using Scada.KPModel.Extend;
 using Scada.UI;
 using System;
 using System.Collections.Generic;

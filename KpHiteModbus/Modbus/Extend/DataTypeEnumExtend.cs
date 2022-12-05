@@ -1,6 +1,6 @@
-﻿using KpHiteModbus.Modbus.Model;
-using Scada.Extend;
-using Scada.KPModel.Attributes;
+﻿using KpCommon.Attributes;
+using KpCommon.Extend;
+using KpHiteModbus.Modbus.Model;
 using System.IO.Ports;
 
 namespace KpHiteModbus.Modbus.Extend

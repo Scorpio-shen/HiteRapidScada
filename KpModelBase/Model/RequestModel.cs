@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Scada.KPModel
+namespace KpCommon.Model
 {
     public class RequestModel
     {

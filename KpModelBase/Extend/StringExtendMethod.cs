@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Scada.Extend
+namespace KpCommon.Extend
 {
     public static class StringExtendMethod
     {

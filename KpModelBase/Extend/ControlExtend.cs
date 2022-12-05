@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Scada.KPModel.Extend
+namespace KpCommon.Extend
 {
     public static class ControlExtend
     {

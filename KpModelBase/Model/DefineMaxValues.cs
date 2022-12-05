@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Scada.KPModel.Model
+namespace KpCommon.Model
 {
     /// <summary>
     /// 定义KpModel中各种最大值限定

@@ -1,8 +1,7 @@
-﻿using KpSiemens.Siemens.Extend;
+﻿using KpCommon.Extend;
+using KpCommon.Model;
+using KpSiemens.Siemens.Extend;
 using Scada;
-using Scada.Extend;
-using Scada.KPModel;
-using Scada.KPModel.Model;
 using System;
 using System.Collections;
 using System.Collections.Generic;

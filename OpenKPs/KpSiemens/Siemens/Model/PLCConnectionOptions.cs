@@ -1,4 +1,5 @@
-﻿using Scada;
+﻿using KpCommon.Extend;
+using Scada;
 using Scada.Extend;
 using System;
 using System.ComponentModel;

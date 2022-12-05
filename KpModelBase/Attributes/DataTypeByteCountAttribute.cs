@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Scada.KPModel.Attributes
+namespace KpCommon.Attributes
 {
     public class DataTypeByteCountAttribute : Attribute
     {

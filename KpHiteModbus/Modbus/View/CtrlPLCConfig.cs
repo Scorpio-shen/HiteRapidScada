@@ -1,7 +1,6 @@
-﻿using KpHiteModbus.Modbus.Model;
+﻿using KpCommon.Extend;
+using KpHiteModbus.Modbus.Model;
 using KpHiteModbus.Modbus.Model.EnumType;
-using Scada.Extend;
-using Scada.KPModel.Extend;
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;

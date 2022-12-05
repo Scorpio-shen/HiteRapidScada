@@ -1,8 +1,8 @@
-﻿using KpHiteModbus.Modbus.Extend;
+﻿using KpCommon.Extend;
+using KpCommon.Helper;
+using KpHiteModbus.Modbus.Extend;
 using KpHiteModbus.Modbus.Model;
 using KpHiteModbus.Modbus.Model.EnumType;
-using Scada.Helper;
-using Scada.KPModel.Extend;
 using Scada.UI;
 using System;
 using System.Collections.Generic;

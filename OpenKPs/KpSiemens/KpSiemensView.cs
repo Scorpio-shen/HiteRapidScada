@@ -1,13 +1,8 @@
 ﻿using KpSiemens.Siemens.Model;
 using KpSiemens.Siemens.View;
 using Scada.Data.Configuration;
-using Scada.UI;
-using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Scada.Comm.Devices
 {

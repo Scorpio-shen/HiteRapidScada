@@ -15,7 +15,7 @@
     <OldToolsVersion>3.5</OldToolsVersion>
     <UpgradeBackupLocation>
     </UpgradeBackupLocation>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -41,30 +41,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Autofac, Version=3.5.0.0, Culture=neutral, PublicKeyToken=17863af14b0044da, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Autofac.3.5.2\lib\net40\Autofac.dll</HintPath>
-    </Reference>
-    <Reference Include="HslCommunication, Version=11.2.2.0, Culture=neutral, PublicKeyToken=3d72ad3b6b5ec0e3, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\HslCommunication.11.2.2\lib\net451\HslCommunication.dll</HintPath>
-    </Reference>
-    <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="NPOI, Version=2.3.0.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NPOI.2.3.0\lib\net40\NPOI.dll</HintPath>
-    </Reference>
-    <Reference Include="NPOI.OOXML, Version=2.3.0.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NPOI.2.3.0\lib\net40\NPOI.OOXML.dll</HintPath>
-    </Reference>
-    <Reference Include="NPOI.OpenXml4Net, Version=2.3.0.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NPOI.2.3.0\lib\net40\NPOI.OpenXml4Net.dll</HintPath>
-    </Reference>
-    <Reference Include="NPOI.OpenXmlFormats, Version=2.3.0.0, Culture=neutral, PublicKeyToken=0df73ec7942b34e1, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\NPOI.2.3.0\lib\net40\NPOI.OpenXmlFormats.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
@@ -126,26 +102,13 @@
     <Compile Include="Data\Tables\TableFilter.cs" />
     <Compile Include="Data\Tables\TableIndex.cs" />
     <Compile Include="Data\Tables\TableRelation.cs" />
-    <Compile Include="KPModel\Attributes\ExcelHeaderSortAttribute.cs" />
-    <Compile Include="KPModel\DIService\DIModbusService\ModbusServiceExtend.cs" />
-    <Compile Include="KPModel\DIService\DIServiceHelper.cs" />
-    <Compile Include="KPModel\Extend\ControlExtend.cs" />
-    <Compile Include="KPModel\Extend\EnumHelper.cs" />
-    <Compile Include="KPModel\Extend\StringExtendMethod.cs" />
     <Compile Include="FileListener.cs" />
     <Compile Include="Data\Tables\BaseAdapter.cs" />
     <Compile Include="Data\Configuration\BaseValues.cs" />
     <Compile Include="CommonPhrases.cs" />
     <Compile Include="Data\Tables\EventAdapter.cs" />
     <Compile Include="Data\Tables\EventTableLight.cs" />
-    <Compile Include="KPModel\Helper\ExcelHelper.cs" />
     <Compile Include="ISettings.cs" />
-    <Compile Include="KPModel\Attributes\DataTypeByteCountAttribute.cs" />
-    <Compile Include="KPModel\Model\DataUnit.cs" />
-    <Compile Include="KPModel\Model\DefineMaxValues.cs" />
-    <Compile Include="KPModel\Model\GroupUnit.cs" />
-    <Compile Include="KPModel\InterFace\IDataUnit.cs" />
-    <Compile Include="KPModel\Model\RequestModel.cs" />
     <Compile Include="Localization.cs" />
     <Compile Include="Data\Models\InCnlProps.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -186,9 +149,6 @@
       <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
       <Name>Log</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

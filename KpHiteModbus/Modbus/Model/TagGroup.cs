@@ -1,15 +1,12 @@
-﻿using KpHiteModbus.Modbus.Extend;
+﻿using KpCommon.Extend;
+using KpCommon.Model;
+using KpHiteModbus.Modbus.Extend;
 using Scada;
-using Scada.Data.Tables;
-using Scada.Extend;
-using Scada.KPModel;
-using Scada.KPModel.Model;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 
 namespace KpHiteModbus.Modbus.Model
