@@ -171,9 +171,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CommonLibrary", "CommonLibr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KpSiemens", "OpenKPs\KpSiemens\KpSiemens.csproj", "{65CC707B-9619-4AA3-A8C8-0306084DB5E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KpHiteModbus", "KpHiteModbus\KpHiteModbus.csproj", "{C75B41C0-6DCC-454A-B36C-69DD01AFE5D5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KpHiteModbus", "OpenKPs\KpHiteModbus\KpHiteModbus.csproj", "{C75B41C0-6DCC-454A-B36C-69DD01AFE5D5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KpCommon", "KpModelBase\KpCommon.csproj", "{2BA0BC26-8C82-4466-A0D1-92F0889C8A94}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KpCommon", "OpenKPs\KpCommon\KpCommon.csproj", "{2BA0BC26-8C82-4466-A0D1-92F0889C8A94}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

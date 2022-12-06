@@ -31,6 +31,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="HslCommunication, Version=11.2.2.0, Culture=neutral, PublicKeyToken=3d72ad3b6b5ec0e3, processorArchitecture=MSIL">
       <HintPath>..\packages\HslCommunication.11.2.2\lib\net451\HslCommunication.dll</HintPath>
@@ -115,17 +118,17 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\KpModelBase\KpCommon.csproj">
-      <Project>{2ba0bc26-8c82-4466-a0d1-92f0889c8a94}</Project>
-      <Name>KpCommon</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ScadaComm\ScadaComm\ScadaCommCommon\ScadaCommCommon.csproj">
+    <ProjectReference Include="..\..\ScadaComm\ScadaComm\ScadaCommCommon\ScadaCommCommon.csproj">
       <Project>{7baeae0e-4694-41d7-bc29-f205aef69741}</Project>
       <Name>ScadaCommCommon</Name>
     </ProjectReference>
-    <ProjectReference Include="..\ScadaData\ScadaData\ScadaData.csproj">
+    <ProjectReference Include="..\..\ScadaData\ScadaData\ScadaData.csproj">
       <Project>{c5dc293f-13ca-435f-a7db-4ba91639c292}</Project>
       <Name>ScadaData</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\KpCommon\KpCommon.csproj">
+      <Project>{2ba0bc26-8c82-4466-a0d1-92f0889c8a94}</Project>
+      <Name>KpCommon</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -153,8 +156,16 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>if exist "C:\SCADA\ScadaComm\KP" (
+    <PostBuildEvent>if exist "C:\SCADA\ScadaComm\KP"  (
 copy "$(TargetFileName)" "C:\SCADA\ScadaComm\KP\"
+copy "$(TargetDir)HslCommunication.dll" "C:\SCADA\ScadaComm\KP\"
+copy "$(TargetDir)ICSharpCode.SharpZipLib.dll" "C:\SCADA\ScadaComm\KP\"
+copy "$(TargetDir)KpCommon.dll" "C:\SCADA\ScadaComm\KP\"
+copy "$(TargetDir)Newtonsoft.Json.dll" "C:\SCADA\ScadaComm\KP\"
+copy "$(TargetDir)NPOI.dll" "C:\SCADA\ScadaComm\KP\"
+copy "$(TargetDir)NPOI.OOXML.dll" "C:\SCADA\ScadaComm\KP\"
+copy "$(TargetDir)NPOI.OpenXml4Net.dll" "C:\SCADA\ScadaComm\KP\"
+copy "$(TargetDir)NPOI.OpenXmlFormats.dll" "C:\SCADA\ScadaComm\KP\"
 )</PostBuildEvent>
   </PropertyGroup>
 </Project>
