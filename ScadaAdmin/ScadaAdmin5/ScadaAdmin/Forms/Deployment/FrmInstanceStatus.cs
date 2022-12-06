@@ -140,17 +140,41 @@ namespace Scada.Admin.App.Forms.Deployment
         {
             await Task.Run(() =>
             {
-                try
+                //try
+                //{
+
+                //    //txtServerStatus.Text = agentClient.GetServiceStatus(ServiceApp.Server, out ServiceStatus status) ?
+                //    //    StatusToString(status) : "---";
+                //    //txtUpdateTime.Text = DateTime.Now.ToLocalizedString();
+
+                //}
+                //catch (Exception ex)
+                //{
+                //    txtServerStatus.Text = ex.Message;
+                //}
+
+                UpdateServerStatus();
+            });
+        }
+
+        private void UpdateServerStatus()
+        {
+            try
+            {
+                var statusOk = agentClient.GetServiceStatus(ServiceApp.Server, out ServiceStatus status);
+                txtServerStatus.Invoke(new Action(() =>
                 {
-                    txtServerStatus.Text = agentClient.GetServiceStatus(ServiceApp.Server, out ServiceStatus status) ?
-                        StatusToString(status) : "---";
+                    txtServerStatus.Text = statusOk ? StatusToString(status) : "---";
                     txtUpdateTime.Text = DateTime.Now.ToLocalizedString();
-                }
-                catch (Exception ex)
+                }));
+            }
+            catch(Exception ex)
+            {
+                txtServerStatus.Invoke(new Action(() =>
                 {
                     txtServerStatus.Text = ex.Message;
-                }
-            });
+                }));
+            }
         }
 
         /// <summary>
@@ -158,19 +182,38 @@ namespace Scada.Admin.App.Forms.Deployment
         /// </summary>
         private async Task GetCommStatusAsync()
         {
-            await Task.Run(() =>
+            await Task.Run(UpdateCommStatus);
+            //await Task.Run(() =>
+            //{
+            //    try
+            //    {
+            //        txtCommStatus.Text = agentClient.GetServiceStatus(ServiceApp.Comm, out ServiceStatus status) ?
+            //            StatusToString(status) : "---";
+            //        txtUpdateTime.Text = DateTime.Now.ToLocalizedString();
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        txtCommStatus.Text = ex.Message;
+            //    }
+            //});
+        }
+
+        private void UpdateCommStatus()
+        {
+            try
             {
-                try
+                var statusOk = agentClient.GetServiceStatus(ServiceApp.Comm, out ServiceStatus status);
+                txtCommStatus.Invoke(new Action(() =>
                 {
-                    txtCommStatus.Text = agentClient.GetServiceStatus(ServiceApp.Comm, out ServiceStatus status) ?
+                    txtCommStatus.Text = statusOk ?
                         StatusToString(status) : "---";
                     txtUpdateTime.Text = DateTime.Now.ToLocalizedString();
-                }
-                catch (Exception ex)
-                {
-                    txtCommStatus.Text = ex.Message;
-                }
-            });
+                }));
+            }
+            catch(Exception ex)
+            {
+                txtCommStatus.Invoke(new Action(() => { txtCommStatus.Text = ex.Message; }));
+            }
         }
 
         /// <summary>
