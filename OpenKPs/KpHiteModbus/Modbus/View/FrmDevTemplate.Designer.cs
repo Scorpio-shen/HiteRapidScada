@@ -132,7 +132,7 @@
             this.btnAddTagGroup.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.btnAddTagGroup.Name = "btnAddTagGroup";
             this.btnAddTagGroup.Size = new System.Drawing.Size(23, 22);
-            this.btnAddTagGroup.ToolTipText = "Add tag group";
+            this.btnAddTagGroup.ToolTipText = "添加变量组";
             this.btnAddTagGroup.Click += new System.EventHandler(this.btnAddTagGroup_Click);
             // 
             // btnMoveUp

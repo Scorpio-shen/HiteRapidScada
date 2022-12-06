@@ -150,7 +150,7 @@
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.Name = "FrmDevProps";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "FrmDevTemplate";
+            this.Text = "模板配置";
             this.Load += new System.EventHandler(this.FrmDevProps_Load);
             this.gbDevice.ResumeLayout(false);
             this.gbDevice.PerformLayout();

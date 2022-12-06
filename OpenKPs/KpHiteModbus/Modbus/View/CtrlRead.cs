@@ -430,7 +430,13 @@ namespace KpHiteModbus.Modbus.View
                 Directory.CreateDirectory(directory);
             try
             {
-                using (var ms = ExcelHelper.ToExcel( ModbusTagGroup.Tags, excelType))
+                var exportTags = ModbusTagGroup.Tags;
+                if (exportTags.Count == 0)
+                    exportTags = new List<Tag>();
+                //当前导出为空模板时添加两条空数据,用于指示用户使用
+                exportTags.Add(Model.Tag.CreateNewTag(tagID:1,tagname:"xx1",dataType: DataTypeEnum.UShort,registerType: RegisterTypeEnum.HoldingRegisters,address:"1",canwrite:true));
+                exportTags.Add(Model.Tag.CreateNewTag(tagID:2, tagname: "xx2", dataType: DataTypeEnum.UShort, registerType: RegisterTypeEnum.HoldingRegisters, address: "2", canwrite: true));
+                using (var ms = ExcelHelper.ToExcel(exportTags, excelType))
                 {
                     using (var fileStream = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
                     {
