@@ -97,7 +97,7 @@ namespace KpCommon.Model
             TagGroups.ForEach(t =>
             {
                 t.StartKpTagIndex = startIndex;
-                t.SortTags();
+                t.RefreshTagIndex();
                 startIndex += t.TagCount;
             });
         }

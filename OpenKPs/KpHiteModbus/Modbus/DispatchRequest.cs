@@ -24,10 +24,12 @@ namespace KpHiteModbus.Modbus
         public bool Request(TagGroupRequestModel request, RegisterTypeEnum registerType,out string errorMsg)
         {
             _request= request;
-            if(registerType == RegisterTypeEnum.Coils || registerType == RegisterTypeEnum.DiscretesInputs)
-                _maxlength= ModbusRegisterMaxDefine.MaxCoilOrDiRequestLength;
-            else
-                _maxlength = ModbusRegisterMaxDefine.MaxHrOrIRRequestLength;
+            //if(registerType == RegisterTypeEnum.Coils || registerType == RegisterTypeEnum.DiscretesInputs)
+            //    _maxlength= ModbusRegisterMaxDefine.MaxCoilOrDiRequestLength;
+            //else
+            //    _maxlength = ModbusRegisterMaxDefine.MaxHrOrIRRequestLength;
+
+            _maxlength = ushort.MaxValue;
 
             errorMsg = string.Empty;
             if (_request == null)
@@ -81,7 +83,7 @@ namespace KpHiteModbus.Modbus
                 for(int j = 0;j < listUnits.Count; j++)
                 {
                     _requestMethod?.Invoke(listUnits[j]);
-                    Thread.Sleep(10);
+                    //Thread.Sleep(1);
                 }
                     
 

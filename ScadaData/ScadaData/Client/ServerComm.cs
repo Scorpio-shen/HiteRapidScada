@@ -31,6 +31,7 @@ using Scada.Data.Tables;
 using System;
 using System.Data;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -1666,6 +1667,7 @@ namespace Scada.Client
                     // обработка полученных данных
                     if (CheckDataFormat(buf, 0x07) && bytesRead == buf.Length)
                     {
+                        WriteAction($"{string.Join(",", buf.Select(b => b.ToString("x2")))},bytesRead:{bytesRead},Length:{buf.Length}", Log.ActTypes.Information);
                         if (cmdDataLen > 0)
                         {
                             byte cmdType = buf[5];
@@ -1695,6 +1697,7 @@ namespace Scada.Client
                     }
                     else
                     {
+                        WriteAction($"{string.Join(",",buf.Select(b=>b.ToString("x2")))},bytesRead:{bytesRead},Length:{buf.Length}", Log.ActTypes.Error);
                         errMsg = Localization.UseRussian ?
                             "Неверный формат ответа SCADA-Сервера на запрос команды ТУ" :
                             "Incorrect SCADA-Server response to telecommand request";

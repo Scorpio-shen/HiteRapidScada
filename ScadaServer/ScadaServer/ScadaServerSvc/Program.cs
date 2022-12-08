@@ -28,29 +28,29 @@ using System.ServiceProcess;
 
 namespace Scada.Server.Svc
 {
-    // static class Program
-    // {
-    //     /// <summary>
-    //     /// The main entry point for the application.
-    //     /// </summary>
-    //     static void Main()
-    //     {
-    //         ServiceBase[] ServicesToRun;
-    //         ServicesToRun = new ServiceBase[] 
-    //{ 
-    //	new SvcMain() 
-    //};
-    //         ServiceBase.Run(ServicesToRun);
-    //     }
-    // }
-
-
-    internal class Program
+    static class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        static void Main()
         {
-            var temp = new SvcMain();
-            temp.StartService();
+            ServiceBase[] ServicesToRun;
+            ServicesToRun = new ServiceBase[]
+            {
+                new SvcMain()
+            };
+            ServiceBase.Run(ServicesToRun);
         }
     }
+
+
+    //internal class Program
+    //{
+    //    static void Main(string[] args)
+    //    {
+    //        var temp = new SvcMain();
+    //        temp.StartService();
+    //    }
+    //}
 }

@@ -45,11 +45,11 @@ namespace Scada.Comm.Svc
     //        //
 
     //        #region 源有代码
-    //        //ServiceBase[] ServicesToRun;
+    //        ServiceBase[] ServicesToRun;
 
-    //        //ServicesToRun = new ServiceBase[] { new SvcMain() };
+    //        ServicesToRun = new ServiceBase[] { new SvcMain() };
 
-    //        //ServiceBase.Run(ServicesToRun);
+    //        ServiceBase.Run(ServicesToRun);
     //        #endregion
 
 

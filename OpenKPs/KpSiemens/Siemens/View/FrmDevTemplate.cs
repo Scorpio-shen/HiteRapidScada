@@ -116,7 +116,7 @@ namespace KpSiemens.Siemens.View
             var tagGroup = deviceTemplate.CreateTagGroup();
             int index = currentNode != null && currentNode.Tag is SiemensTagGroup ? currentNode.Index + 1 : deviceTemplate.TagGroups.Count;
             deviceTemplate.TagGroups.Insert(index,tagGroup);
-            deviceTemplate.RefreshTagGroupIndex();
+            RefreshTagGroupIndex();
 
             TreeNode treeNode = NewTagGroupNode(tagGroup);
             tagGroupRootNode.Nodes.Insert(index, treeNode);
@@ -141,7 +141,7 @@ namespace KpSiemens.Siemens.View
                 tagGroupRootNode.Nodes.RemoveAt(prevIndex);
                 tagGroupRootNode.Nodes.Insert(prevIndex + 1, prevNode);
 
-                deviceTemplate.RefreshTagGroupIndex();
+                RefreshTagGroupIndex();
             }
 
             btnMoveUp.Enabled = currentNode.PrevNode != null;
@@ -169,6 +169,7 @@ namespace KpSiemens.Siemens.View
             if(tagGroup != null)
             {
                 deviceTemplate.TagGroups.Remove(tagGroup);
+                RefreshTagGroupIndex();
                 tagGroupRootNode.Nodes.Remove(currentNode);
             }
             Modified = true;
@@ -252,7 +253,7 @@ namespace KpSiemens.Siemens.View
                     switch (e.ModifyType)
                     {
                         case ModifyType.TagCount:
-                            deviceTemplate.RefreshTagGroupIndex();
+                            RefreshTagGroupIndex();
                             break;
                         case ModifyType.GroupName:
                             currentNode.Text = GetTagGroupDesc(tagGroup);
@@ -392,6 +393,12 @@ namespace KpSiemens.Siemens.View
         }
         #endregion
 
-        
+        #region TagGroupIndex刷新
+        private void RefreshTagGroupIndex()
+        {
+            deviceTemplate.RefreshTagGroupIndex();
+            //ctrlRead.RefreshDataGridView();
+        }
+        #endregion
     }
 }
