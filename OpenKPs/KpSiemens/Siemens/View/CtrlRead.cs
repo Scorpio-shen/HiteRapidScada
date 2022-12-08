@@ -437,10 +437,15 @@ namespace KpSiemens.Siemens.View
             {
                 var exportTags = SiemensTagGroup.Tags;
                 if (exportTags.Count == 0)
-                    exportTags = new List<Tag>();
-                //当前导出为空模板时添加两条空数据,用于指示用户使用
-                exportTags.Add(Model.Tag.CreateNewTag(tagID: 1, tagname: "xx1", dataType: DataTypeEnum.Int,memoryType: MemoryTypeEnum.DB, address: "0",canwrite:1));
-                exportTags.Add(Model.Tag.CreateNewTag(tagID: 2, tagname: "xx2", dataType: DataTypeEnum.Int, memoryType: MemoryTypeEnum.DB, address: "0", canwrite: 2));
+                {
+                    exportTags = new List<Tag>
+                    {
+                        //当前导出为空模板时添加两条空数据,用于指示用户使用
+                        Model.Tag.CreateNewTag(tagID: 1, tagname: "xx1", dataType: DataTypeEnum.Int, memoryType: MemoryTypeEnum.DB, address: "0", canwrite: 1),
+                        Model.Tag.CreateNewTag(tagID: 2, tagname: "xx2", dataType: DataTypeEnum.Int, memoryType: MemoryTypeEnum.DB, address: "0", canwrite: 2)
+                    };
+                }
+                    
                 using (var ms = ExcelHelper.ToExcel(SiemensTagGroup.Tags,excelType))
                 {
                     using (var fileStream = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite))

@@ -49,21 +49,25 @@ namespace Scada.Comm.Devices
 
         /// <summary>
         /// Получить или установить таймаут запросов, мс
+        /// 获取或设置请求超时，毫秒
         /// </summary>
         public int Timeout { get; set; }
 
         /// <summary>
         /// Получить или установить задержку после запросов, мс
+        /// 获取或设置请求后的延迟，毫秒
         /// </summary>
         public int Delay { get; set; }
 
         /// <summary>
         /// Получить или установить время опроса
+        /// 获取或设置轮询时间
         /// </summary>
         public DateTime Time { get; set; }
 
         /// <summary>
         /// Получить или установить период опроса
+        /// 获取或设置轮询间隔
         /// </summary>
         public TimeSpan Period { get; set; }
 

@@ -28,7 +28,9 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.lblTagCount = new System.Windows.Forms.Label();
             this.chkAllCanWrite = new System.Windows.Forms.CheckBox();
             this.txtMaxAddressLength = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
@@ -44,12 +46,11 @@
             this.dgvTagStringLength = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dgvTagAddress = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dgvTagCanWrite = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.cmsTags = new System.Windows.Forms.ContextMenuStrip();
+            this.cmsTags = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.deleteTStripItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cbxRegisterType = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.bdsTags = new System.Windows.Forms.BindingSource();
-            this.lblTagCount = new System.Windows.Forms.Label();
+            this.bdsTags = new System.Windows.Forms.BindingSource(this.components);
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvTags)).BeginInit();
             this.cmsTags.SuspendLayout();
@@ -78,6 +79,15 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "参数配置";
             // 
+            // lblTagCount
+            // 
+            this.lblTagCount.AutoSize = true;
+            this.lblTagCount.Location = new System.Drawing.Point(319, 33);
+            this.lblTagCount.Name = "lblTagCount";
+            this.lblTagCount.Size = new System.Drawing.Size(11, 12);
+            this.lblTagCount.TabIndex = 17;
+            this.lblTagCount.Text = "0";
+            // 
             // chkAllCanWrite
             // 
             this.chkAllCanWrite.AutoSize = true;
@@ -89,6 +99,7 @@
             this.chkAllCanWrite.Text = "全部勾选";
             this.chkAllCanWrite.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.chkAllCanWrite.UseVisualStyleBackColor = true;
+            this.chkAllCanWrite.CheckedChanged += new System.EventHandler(this.chkAllCanWrite_CheckedChanged);
             // 
             // txtMaxAddressLength
             // 
@@ -252,15 +263,6 @@
             this.label1.Size = new System.Drawing.Size(65, 12);
             this.label1.TabIndex = 0;
             this.label1.Text = "寄存器类型";
-            // 
-            // lblTagCount
-            // 
-            this.lblTagCount.AutoSize = true;
-            this.lblTagCount.Location = new System.Drawing.Point(319, 33);
-            this.lblTagCount.Name = "lblTagCount";
-            this.lblTagCount.Size = new System.Drawing.Size(11, 12);
-            this.lblTagCount.TabIndex = 17;
-            this.lblTagCount.Text = "0";
             // 
             // CtrlRead
             // 

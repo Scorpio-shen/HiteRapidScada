@@ -74,11 +74,16 @@
     <Compile Include="Extend\EnumHelper.cs" />
     <Compile Include="Extend\StringExtendMethod.cs" />
     <Compile Include="Helper\ExcelHelper.cs" />
+    <Compile Include="InterFace\IConnectionUnit.cs" />
     <Compile Include="InterFace\IDataUnit.cs" />
+    <Compile Include="InterFace\IGroupUnit.cs" />
+    <Compile Include="InterFace\ITemplateUnit.cs" />
+    <Compile Include="Model\ConnectionUnit.cs" />
     <Compile Include="Model\DataUnit.cs" />
-    <Compile Include="Model\DefineMaxValues.cs" />
+    <Compile Include="Model\DefineReadOnlyValues.cs" />
     <Compile Include="Model\GroupUnit.cs" />
     <Compile Include="Model\RequestModel.cs" />
+    <Compile Include="Model\TemplateUnit.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

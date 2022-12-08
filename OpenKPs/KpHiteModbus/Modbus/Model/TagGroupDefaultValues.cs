@@ -14,6 +14,6 @@ namespace KpHiteModbus.Modbus.Model
         /// <summary>
         /// 默认最大地址长度
         /// </summary>
-        public static readonly double MaxAddressLength = 200;
+        public static readonly double MaxAddressLength = 2000;
     }
 }

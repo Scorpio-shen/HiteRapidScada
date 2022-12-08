@@ -33,6 +33,7 @@ using Scada.Data.Tables;
 using System;
 using System.Collections.Generic;
 using System.Data;
+//using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -85,22 +86,27 @@ namespace Scada.Comm.Engine
         {
             /// <summary>
             /// Бездействие
+            /// 闲置
             /// </summary>
             Idle,
             /// <summary>
             /// Цикл работы
+            /// 运行中
             /// </summary>
             Running,
             /// <summary>
             /// Завершение работы
+            /// 关闭
             /// </summary>
             Terminating,
             /// <summary>
             /// Работа нормально завершена
+            /// 工作正常完成
             /// </summary>
             Terminated,
             /// <summary>
             /// Работа прервана
+            /// 工作中断
             /// </summary>
             Aborted
         }
@@ -782,6 +788,9 @@ namespace Scada.Comm.Engine
                 if (sendAll)
                     sendAllDT = utcNowDT;
 
+                System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                log.WriteLine();
+                log.WriteInfo($"{DateTime.Now},开始轮询所有Device");
                 while (kpInd < kpCnt && !terminateCycle)
                 {
                     // обработка команд ТУ
@@ -821,6 +830,8 @@ namespace Scada.Comm.Engine
                     else
                         Thread.Sleep(CycleDelay);
                 }
+                stopwatch.Stop();
+                log.WriteInfo($"{DateTime.Now},结束轮询所有Device，耗时(ms){stopwatch.ElapsedMilliseconds}");
             }
         }
 
@@ -837,12 +848,15 @@ namespace Scada.Comm.Engine
                 // установка признака завершения работы для опрашиваемого КП 为被轮询的 CP 设置完成工作的标志
                 kpLogic.Terminated = workState == WorkStates.Terminating;
 
+                System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 // выполнение сеанса опроса КП 执行 CP 轮询会话
                 if (sessionNeeded)
                 {
                     curAction = DateTime.Now.ToLocalizedString() + (Localization.UseRussian ?
                         " Сеанс связи с " :
                         " Communication with ") + kpLogic.Caption;
+                   
+
                     WriteInfo();
 
                     CommCnlBeforeSession(kpLogic);
@@ -870,6 +884,9 @@ namespace Scada.Comm.Engine
 
                 // определение необходимости завершить цикл работы
                 terminateCycle = workState == WorkStates.Terminating && kpLogic.Terminated;
+
+                stopwatch.Stop();
+                log.WriteInfo($"{kpLogic.Caption}结束Session，结束时间:{DateTime.Now}，Session耗时(ms):{stopwatch.ElapsedMilliseconds}");
             }
             catch (ThreadAbortException)
             {

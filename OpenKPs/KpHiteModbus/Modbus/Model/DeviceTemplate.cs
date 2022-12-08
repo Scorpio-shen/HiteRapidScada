@@ -1,4 +1,5 @@
-﻿using KpHiteModbus.Modbus.Model;
+﻿using KpCommon.Model;
+using KpHiteModbus.Modbus.Model;
 using Scada;
 using System;
 using System.Collections.Generic;
@@ -7,31 +8,15 @@ using System.Xml;
 
 namespace KpHiteModbus.Modbus.Model
 {
-    public class DeviceTemplate
+    public class DeviceTemplate : TemplateUnit<ModbusTagGroup,Tag,ConnectionOptions>
     {
-        public List<ModbusTagGroup> TagGroups { get; set; }    
 
-        public ConnectionOptions ConnectionOptions { get; set; }
-
-        /// <summary>
-        /// 指令点数目
-        /// </summary>
-        public int CmdTagCount
+        public DeviceTemplate() : base()
         {
-            get=> TagGroups.SelectMany(t=>t.Tags).Where(t=>t.CanWrite > 0).Count();
+            //TagGroups = new List<ModbusTagGroup>();
+            //ConnectionOptions = new ConnectionOptions();
         }
-
-        public List<Tag> CmdTags
-        {
-            get => TagGroups.SelectMany(t => t.Tags).Where(t => t.CanWrite > 0).OrderBy(t => t.TagID).ToList();
-        }
-
-        public DeviceTemplate()
-        {
-            TagGroups = new List<ModbusTagGroup>();
-            ConnectionOptions = new ConnectionOptions();
-        }
-        private void LoadFromXml(XmlNode rootNode)
+        protected override void LoadFromXml(XmlNode rootNode)
         {
             XmlNode tagGroupsNode = rootNode.SelectSingleNode("TagGroups");
             if(tagGroupsNode != null)
@@ -70,7 +55,7 @@ namespace KpHiteModbus.Modbus.Model
             }
         }
 
-        private void SaveToXml(XmlElement rootElement)
+        protected override void SaveToXml(XmlElement rootElement)
         {
             XmlElement tagGroupElem = rootElement.AppendElem("TagGroups");
             foreach (ModbusTagGroup tagGroup in TagGroups)
@@ -86,45 +71,45 @@ namespace KpHiteModbus.Modbus.Model
             ConnectionOptions.SaveToXml(optionElem);
         }
 
-        public bool Load(string fileName,out string errMsg)
-        {
-            try
-            {
-                XmlDocument document = new XmlDocument();
-                document.Load(fileName);
-                LoadFromXml(document.DocumentElement);
-                errMsg = String.Empty;
-                return true;
-            }
-            catch(Exception ex)
-            {
-                errMsg = $"DeviceTemplate_Load,载入模板异常,{ex.Message}";
-                return false;
-            }
-        }
+        //public bool Load(string fileName,out string errMsg)
+        //{
+        //    try
+        //    {
+        //        XmlDocument document = new XmlDocument();
+        //        document.Load(fileName);
+        //        LoadFromXml(document.DocumentElement);
+        //        errMsg = String.Empty;
+        //        return true;
+        //    }
+        //    catch(Exception ex)
+        //    {
+        //        errMsg = $"DeviceTemplate_Load,载入模板异常,{ex.Message}";
+        //        return false;
+        //    }
+        //}
 
-        public bool Save(string fileName,out string errMsg)
-        {
-            try
-            {
-                XmlDocument xmlDoc = new XmlDocument();
-                XmlDeclaration xmlDecl = xmlDoc.CreateXmlDeclaration("1.0", "utf-8", null);
-                xmlDoc.AppendChild(xmlDecl);
+        //public bool Save(string fileName,out string errMsg)
+        //{
+        //    try
+        //    {
+        //        XmlDocument xmlDoc = new XmlDocument();
+        //        XmlDeclaration xmlDecl = xmlDoc.CreateXmlDeclaration("1.0", "utf-8", null);
+        //        xmlDoc.AppendChild(xmlDecl);
 
-                XmlElement rootElem = xmlDoc.CreateElement("DevTemplate");
-                xmlDoc.AppendChild(rootElem);
-                SaveToXml(rootElem);
+        //        XmlElement rootElem = xmlDoc.CreateElement("DevTemplate");
+        //        xmlDoc.AppendChild(rootElem);
+        //        SaveToXml(rootElem);
 
-                xmlDoc.Save(fileName);
-                errMsg = "";
-                return true;
-            }
-            catch(Exception ex)
-            {
-                errMsg = $"DeviceTemplate_Save,保存模板异常,{ex.Message}";
-                return false;
-            }
-        }
+        //        xmlDoc.Save(fileName);
+        //        errMsg = "";
+        //        return true;
+        //    }
+        //    catch(Exception ex)
+        //    {
+        //        errMsg = $"DeviceTemplate_Save,保存模板异常,{ex.Message}";
+        //        return false;
+        //    }
+        //}
 
         public ModbusTagGroup CreateTagGroup(RegisterTypeEnum registerType = RegisterTypeEnum.HoldingRegisters)
         {
@@ -148,56 +133,56 @@ namespace KpHiteModbus.Modbus.Model
             return option;
         }
 
-        public void RefreshTagGroupIndex()
-        {
-            int startIndex = 1;
-            TagGroups.ForEach(t =>
-            {
-                t.StartKpTagIndex = startIndex;
-                t.SortTags();
-                startIndex += t.TagCount;
-            });
-        }
+        //public void RefreshTagGroupIndex()
+        //{
+        //    int startIndex = 1;
+        //    TagGroups.ForEach(t =>
+        //    {
+        //        t.StartKpTagIndex = startIndex;
+        //        t.SortTags();
+        //        startIndex += t.TagCount;
+        //    });
+        //}
 
 
-        /// <summary>
-        /// 获取Active TagGroup集合
-        /// </summary>
-        /// <returns></returns>
-        public List<ModbusTagGroup> GetActiveTagGroups()
-        {
-            var result = new List<ModbusTagGroup>();
-            foreach (var tagGroup in TagGroups)
-                if (tagGroup.Active)
-                    result.Add(tagGroup);
+        ///// <summary>
+        ///// 获取Active TagGroup集合
+        ///// </summary>
+        ///// <returns></returns>
+        //public List<ModbusTagGroup> GetActiveTagGroups()
+        //{
+        //    var result = new List<ModbusTagGroup>();
+        //    foreach (var tagGroup in TagGroups)
+        //        if (tagGroup.Active)
+        //            result.Add(tagGroup);
 
-            return result;
-        }
+        //    return result;
+        //}
         /// <summary>
         /// 根据cmdNumber返回对应Tag点
         /// </summary>
         /// <param name="cmdNumber"></param>
         /// <returns></returns>
-        public Tag FindCmd(int cmdNumber,out ModbusTagGroup tagGroup)
-        {
-            //var cmdTag = Cmds.SelectMany(c => c.Tags).FirstOrDefault(t => t.TagID == cmdNumber);
-            //memoryType = cmdTag?.MemoryType ?? MemoryTypeEnum.DB;
-            //return cmdTag;
-            tagGroup = null;
-            Tag result = null;
-            foreach (var tg in TagGroups)
-            {
-                foreach(var tag in tg.Tags)
-                {
-                    if(tag.TagID == cmdNumber)
-                    {
-                        tagGroup = tg;
-                        result = tag;
-                    }
-                }
-            }
+        //public Tag FindCmd(int cmdNumber,out ModbusTagGroup tagGroup)
+        //{
+        //    //var cmdTag = Cmds.SelectMany(c => c.Tags).FirstOrDefault(t => t.TagID == cmdNumber);
+        //    //memoryType = cmdTag?.MemoryType ?? MemoryTypeEnum.DB;
+        //    //return cmdTag;
+        //    tagGroup = null;
+        //    Tag result = null;
+        //    foreach (var tg in TagGroups)
+        //    {
+        //        foreach(var tag in tg.Tags)
+        //        {
+        //            if(tag.TagID == cmdNumber)
+        //            {
+        //                tagGroup = tg;
+        //                result = tag;
+        //            }
+        //        }
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
     }
 }

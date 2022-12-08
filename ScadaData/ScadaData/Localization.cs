@@ -179,7 +179,14 @@ namespace Scada
                     Microsoft.Win32.RegistryView.Registry64)
                     .OpenSubKey("Software\\SCADA", false))
                 {
-                    return key.GetValue("Culture").ToString();
+                    if (key != null)
+                    {
+                        var obj = key.GetValue("Culture");
+                        //return key.GetValue("Culture").ToString();
+                        return obj == null ? obj.ToString() : string.Empty;
+                    }
+                    else
+                        return string.Empty;
                 }
 #endif
             }

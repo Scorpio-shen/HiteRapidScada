@@ -1,5 +1,6 @@
 ﻿using HslCommunication;
 using HslCommunication.Profinet.Siemens;
+using KpCommon.Model;
 using KpSiemens.Siemens.Extend;
 using KpSiemens.Siemens.Model;
 using Newtonsoft.Json;
@@ -173,14 +174,18 @@ namespace Scada.Comm.Devices
                     return;
                 var option = deviceTemplate.ConnectionOptions;
                 siemensS7Net = new SiemensS7Net(option.SiemensPLCTypeEnum.ToHslSiemensPLCS(), option.IPAddress);
+                if (ReqParams.Timeout > 0)
+                    siemensS7Net.ReceiveTimeOut = ReqParams.Timeout;
+                else
+                    siemensS7Net.ReceiveTimeOut = DefineReadOnlyValues.DefaultRequestTimeOut;
                 var result = siemensS7Net.ConnectServer();
                 if (!result.IsSuccess)
-                    WriteToLog($"KpSiemensLogic_OnCommLineStart,连接PLC失败,{result.Message}");
+                    WriteToLog($"Name:{Name},Number:{Number},连接PLC失败,{result.Message}");
                 IsConnected = result.IsSuccess;
             }
             catch (Exception ex)
             {
-                WriteToLog($"KpSiemensLogic_OnCommLineStart,连接PLC异常,{ex.Message}");
+                WriteToLog($"KpSiemensLogic_OnCommLineStart,Name:{Name},Number:{Number},连接PLC异常,{ex.Message}");
                 IsConnected = false;
             }
         }
@@ -192,7 +197,7 @@ namespace Scada.Comm.Devices
             deviceTemplate = null;
             if (string.IsNullOrEmpty(fileName))
             {
-                WriteToLog($"KpSiemensLogic_InitDeviceTemplate,初始化模板失败,找到相应模板文件");
+                WriteToLog($"Name:{Name},Number:{Number},初始化模板失败,找到相应模板文件");
                 return; 
             }
 
@@ -237,17 +242,17 @@ namespace Scada.Comm.Devices
         private bool RequestReadData(SiemensTagGroup tagGroup)
         {
             var model = tagGroup.GetRequestModel();
-            WriteToLog($"开始请求数据,GroupName:{tagGroup.Name},寄存器类型:{tagGroup.MemoryType},起始地址:{model.Address},请求长度:{model.Length}");
+            WriteToLog($"Name:{Name},Number:{Number},开始请求数据,GroupName:{tagGroup.Name},寄存器类型:{tagGroup.MemoryType},起始地址:{model.Address},请求长度:{model.Length}");
             if (!IsConnected)
             {
-                WriteToLog($"KpSiemensLogic_RequestData,读取数据失败,未连接到设备,连接参数,{JsonConvert.SerializeObject(deviceTemplate.ConnectionOptions)}");
+                WriteToLog($"Name:{Name},Number:{Number},读取数据失败,未连接到设备,连接参数,{JsonConvert.SerializeObject(deviceTemplate.ConnectionOptions)}");
                 return false;
             }
 
             try
             {
                 var result = siemensS7Net.Read(model.Address, model.Length);
-                WriteToLog($"数据请求结束,IsSuccess:{result.IsSuccess},Message:{result.Message},Data:{result.Content.ToJsonString()}");
+                WriteToLog($"Name:{Name},Number:{Number},数据请求结束,IsSuccess:{result.IsSuccess},Message:{result.Message},Data:{result.Content.ToJsonString()}");
                 if (result.IsSuccess && result.Content?.Length > 0)
                 {
                     //赋值
@@ -257,7 +262,7 @@ namespace Scada.Comm.Devices
             }
             catch(Exception ex)
             {
-                WriteToLog($"KpSiemensLogic_RequestData,数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
+                WriteToLog($"KpSiemensLogic_RequestData,Name:{Name},Number:{Number},数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
                 return false;
             }
 
@@ -274,17 +279,17 @@ namespace Scada.Comm.Devices
                 address = $"{memoryType}{dbNum}.{tag.Address}";
             else
                 address = $"{memoryType}{tag.Address}";
-            WriteToLog($"开始写入数据,Name:{tag.Name},寄存器类型:{memoryType},地址:{tag.Address},DBNum:{dbNum},写入值:{JsonConvert.SerializeObject(tag.Data)}");
+            WriteToLog($"Name:{Name},Number:{Number},开始写入数据,Name:{tag.Name},寄存器类型:{memoryType},地址:{tag.Address},DBNum:{dbNum},写入值:{JsonConvert.SerializeObject(tag.Data)}");
             try
             {
 
                 OperateResult result = siemensS7Net.Write(address, tag.Data);
-                WriteToLog($"写入数据结束,Name:{tag.Name},写入结果:{result.IsSuccess},Message:{result.Message}");
+                WriteToLog($"Name:{Name},Number:{Number},写入数据结束,Name:{tag.Name},写入结果:{result.IsSuccess},Message:{result.Message}");
                 return result.IsSuccess;
             }
             catch(Exception ex)
             {
-                WriteToLog($"KpSiemensLogic_RequestWriteData,数据写入异常,{ex.Message},StackTrace:{ex.StackTrace}");
+                WriteToLog($"KpSiemensLogic_RequestWriteData,Name:{Name},Number:{Number},数据写入异常,{ex.Message},StackTrace:{ex.StackTrace}");
                 return false;
             }
         }

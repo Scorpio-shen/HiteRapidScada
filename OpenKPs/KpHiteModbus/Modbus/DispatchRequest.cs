@@ -81,7 +81,7 @@ namespace KpHiteModbus.Modbus
                 for(int j = 0;j < listUnits.Count; j++)
                 {
                     _requestMethod?.Invoke(listUnits[j]);
-                    Thread.Sleep(1);
+                    Thread.Sleep(10);
                 }
                     
 

@@ -158,14 +158,6 @@
   <PropertyGroup>
     <PostBuildEvent>if exist "C:\SCADA\ScadaComm\KP"  (
 copy "$(TargetFileName)" "C:\SCADA\ScadaComm\KP\"
-copy "$(TargetDir)HslCommunication.dll" "C:\SCADA\ScadaComm\KP\"
-copy "$(TargetDir)ICSharpCode.SharpZipLib.dll" "C:\SCADA\ScadaComm\KP\"
-copy "$(TargetDir)KpCommon.dll" "C:\SCADA\ScadaComm\KP\"
-copy "$(TargetDir)Newtonsoft.Json.dll" "C:\SCADA\ScadaComm\KP\"
-copy "$(TargetDir)NPOI.dll" "C:\SCADA\ScadaComm\KP\"
-copy "$(TargetDir)NPOI.OOXML.dll" "C:\SCADA\ScadaComm\KP\"
-copy "$(TargetDir)NPOI.OpenXml4Net.dll" "C:\SCADA\ScadaComm\KP\"
-copy "$(TargetDir)NPOI.OpenXmlFormats.dll" "C:\SCADA\ScadaComm\KP\"
 )</PostBuildEvent>
   </PropertyGroup>
 </Project>

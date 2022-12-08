@@ -1,4 +1,5 @@
 ﻿using KpCommon.Extend;
+using KpCommon.Model;
 using Scada;
 using Scada.Extend;
 using System;
@@ -8,7 +9,7 @@ using System.Xml;
 
 namespace KpSiemens.Siemens.Model
 {
-    public class PLCConnectionOptions : INotifyPropertyChanged
+    public class PLCConnectionOptions : ConnectionUnit
     {
         private string ipaddress;
         public string IPAddress
@@ -124,16 +125,6 @@ namespace KpSiemens.Siemens.Model
             optionElement.SetAttribute("LocalTSAP", LocalTSAP);
             optionElement.SetAttribute("ConnectionType", ConnectionType);
             optionElement.SetAttribute("SiemensPLCTypeEnum", SiemensPLCTypeEnum);
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPropertyChanged(string propertyName = null)
-        {
-            var eventHandler = PropertyChanged;
-            if (eventHandler != null)
-            {
-                eventHandler(this, new PropertyChangedEventArgs(propertyName));
-            }
         }
     }
     /// <summary>

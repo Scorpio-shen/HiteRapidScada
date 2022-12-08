@@ -206,13 +206,23 @@ namespace KpHiteModbus.Modbus.View
         //            ModbusTagGroup.Tags.RemoveAt(i);
         //        }
         //    }
-            
+
         //    bdsTags.ResetBindings(false);
         //    ModbusTagGroup.RefreshTagIndex();
         //    OnTagGroupChanged(sender, ModifyType.TagCount);
         //}
 
+        private void chkAllCanWrite_CheckedChanged(object sender, EventArgs e)
+        {
+            if (ModbusTagGroup == null)
+                return;
+            if (IsShowTagGroup)
+                return;
 
+            bool canwrite = chkAllCanWrite.Checked;
+            ModbusTagGroup.SetTagCanWrite(canwrite);
+            RefreshDataGridView(false);
+        }
 
         private void TxtGroupName_TextChanged(object sender, EventArgs e)
         {
@@ -432,10 +442,14 @@ namespace KpHiteModbus.Modbus.View
             {
                 var exportTags = ModbusTagGroup.Tags;
                 if (exportTags.Count == 0)
-                    exportTags = new List<Tag>();
-                //当前导出为空模板时添加两条空数据,用于指示用户使用
-                exportTags.Add(Model.Tag.CreateNewTag(tagID:1,tagname:"xx1",dataType: DataTypeEnum.UShort,registerType: RegisterTypeEnum.HoldingRegisters,address:"1",canwrite:true));
-                exportTags.Add(Model.Tag.CreateNewTag(tagID:2, tagname: "xx2", dataType: DataTypeEnum.UShort, registerType: RegisterTypeEnum.HoldingRegisters, address: "2", canwrite: true));
+                {
+                    exportTags = new List<Tag>
+                    {
+                        //当前导出为空模板时添加两条空数据,用于指示用户使用
+                        Model.Tag.CreateNewTag(tagID: 1, tagname: "xx1", dataType: DataTypeEnum.UShort, registerType: RegisterTypeEnum.HoldingRegisters, address: "1", canwrite: true),
+                        Model.Tag.CreateNewTag(tagID: 2, tagname: "xx2", dataType: DataTypeEnum.UShort, registerType: RegisterTypeEnum.HoldingRegisters, address: "2", canwrite: true)
+                    };
+                }
                 using (var ms = ExcelHelper.ToExcel(exportTags, excelType))
                 {
                     using (var fileStream = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite))
@@ -453,8 +467,9 @@ namespace KpHiteModbus.Modbus.View
             }
         }
 
+
         #endregion
 
-       
+        
     }
 }

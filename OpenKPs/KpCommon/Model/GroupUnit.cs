@@ -6,7 +6,7 @@ using System.Xml;
 
 namespace KpCommon.Model
 {
-    public abstract class GroupUnit<T>:INotifyPropertyChanged  where T : class,IDataUnit 
+    public abstract class GroupUnit<T>: IGroupUnit<T> where T : class,IDataUnit
     {
         #region 属性
         /// <summary>
@@ -143,20 +143,9 @@ namespace KpCommon.Model
         /// </summary>
         public virtual void SortTags()
         {
-            if (Tags == null || Tags.Count == 0)
-                return;
             if (Tags?.Count > 0)
                 Tags.Sort();
         }
-
-        /// <summary>
-        /// 对测点进行排序
-        /// </summary>
-        //private void SortTags()
-        //{
-        //    if (Tags?.Count > 0)
-        //        Tags.Sort();
-        //}
         #endregion
 
         #region 批量添加点集合

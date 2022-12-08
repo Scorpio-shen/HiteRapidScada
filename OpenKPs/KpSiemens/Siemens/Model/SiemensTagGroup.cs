@@ -142,7 +142,7 @@ namespace KpSiemens.Siemens.Model
             Tags.AddRange(addTags);
             SortTags();
             //验证是否超出最大点数限制
-            if (TagCount + StartKpTagIndex > DefineMaxValues.MaxTagCount)
+            if (TagCount + StartKpTagIndex > DefineReadOnlyValues.MaxTagCount)
             {
                 Tags.Clear();
                 Tags.AddRange(tagsOld);

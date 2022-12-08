@@ -1,4 +1,5 @@
 ﻿using KpCommon.Extend;
+using KpCommon.Model;
 using KpHiteModbus.Modbus.Extend;
 using KpHiteModbus.Modbus.Model.EnumType;
 using Scada;
@@ -10,7 +11,7 @@ using System.Xml;
 
 namespace KpHiteModbus.Modbus.Model
 {
-    public class ConnectionOptions : INotifyPropertyChanged
+    public class ConnectionOptions : ConnectionUnit
     {
         #region 公共参数
         private byte station;
@@ -160,16 +161,6 @@ namespace KpHiteModbus.Modbus.Model
         }
         #endregion
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        public void OnPropertyChanged(string propertyName = null)
-        {
-            var eventHandler = PropertyChanged;
-            if (eventHandler != null)
-            {
-                eventHandler(this, new PropertyChangedEventArgs(propertyName));
-            }
-        }
-
         public virtual void LoadFromXml(XmlElement optionElement)
         {
             if (optionElement == null)
@@ -206,43 +197,4 @@ namespace KpHiteModbus.Modbus.Model
             optionElement.SetAttribute("Parity", Parity);
         }
     }
-
-    //public class ConnectionOptionsByTcp : ConnectionOptions
-    //{
-        
-
-    //    public override void LoadFromXml(XmlElement optionElement)
-    //    {
-    //        base.LoadFromXml(optionElement);
-
-           
-    //    }
-
-    //    public override void SaveToXml(XmlElement optionElement)
-    //    {
-    //        base.SaveToXml(optionElement);
-
-    //        optionElement.SetAttribute("IPAddress", IPAddress);
-    //        optionElement.SetAttribute("Port", Port);
-    //    }
-    //}
-
-    //public class ConnectionOptionsBySerial : ConnectionOptions
-    //{
-        
-
-    //    public override void LoadFromXml(XmlElement optionElement)
-    //    {
-    //        base.LoadFromXml(optionElement);
-
-           
-    //    }
-
-    //    public override void SaveToXml(XmlElement optionElement)
-    //    {
-    //        base.SaveToXml(optionElement);
-
-            
-    //    }
-    //}
 }

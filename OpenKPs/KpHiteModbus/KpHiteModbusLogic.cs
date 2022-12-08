@@ -1,5 +1,6 @@
 ﻿using HslCommunication;
 using HslCommunication.ModBus;
+using KpCommon.Model;
 using KpHiteModbus.Modbus;
 using KpHiteModbus.Modbus.Extend;
 using KpHiteModbus.Modbus.Model;
@@ -25,6 +26,7 @@ namespace Scada.Comm.Devices
         private List<ModbusTagGroup> modbustagGroupsActive;
         DispatchRequest dispatchRequest;
         IModbus modbus;
+        string templateName;
 
         int ActiveTagGroupCount
         {
@@ -168,12 +170,16 @@ namespace Scada.Comm.Devices
                 var option = deviceTemplate.ConnectionOptions;
                 var station = option.Station;
                 OperateResult initResult = null;
+                var timeOut = ReqParams.Timeout;
+                if (timeOut <= 0)
+                    timeOut = DefineReadOnlyValues.DefaultRequestTimeOut;
                 switch (option.ConnectionType)
                 {
                     case KpHiteModbus.Modbus.Model.EnumType.ModbusConnectionTypeEnum.SerialPort:
                         if (option.ModbusMode == KpHiteModbus.Modbus.Model.EnumType.ModbusModeEnum.Ascii)
                         {
                             var modbusAscii = new ModbusAscii(station);
+                            modbusAscii.ReceiveTimeout = timeOut;
                             modbusAscii.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
                             initResult = modbusAscii.Open();
                             if(initResult.IsSuccess)
@@ -182,6 +188,7 @@ namespace Scada.Comm.Devices
                         else
                         {
                             var modbusRtu= new ModbusRtu(station);
+                            modbusRtu.ReceiveTimeout = timeOut;
                             modbusRtu.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
                             initResult = modbusRtu.Open();
                             if (initResult.IsSuccess)
@@ -190,12 +197,14 @@ namespace Scada.Comm.Devices
                         break;
                     case KpHiteModbus.Modbus.Model.EnumType.ModbusConnectionTypeEnum.TcpIP:
                         var modbusTcp = new ModbusTcpNet(option.IPAddress,option.Port,station);
+                        modbusTcp.ReceiveTimeOut = timeOut;
                         initResult = modbusTcp.ConnectServer();
                         if (initResult.IsSuccess)
                             modbus = modbusTcp;
                             break;
                     case KpHiteModbus.Modbus.Model.EnumType.ModbusConnectionTypeEnum.Udp:
                         var modbusUdp = new ModbusUdpNet(option.IPAddress,option.Port,station);
+                        modbusUdp.ReceiveTimeout = timeOut;
                         initResult = new OperateResult();
                         var pingResult = modbusUdp.IpAddressPing();
                         if (pingResult == System.Net.NetworkInformation.IPStatus.Success)
@@ -213,6 +222,7 @@ namespace Scada.Comm.Devices
                         if(option.ModbusMode == KpHiteModbus.Modbus.Model.EnumType.ModbusModeEnum.Ascii)
                         {
                             var modbusAsciiOverTcp = new ModbusAsciiOverTcp(option.IPAddress, option.Port, station);
+                            modbusAsciiOverTcp.ReceiveTimeOut = timeOut;
                             initResult = modbusAsciiOverTcp.ConnectServer();
                             if(initResult.IsSuccess)
                                 modbus = modbusAsciiOverTcp;
@@ -220,6 +230,7 @@ namespace Scada.Comm.Devices
                         else
                         {
                             var modbusRtuOverTcp = new ModbusRtuOverTcp(option.IPAddress, option.Port, station);
+                            modbusRtuOverTcp.ReceiveTimeOut = timeOut;
                             initResult = modbusRtuOverTcp.ConnectServer();
                             if (initResult.IsSuccess)
                                 modbus = modbusRtuOverTcp;
@@ -239,11 +250,11 @@ namespace Scada.Comm.Devices
                 }
 
                 if (!initResult.IsSuccess)
-                    WriteToLog($"KpHiteModbusLogic_OnCommLineStart,初始化连接失败,{initResult.Message}");
+                    WriteToLog($"Name:{Name},Number:{Number},初始化连接失败,{initResult.Message}");
             }
             catch(Exception ex)
             {
-                WriteToLog($"KpSiemensLogic_OnCommLineStart,连接PLC异常,{ex.Message}");
+                WriteToLog($"KpHiteModbusLogic_OnCommLineStart,Name:{Name},Number:{Number},连接PLC异常,{ex.Message}");
             }
         }
 
@@ -252,7 +263,7 @@ namespace Scada.Comm.Devices
             deviceTemplate = null;
             if (string.IsNullOrEmpty(fileName))
             {
-                WriteToLog($"KpHiteModbusLogic_InitDeviceTemplate,初始化模板失败,找到相应模板文件");
+                WriteToLog($"Name:{Name},Number:{Number},初始化模板失败,找到相应模板文件");
                 return;
             }
 
@@ -263,6 +274,7 @@ namespace Scada.Comm.Devices
                 WriteToLog(errMsg);
             else
             {
+                templateName = Path.GetFileName(filePath);
                 //初始话Tag和Command 点位顺序和地址
                 deviceTemplate.RefreshTagGroupIndex();
                 foreach (var tagGroup in deviceTemplate.TagGroups)
@@ -300,13 +312,18 @@ namespace Scada.Comm.Devices
         private bool RequestReadData(ModbusTagGroup tagGroup)
         {
             var model = tagGroup.GetRequestModel();
-            WriteToLog($"KpHiteModbusLogic_RequestReadData,开始请求数据,GroupName:{tagGroup.Name},寄存器类型:{tagGroup.RegisterType},起始地址:{model.Address},请求长度:{model.Length}");
+            WriteToLog($"Name:{Name},Number:{Number},开始请求数据,GroupName:{tagGroup.Name},寄存器类型:{tagGroup.RegisterType},起始地址:{model.Address},请求长度:{model.Length}");
 
             try
             {
                 //当前寄存器时Coil或DI时进行分包操作
+                if(modbus == null)
+                {
+                    WriteToLog($"Name:{Name},Number:{Number},数据请求失败,Modbus对象为null");
+                    return false;
+                }
                 var result = dispatchRequest.Request(model, tagGroup.RegisterType, out string errorMsg);
-                WriteToLog($"KpHiteModbusLogic_RequestReadData,数据请求结束,Result:{result},Msg:{errorMsg}");
+                WriteToLog($"Name:{Name},Number:{Number},数据请求结束,Result:{result},Msg:{errorMsg}");
                 if (!result)
                     return false;
 
@@ -317,7 +334,7 @@ namespace Scada.Comm.Devices
             }
             catch(Exception ex)
             {
-                WriteToLog($"KpHiteModbusLogic_RequestData,数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
+                WriteToLog($"KpHiteModbusLogic_RequestData,Name:{Name},Number:{Number},数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
                 return false;
             }
         }
@@ -326,9 +343,10 @@ namespace Scada.Comm.Devices
         {
             try
             {
+                
                 var functionCode = requestUnit.RegisterType.GetFunctionCode(iswrite: false);
                 var address = $"x={functionCode};{requestUnit.StartAddress}";
-                WriteToLog($"KpHiteModbusLogic_RequestUnitMethod,开始请求,Index:{requestUnit.Index},Address:{address},RequestLength:{requestUnit.RequestLength}");
+                WriteToLog($"Name:{Name},Number:{Number},开始请求,Index:{requestUnit.Index},Address:{address},RequestLength:{requestUnit.RequestLength}");
                 var result = modbus.Read(address, requestUnit.RequestLength);
                 if (result.IsSuccess)
                     requestUnit.Buffer = result.Content;
@@ -347,11 +365,11 @@ namespace Scada.Comm.Devices
 
                     requestUnit.Buffer = buffer;
                 }
-                WriteToLog($"KpHiteModbusLogic_RequestUnitMethod,请求结束,结果:{JsonConvert.SerializeObject(result)}");
+                WriteToLog($"Name:{Name},Number:{Number},请求结束,结果:{JsonConvert.SerializeObject(result)}");
             }
             catch(Exception ex )
             {
-                WriteToLog($"KpHiteModbusLogic_RequestUnitMethod,数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
+                WriteToLog($"KpHiteModbusLogic_RequestUnitMethod,Name:{Name},Number:{Number},数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
             }
         }
 
@@ -375,7 +393,7 @@ namespace Scada.Comm.Devices
 
 
             var address =  $"{tag.Address}";
-            WriteToLog($"KpHiteModbusLogic_RequestWriteData,开始写入数据,Name:{tag.Name},寄存器类型:{tag.RegisterType},地址:{tag.Address},写入值:{JsonConvert.SerializeObject(tag.Data)}");
+            WriteToLog($"Name:{Name},Number:{Number},开始写入数据,Name:{tag.Name},寄存器类型:{tag.RegisterType},地址:{tag.Address},写入值:{JsonConvert.SerializeObject(tag.Data)}");
             try
             {
                 OperateResult operateResult = new OperateResult { IsSuccess = false};
@@ -420,12 +438,12 @@ namespace Scada.Comm.Devices
                         operateResult.Message = $"未知数据类型,{tag.DataType}";
                         break;
                 }
-                WriteToLog($"KpHiteModbusLogic_RequestWriteData,写入数据结束,Name:{tag.Name},写入结果:{operateResult.IsSuccess},Message:{operateResult.Message}");
+                WriteToLog($"Name:{Name},Number:{Number},写入数据结束,Name:{tag.Name},写入结果:{operateResult.IsSuccess},Message:{operateResult.Message}");
                 return operateResult.IsSuccess;
             }
             catch(Exception ex)
             {
-                WriteToLog($"KpHiteModbusLogic_RequestWriteData,写入数据异常,{ex.Message},StackTrace:{ex.StackTrace}");
+                WriteToLog($"KpHiteModbusLogic_RequestWriteData,Name:{Name},Number:{Number},写入数据异常,{ex.Message},StackTrace:{ex.StackTrace}");
                 return false;
             }
         }
