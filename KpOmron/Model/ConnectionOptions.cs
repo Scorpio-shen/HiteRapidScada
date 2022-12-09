@@ -1,10 +1,8 @@
 ﻿using KpCommon.Extend;
 using KpCommon.Model;
-using KpHiteModbus.Modbus.Extend;
 using KpHiteModbus.Modbus.Model.EnumType;
 using Scada;
 using System;
-using System.ComponentModel;
 using System.IO.Ports;
 using System.Text;
 using System.Xml;
@@ -165,6 +163,8 @@ namespace KpHiteModbus.Modbus.Model
         {
             if (optionElement == null)
                 throw new ArgumentNullException("OptionElement");
+
+
             Station = optionElement.GetAttrAsString("Station").ToByte();
             ConnectionType = optionElement.GetAttrAsEnum("ConnectionType", ModbusConnectionTypeEnum.TcpIP);
             ModbusMode = optionElement.GetAttrAsEnum("ModbusMode", ModbusModeEnum.Rtu);

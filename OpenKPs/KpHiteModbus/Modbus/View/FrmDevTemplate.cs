@@ -1,5 +1,7 @@
 ﻿using KpHiteModbus.Modbus.Model;
 using KpHiteModbus.Modbus.Model.EnumType;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Scada;
 using Scada.Comm;
 using Scada.UI;
@@ -314,6 +316,14 @@ namespace KpHiteModbus.Modbus.View
                 return false;
 
             string errMsg = string.Empty;
+            if (saveAs)
+            {
+                JObject jobect = JObject.Parse( JsonConvert.SerializeObject(deviceTemplate));
+                File.WriteAllText(newFileName,jobect.ToString());
+                _fileName = newFileName;
+                Modified = false;
+                return true;
+            }
             if (deviceTemplate.Save(newFileName, out errMsg))
             {
                 _fileName = newFileName;
