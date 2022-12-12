@@ -1,6 +1,6 @@
-﻿using KpOmron.Model;
-using KpOmron.Model.EnumType;
-using KpOmron.View;
+﻿using KpMelsec.Model;
+using KpMelsec.Model.EnumType;
+using KpMelsec.View;
 using Scada.Data.Configuration;
 using System.Collections.Generic;
 using System.IO;

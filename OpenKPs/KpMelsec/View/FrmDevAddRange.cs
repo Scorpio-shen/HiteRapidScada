@@ -1,7 +1,7 @@
 ﻿using KpCommon.Extend;
-using KpOmron.Model;
-using KpOmron.Model.EnumType;
-using KpOmron.ViewModel;
+using KpMelsec.Model;
+using KpMelsec.Model.EnumType;
+using KpMelsec.ViewModel;
 using Scada.UI;
 using System;
 using System.Collections.Generic;

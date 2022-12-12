@@ -1,4 +1,4 @@
-﻿using KpOmron.Model.EnumType;
+﻿using KpMelsec.Model.EnumType;
 using System.ComponentModel;
 
 namespace KpMelsec.ViewModel

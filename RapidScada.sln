@@ -177,7 +177,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KpCommon", "OpenKPs\KpCommo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KpOmron", "OpenKPs\KpOmron\KpOmron.csproj", "{1E86E89D-D3BD-449E-966B-74934DB089CC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KpMelsec", "KpMelsec\KpMelsec.csproj", "{30BA243F-A90D-4A9A-B5F8-6550DF95BAAC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KpMelsec", "OpenKPs\KpMelsec\KpMelsec.csproj", "{30BA243F-A90D-4A9A-B5F8-6550DF95BAAC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

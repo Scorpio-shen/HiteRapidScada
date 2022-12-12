@@ -9,9 +9,15 @@ namespace KpMelsec.Model.EnumType
 {
     public enum ConnectionTypeEnum
     {
-        [Description("SerialPort")]
-        SerialPort,
-        [Description("TcpIP")]
-        TcpIP
+        [Description("McBinary")]
+        McBinary,
+        [Description("McUDPBinary")]
+        McUDPBinary,
+        [Description("McAscii")]
+        McAscii,
+        [Description("McUDPAscii")]
+        McUDPAscii,
+        [Description("McRBinary")]
+        McRBinary
     }
 }

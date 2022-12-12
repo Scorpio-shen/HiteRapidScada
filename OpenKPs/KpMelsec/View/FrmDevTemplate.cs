@@ -1,5 +1,7 @@
-﻿using KpOmron.Model;
-using KpOmron.Model.EnumType;
+﻿using KpCommon.Model;
+using KpCommon.Model.EnumType;
+using KpMelsec.Model;
+using KpMelsec.Model.EnumType;
 using Scada;
 using Scada.Comm;
 using Scada.UI;
@@ -11,7 +13,7 @@ namespace KpMelsec.View
 {
     public partial class FrmDevTemplate : Form
     {
-        const string NewFileName = "KpHiteOmron_NewTemplate.xml";
+        const string NewFileName = "KpHiteMelsec_NewTemplate.xml";
         string _fileName;                                   //载入已定义模板时文件名称或者新建的模板文件名称
         AppDirs _appDirs;
         DeviceTemplate deviceTemplate;                      //模板文件
@@ -246,7 +248,7 @@ namespace KpMelsec.View
         #endregion
 
         #region TagGroup、Cmd事件
-        private void ctrlRead_TagGroupChanged(object sender, ConfigChangedEventArgs e)
+        private void ctrlRead_TagGroupChanged(object sender, ConfigChangedEventArgs<Tag> e)
         {
             Modified = true;
             if(tagGroup != null)

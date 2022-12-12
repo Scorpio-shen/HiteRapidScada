@@ -1,5 +1,5 @@
 ﻿using KpCommon.Extend;
-using KpOmron.Model;
+using KpMelsec.Model;
 using System;
 using System.Collections.Generic;
 using System.IO.Ports;
@@ -23,16 +23,19 @@ namespace KpMelsec.View
         {
             isLoad = true;
 
-            if(_connectionOptions.ConnectionType ==  Model.EnumType.ConnectionTypeEnum.SerialPort)
-            {
-                gbxSerial.Enabled = true;
-                gbxTcp.Enabled = false;
-            }
-            else
-            {
-                gbxSerial.Enabled = false;
-                gbxTcp.Enabled = true;
-            }
+            //if(_connectionOptions.ConnectionType ==  Model.EnumType.ConnectionTypeEnum.SerialPort)
+            //{
+            //    gbxSerial.Enabled = true;
+            //    gbxTcp.Enabled = false;
+            //}
+            //else
+            //{
+            //    gbxSerial.Enabled = false;
+            //    gbxTcp.Enabled = true;
+            //}
+
+            gbxSerial.Enabled = false;
+            gbxTcp.Enabled = true;
 
             #region 下拉框绑定数据源
             //获取所有串口
@@ -76,11 +79,11 @@ namespace KpMelsec.View
             txtIPAddress.AddDataBindings(_connectionOptions, nameof(_connectionOptions.IPAddress));
             txtPort.AddDataBindings( _connectionOptions, nameof(_connectionOptions.Port));
 
-            cbxSerialPortName.AddDataBindings(_connectionOptions, nameof(_connectionOptions.PortName));
-            cbxBaudRate.AddDataBindings( _connectionOptions, nameof(_connectionOptions.BaudRate));
-            cbxDataBits.AddDataBindings(_connectionOptions, nameof(_connectionOptions.DataBits));
-            cbxParity.AddDataBindings(_connectionOptions, nameof(_connectionOptions.Parity));
-            cbxStopBits.AddDataBindings(_connectionOptions, nameof(_connectionOptions.StopBits));
+            //cbxSerialPortName.AddDataBindings(_connectionOptions, nameof(_connectionOptions.PortName));
+            //cbxBaudRate.AddDataBindings( _connectionOptions, nameof(_connectionOptions.BaudRate));
+            //cbxDataBits.AddDataBindings(_connectionOptions, nameof(_connectionOptions.DataBits));
+            //cbxParity.AddDataBindings(_connectionOptions, nameof(_connectionOptions.Parity));
+            //cbxStopBits.AddDataBindings(_connectionOptions, nameof(_connectionOptions.StopBits));
         }
 
         private void btnConfirm_Click(object sender, EventArgs e)

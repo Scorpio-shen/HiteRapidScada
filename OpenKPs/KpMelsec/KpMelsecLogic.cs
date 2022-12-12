@@ -1,8 +1,12 @@
 ﻿using HslCommunication;
+using HslCommunication.Core;
+using HslCommunication.Profinet.Melsec;
+using HslCommunication.Profinet.Melsec.Helper;
 using HslCommunication.Profinet.Omron;
 using KpCommon.Hsl.Profinet.Omron.InterFace;
 using KpCommon.Model;
 using KpMelsec.Model;
+using KpMelsec.Model.EnumType;
 using Newtonsoft.Json;
 using Scada.Data.Configuration;
 using Scada.Data.Models;
@@ -19,7 +23,7 @@ namespace Scada.Comm.Devices
         protected DeviceTemplate deviceTemplate;
         private HashSet<int> floatSignals;
         private List<KpMelsec.Model.TagGroup> tagGroupsActive;
-        IHostLink hostLink;
+        IReadWriteMc readWriteMc;
         string templateName;
         bool IsConnected = false;
 
@@ -100,7 +104,7 @@ namespace Scada.Comm.Devices
             base.SendCmd(cmd);
             if (CanSendCmd)
             {
-                KpOmron.Model.TagGroup tagGroup = null;
+                KpMelsec.Model.TagGroup tagGroup = null;
                 var tag = deviceTemplate.FindCmd(cmd.CmdNum, out tagGroup);
                 if (tag != null)
                 {
@@ -161,40 +165,56 @@ namespace Scada.Comm.Devices
             try
             {
                 var option = deviceTemplate.ConnectionOptions;
-                var unitnumber = option.UnitNumber;
-                var sid = option.SID;
-                var da2 = option.DA2;
-                var sa2 = option.SA2;
+                var ipaddress = option.IPAddress;
+                var port = option.Port;
                 OperateResult initResult = null;
                 var timeOut = ReqParams.Timeout;
                 if (timeOut <= 0)
                     timeOut = DefineReadOnlyValues.DefaultRequestTimeOut;
                 switch (option.ConnectionType)
                 {
-                    case ConnectionTypeEnum.SerialPort:
-                        var omronHostLink = new OmronHostLink
-                        {
-                            UnitNumber = unitnumber,
-                            SID = sid,
-                            DA2 = da2,
-                            SA2 = sa2
-                        };
-                        omronHostLink.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
-                        hostLink = omronHostLink;
-                        IsConnected= true;
+                    case ConnectionTypeEnum.McBinary:
+                        var mcNet = new MelsecMcNet(ipaddress, port);
+                        mcNet.ReceiveTimeOut = timeOut;
+                        initResult = mcNet.ConnectServer();
+                        readWriteMc = mcNet;
                         break;
-                    case ConnectionTypeEnum.TcpIP:
-                        var omronHostLinkOverTcp = new OmronHostLinkOverTcp(option.IPAddress, option.Port)
+                    case ConnectionTypeEnum.McUDPBinary:
+                        var mcUdp = new MelsecMcUdp(ipaddress, port);
+                        mcUdp.ReceiveTimeout = timeOut;
+                        initResult = new OperateResult() { IsSuccess = false };
+                        if(mcUdp.IpAddressPing() == System.Net.NetworkInformation.IPStatus.Success)
                         {
-                            ReceiveTimeOut = timeOut
-                        };
-                        initResult = omronHostLinkOverTcp.ConnectServer();
-                        IsConnected = initResult.IsSuccess;
-                        if (initResult.IsSuccess)
-                            hostLink = omronHostLinkOverTcp;
-                            break;
-
+                            initResult.IsSuccess = true;
+                        }
+                        readWriteMc = mcUdp;
+                        break;
+                    case ConnectionTypeEnum.McAscii:
+                       var mcAsciiNet = new MelsecMcAsciiNet(ipaddress, port);
+                        mcAsciiNet.ReceiveTimeOut = timeOut;
+                        initResult = mcAsciiNet.ConnectServer();
+                        readWriteMc = mcAsciiNet;
+                        break;
+                    case ConnectionTypeEnum.McUDPAscii:
+                        var mcAsciiUdp = new MelsecMcAsciiUdp(ipaddress, port);
+                        mcAsciiUdp.ReceiveTimeout= timeOut;
+                        initResult = new OperateResult() { IsSuccess = false };
+                        if(mcAsciiUdp.IpAddressPing() == System.Net.NetworkInformation.IPStatus.Success)
+                            initResult.IsSuccess= true;
+                        readWriteMc= mcAsciiUdp;
+                        break;
+                    case ConnectionTypeEnum.McRBinary:
+                        var mcRNet = new MelsecMcRNet(ipaddress, port);
+                        mcRNet.ReceiveTimeOut = timeOut;
+                        initResult = mcRNet.ConnectServer();
+                        readWriteMc = mcRNet;
+                        break;
+                    default:
+                        initResult = new OperateResult() { IsSuccess = false };
+                        break;
                 }
+
+                IsConnected = initResult.IsSuccess;
 
                 if (!initResult.IsSuccess)
                     WriteToLog($"Name:{Name},Number:{Number},初始化连接失败,{initResult.Message}");
@@ -236,7 +256,7 @@ namespace Scada.Comm.Devices
             List<TagGroup> tagGroups = new List<TagGroup>();
             if (deviceTemplate != null)
             {
-                foreach (KpOmron.Model.TagGroup group in deviceTemplate.TagGroups)
+                foreach (KpMelsec.Model.TagGroup group in deviceTemplate.TagGroups)
                 {
                     var tagGroup = new TagGroup(group.Name);
                     tagGroups.Add(tagGroup);
@@ -257,7 +277,7 @@ namespace Scada.Comm.Devices
         #region 自定义驱动数据请求、下发
 
 
-        private bool RequestReadData(KpOmron.Model.TagGroup tagGroup)
+        private bool RequestReadData(KpMelsec.Model.TagGroup tagGroup)
         {
             var model = tagGroup.GetRequestModel();
             WriteToLog($"Name:{Name},Number:{Number},开始请求数据,GroupName:{tagGroup.Name},寄存器类型:{tagGroup.MemoryType},起始地址:{model.Address},请求长度:{model.Length}");
@@ -269,7 +289,7 @@ namespace Scada.Comm.Devices
 
             try
             {
-                var result = hostLink.Read(model.Address, model.Length);
+                var result = readWriteMc.Read(model.Address, model.Length);
                 WriteToLog($"Name:{Name},Number:{Number},数据请求结束,IsSuccess:{result.IsSuccess},Message:{result.Message},Data:{result.Content.ToJsonString()}");
                 if (result.IsSuccess && result.Content?.Length > 0)
                 {
@@ -280,12 +300,12 @@ namespace Scada.Comm.Devices
             }
             catch (Exception ex)
             {
-                WriteToLog($"KpOmronLogic_RequestData,Name:{Name},Number:{Number},数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
+                WriteToLog($"KpMelsecLogic_RequestData,Name:{Name},Number:{Number},数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
                 return false;
             }
         }
 
-        private void SetTagsData(KpOmron.Model.TagGroup tagGroup)
+        private void SetTagsData(KpMelsec.Model.TagGroup tagGroup)
         {
             for(int i = 0; i < tagGroup.Tags.Count; i++)
             {
@@ -296,7 +316,7 @@ namespace Scada.Comm.Devices
             }
         }
 
-        private bool RequestWriteData(Tag tag, KpOmron.Model.TagGroup tagGroup)
+        private bool RequestWriteData(Tag tag, KpMelsec.Model.TagGroup tagGroup)
         {
             if (tag.Data == null)
                 return false;
@@ -310,37 +330,37 @@ namespace Scada.Comm.Devices
                 switch (tag.DataType)
                 {
                     case DataTypeEnum.Bool:
-                        operateResult = hostLink.Write(address,(bool)tag.Data);
+                        operateResult = readWriteMc.Write(address,(bool)tag.Data);
                         break;
                     case DataTypeEnum.Int:
-                        operateResult = hostLink.Write(address, (short)tag.Data);
+                        operateResult = readWriteMc.Write(address, (short)tag.Data);
                         break;
                     case DataTypeEnum.DInt:
-                        operateResult = hostLink.Write(address,(int)tag.Data);
+                        operateResult = readWriteMc.Write(address,(int)tag.Data);
                         break;
                     case DataTypeEnum.LInt:
-                        operateResult = hostLink.Write(address, (long)tag.Data);
+                        operateResult = readWriteMc.Write(address, (long)tag.Data);
                         break;
                     case DataTypeEnum.UInt:
                     case DataTypeEnum.Word:
-                        operateResult = hostLink.Write(address,(ushort)tag.Data);
+                        operateResult = readWriteMc.Write(address,(ushort)tag.Data);
                         break;
                     case DataTypeEnum.UDInt:
                     case DataTypeEnum.DWord:
-                        operateResult = hostLink.Write(address,(uint)tag.Data);
+                        operateResult = readWriteMc.Write(address,(uint)tag.Data);
                         break;
                     case DataTypeEnum.ULInt:
                     case DataTypeEnum.LWord:
-                        operateResult = hostLink.Write(address,(ulong)tag.Data);
+                        operateResult = readWriteMc.Write(address,(ulong)tag.Data);
                         break;
                     case DataTypeEnum.Real:
-                        operateResult = hostLink.Write(address,(float)tag.Data);
+                        operateResult = readWriteMc.Write(address,(float)tag.Data);
                         break;
                     case DataTypeEnum.LReal:
-                        operateResult = hostLink.Write(address,(double)tag.Data);
+                        operateResult = readWriteMc.Write(address,(double)tag.Data);
                         break;
                     case DataTypeEnum.String:
-                        operateResult = hostLink.Write(address,(string)tag.Data);
+                        operateResult = readWriteMc.Write(address,(string)tag.Data);
                         break;
                     default:
                         operateResult.Message = $"未知数据类型,{tag.DataType}";
@@ -351,7 +371,7 @@ namespace Scada.Comm.Devices
             }
             catch(Exception ex)
             {
-                WriteToLog($"KpOmronLogic_RequestWriteData,Name:{Name},Number:{Number},写入数据异常,{ex.Message},StackTrace:{ex.StackTrace}");
+                WriteToLog($"KpMelsecLogic_RequestWriteData,Name:{Name},Number:{Number},写入数据异常,{ex.Message},StackTrace:{ex.StackTrace}");
                 return false;
             }
         }

@@ -1,6 +1,7 @@
 ﻿using KpCommon.Extend;
-using KpOmron.Model;
-using KpOmron.Model.EnumType;
+using KpCommon.Model;
+using KpMelsec.Model;
+using KpMelsec.Model.EnumType;
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
@@ -9,7 +10,7 @@ namespace KpMelsec.View
 {
     public partial class CtrlPLCConfig : UserControl
     {
-        public event ConfigChangedEventHandler ConfigChanged;
+        public event ConfigChangedEventHandler<Tag> ConfigChanged;
         private ConnectionOptions connectionOptions;
         public ConnectionOptions ConnectionOptions
         {
@@ -63,18 +64,14 @@ namespace KpMelsec.View
         {
             if (options == null)
                 return;
-            txtStation.AddDataBindings( options, nameof(options.UnitNumber));
-            txtSID.AddDataBindings(options, nameof(options.SID));
-            txtDA2.AddDataBindings(options,nameof(options.DA2));
-            txtSA2.AddDataBindings(options, nameof(options.SA2));
-            txtParams.AddDataBindings(options, nameof(options.ConsoleParamsStr));
+            txtIPAddress.AddDataBindings( options, nameof(options.IPAddress));
+            txtPort.AddDataBindings(options, nameof(options.Port));
             cbxConnectionType.AddDataBindings( options, nameof(options.ConnectionType));
-            //cbxMode.AddDataBindings( options, nameof(options.ModbusMode));
         }
 
         private void OnConfigChanged(object sender)
         {
-            ConfigChanged?.Invoke(sender, new ConfigChangedEventArgs
+            ConfigChanged?.Invoke(sender, new ConfigChangedEventArgs<Tag>
             {
                 ConnectionOptions = ConnectionOptions
             });
