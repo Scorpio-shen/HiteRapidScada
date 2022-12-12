@@ -1,4 +1,4 @@
-﻿using KpHiteModbus.Modbus.Model;
+﻿using KpOmron.Model.EnumType;
 using Scada.Comm;
 using Scada.UI;
 using System;
@@ -6,7 +6,7 @@ using System.IO;
 using System.Windows.Forms;
 using static Scada.Comm.Devices.KPView;
 
-namespace KpHiteModbus.Modbus.View
+namespace KpOmron.View
 {
     public partial class FrmDevProps : Form
     {

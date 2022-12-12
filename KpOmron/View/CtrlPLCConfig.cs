@@ -9,7 +9,7 @@ namespace KpOmron.View
 {
     public partial class CtrlPLCConfig : UserControl
     {
-        public event PLCConfigChangedEventHandler ConfigChanged;
+        public event ConfigChangedEventHandler ConfigChanged;
         private ConnectionOptions connectionOptions;
         public ConnectionOptions ConnectionOptions
         {
@@ -63,7 +63,7 @@ namespace KpOmron.View
         {
             if (options == null)
                 return;
-            txtStation.AddDataBindings( options, nameof(options.Station));
+            txtStation.AddDataBindings( options, nameof(options.UnitNumber));
             txtParams.AddDataBindings(options, nameof(options.ConsoleParamsStr));
             cbxConnectionType.AddDataBindings( options, nameof(options.ConnectionType));
             //cbxMode.AddDataBindings( options, nameof(options.ModbusMode));
@@ -71,9 +71,9 @@ namespace KpOmron.View
 
         private void OnConfigChanged(object sender)
         {
-            ConfigChanged?.Invoke(sender, new PLCConfigChangedEventArgs
+            ConfigChanged?.Invoke(sender, new ConfigChangedEventArgs
             {
-                Options = ConnectionOptions
+                ConnectionOptions = ConnectionOptions
             });
         }
 

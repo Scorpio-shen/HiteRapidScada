@@ -39,6 +39,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -49,8 +50,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Extend\DataTypeEnumExtend.cs" />
-    <Compile Include="KpHideModbusView.cs" />
-    <Compile Include="KpHiteModbusLogic.cs" />
+    <Compile Include="KpOmronView.cs" />
+    <Compile Include="KpOmronLogic.cs" />
     <Compile Include="Model\ConnectionOptions.cs" />
     <Compile Include="Model\DeviceTemplate.cs" />
     <Compile Include="Model\EnumType\DataTypeEnum.cs" />
@@ -102,6 +103,10 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
     <ProjectReference Include="..\OpenKPs\KpCommon\KpCommon.csproj">
       <Project>{2ba0bc26-8c82-4466-a0d1-92f0889c8a94}</Project>
       <Name>KpCommon</Name>

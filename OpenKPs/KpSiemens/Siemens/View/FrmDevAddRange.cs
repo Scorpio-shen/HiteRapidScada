@@ -48,17 +48,6 @@ namespace KpSiemens.Siemens.View
             lblNameOutput.AddDataBindings( ViewModel, nameof(ViewModel.NameOutput));
             txtLength.AddDataBindings(ViewModel, nameof(ViewModel.Length));
 
-            //txtNameReplace.DataBindings.Add(nameof(txtNameReplace.Text), ViewModel, nameof(ViewModel.NameReplace));
-            //numNameStartIndex.DataBindings.Add(nameof(numNameStartIndex.Value),ViewModel, nameof(ViewModel.NameStartIndex));
-            //txtStartAddress.DataBindings.Add(nameof(txtStartAddress.Text), ViewModel, nameof(ViewModel.StartAddress));
-            //numAddressIncrement.DataBindings.Add(nameof(numAddressIncrement.Value), ViewModel, nameof(ViewModel.AddressIncrement));
-            //numTagCount.DataBindings.Add(nameof(numTagCount.Value),ViewModel, nameof(ViewModel.TagCount));
-            //cbxDataType.DataBindings.Add(nameof(cbxDataType.SelectedValue), ViewModel, nameof(ViewModel.DataType));
-            //chkCanWrite.DataBindings.Add(nameof(chkCanWrite.Checked), ViewModel, nameof(ViewModel.CanWrite));
-            //lblAddressOutput.DataBindings.Add(nameof(lblAddressOutput.Text),ViewModel,nameof(ViewModel.AddressOutput));
-            //lblNameOutput.DataBindings.Add(nameof(lblNameOutput.Text), ViewModel, nameof(ViewModel.NameOutput));
-            //txtLength.DataBindings.Add(nameof(txtLength.Text), ViewModel, nameof(ViewModel.Length));
-
             if (_siemensTagGroup.MemoryType == MemoryTypeEnum.I)
                 chkCanWrite.Enabled = false;
         }

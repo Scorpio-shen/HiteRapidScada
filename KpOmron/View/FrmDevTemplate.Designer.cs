@@ -1,4 +1,4 @@
-﻿namespace KpHiteModbus.Modbus.View
+﻿namespace KpOmron.View
 {
     partial class FrmDevTemplate
     {
@@ -51,8 +51,8 @@
             this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.saveFileDialog = new System.Windows.Forms.SaveFileDialog();
             this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
-            this.ctrlConfig = new KpHiteModbus.Modbus.View.CtrlPLCConfig();
-            this.ctrlRead = new KpHiteModbus.Modbus.View.CtrlRead();
+            this.ctrlConfig = new KpOmron.View.CtrlPLCConfig();
+            this.ctrlRead = new KpOmron.View.CtrlRead();
             this.toolStrip.SuspendLayout();
             this.gbDevTemplate.SuspendLayout();
             this.SuspendLayout();
@@ -269,17 +269,17 @@
             this.ctrlConfig.Name = "ctrlConfig";
             this.ctrlConfig.Size = new System.Drawing.Size(665, 185);
             this.ctrlConfig.TabIndex = 4;
-            this.ctrlConfig.ConfigChanged += new KpHiteModbus.Modbus.Model.ModbusConfigChangedEventHandler(this.ctrlRead_TagGroupChanged);
+            this.ctrlConfig.ConfigChanged += new KpOmron.Model.ConfigChangedEventHandler(this.ctrlRead_TagGroupChanged);
             // 
             // ctrlRead
             // 
             this.ctrlRead.IsShowTagGroup = false;
             this.ctrlRead.Location = new System.Drawing.Point(293, 219);
-            this.ctrlRead.ModbusTagGroup = null;
+            this.ctrlRead.TagGroup = null;
             this.ctrlRead.Name = "ctrlRead";
             this.ctrlRead.Size = new System.Drawing.Size(665, 433);
             this.ctrlRead.TabIndex = 3;
-            this.ctrlRead.TagGroupChanged += new KpHiteModbus.Modbus.Model.ModbusConfigChangedEventHandler(this.ctrlRead_TagGroupChanged);
+            this.ctrlRead.TagGroupChanged += new KpOmron.Model.ConfigChangedEventHandler(this.ctrlRead_TagGroupChanged);
             // 
             // FrmDevTemplate
             // 

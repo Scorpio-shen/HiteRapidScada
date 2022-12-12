@@ -1,9 +1,7 @@
-﻿using KpHiteModbus.Modbus.Model;
-using KpOmron.Model.EnumType;
-using System;
+﻿using KpOmron.Model.EnumType;
 using System.ComponentModel;
 
-namespace KpHiteModbus.Modbus.ViewModel
+namespace KpOmron.ViewModel
 {
     public class FrmDevAddRangeViewModel : INotifyPropertyChanged
     {

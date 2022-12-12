@@ -1,56 +1,39 @@
 ﻿using KpCommon.Extend;
-using KpHiteModbus.Modbus.Model;
-using KpHiteModbus.Modbus.ViewModel;
+using KpOmron.Model;
+using KpOmron.Model.EnumType;
+using KpOmron.ViewModel;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
 
-namespace KpHiteModbus.Modbus.View
+namespace KpOmron.View
 {
     public partial class FrmDevAddRange : Form
     {
         FrmDevAddRangeViewModel ViewModel { get; set; }
-        readonly ModbusTagGroup _modbusTagGroup;
+        readonly TagGroup _tagGroup;
         BindingSource bindSourceDataTypeOnlyBool;
         BindingSource bindSourceDataTypeExceptBool;
 
-        public FrmDevAddRange(ModbusTagGroup modbusTagGroup)
+        public FrmDevAddRange(TagGroup tagGroup)
         {
             InitializeComponent();
             ViewModel = new FrmDevAddRangeViewModel();
-            _modbusTagGroup = modbusTagGroup;
+            _tagGroup = tagGroup;
             InitControl();
         }
 
         private void InitControl()
         {
-            Dictionary<string, DataTypeEnum> keyValueDataTypeEnumsOnlyBool = new Dictionary<string, DataTypeEnum>();
-            keyValueDataTypeEnumsOnlyBool.Add(DataTypeEnum.Bool.ToString(), DataTypeEnum.Bool);
-            bindSourceDataTypeOnlyBool = new BindingSource();
-            bindSourceDataTypeOnlyBool.DataSource = keyValueDataTypeEnumsOnlyBool;
-
-            Dictionary<string, DataTypeEnum> keyValueDataTypeEnumsExceptBool = new Dictionary<string, DataTypeEnum>();
+            Dictionary<string, DataTypeEnum> keyValueDataTypeEnums = new Dictionary<string, DataTypeEnum>();
             foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
-                if (type != DataTypeEnum.Bool)
-                    keyValueDataTypeEnumsExceptBool.Add(type.ToString(), type);
-            bindSourceDataTypeExceptBool = new BindingSource();
-            bindSourceDataTypeExceptBool.DataSource = keyValueDataTypeEnumsExceptBool;
+                keyValueDataTypeEnums.Add(type.ToString(), type);
 
-            //绑定存储器类
-            //Dictionary<string, DataTypeEnum> keyValueDataTypeEnums = new Dictionary<string, DataTypeEnum>();
-            //foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
-            //    keyValueDataTypeEnums.Add(type.ToString(), type);
-
-            //BindingSource bindingSourceDataType = new BindingSource();
-            //bindingSourceDataType.DataSource = keyValueDataTypeEnums;
-
-            if (_modbusTagGroup.RegisterType == RegisterTypeEnum.Coils || _modbusTagGroup.RegisterType == RegisterTypeEnum.DiscretesInputs)
-                cbxDataType.DataSource = bindSourceDataTypeOnlyBool;
-            else
-                cbxDataType.DataSource = bindSourceDataTypeExceptBool;
-            //cbxDataType.DataSource = bindingSourceDataType;
+            BindingSource bindingSourceDataType = new BindingSource();
+            bindingSourceDataType.DataSource = keyValueDataTypeEnums;
+            cbxDataType.DataSource = bindingSourceDataType;
             cbxDataType.DisplayMember = "Key";
             cbxDataType.ValueMember = "Value";
 
@@ -68,18 +51,9 @@ namespace KpHiteModbus.Modbus.View
             chkCanWrite.AddDataBindings(ViewModel, nameof(ViewModel.CanWrite));
 
 
-            var registerType = _modbusTagGroup.RegisterType;
-            if (registerType == RegisterTypeEnum.Coils || registerType == RegisterTypeEnum.HoldingRegisters)
-            {
-                chkCanWrite.Enabled = true;
-                chkCanWrite.Visible = true;
-            }
-            else
-            {
-                chkCanWrite.Enabled = false;
-                chkCanWrite.Visible = false;
-            }
-                
+            chkCanWrite.Enabled = true;
+            chkCanWrite.Visible = true;
+
         }
 
         private void btnConfirm_Click(object sender, EventArgs e)
@@ -98,7 +72,7 @@ namespace KpHiteModbus.Modbus.View
             }
 
             //验证是否超出最大地址长度
-            if(!_modbusTagGroup.CheckAndAddTags(GetTags(),out string errorMsg))
+            if(!_tagGroup.CheckAndAddTags(GetTags(),out string errorMsg))
             {
                 ScadaUiUtils.ShowError(errorMsg);
                 return;
@@ -143,7 +117,7 @@ namespace KpHiteModbus.Modbus.View
             {
                 var name = $"{ViewModel.NameReplace}{ViewModel.NameStartIndex + i}";
                 address = ViewModel.StartAddress + ViewModel.AddressIncrement * i;
-                Tag tag = Model.Tag.CreateNewTag(tagname: name, dataType: ViewModel.DataType, registerType: _modbusTagGroup.RegisterType, address: address.ToString(), canwrite:ViewModel.CanWrite,length: ViewModel.Length);
+                Tag tag = Model.Tag.CreateNewTag(tagname: name, dataType: ViewModel.DataType, memoryType: _tagGroup.MemoryType, address: address.ToString(), canwrite:ViewModel.CanWrite,length: ViewModel.Length);
                 result.Add(tag);
             }
 

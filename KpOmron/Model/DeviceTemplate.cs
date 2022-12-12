@@ -100,7 +100,7 @@ namespace KpOmron.Model
         {
             var option = new ConnectionOptions()
             {
-                Station = 1,
+                UnitNumber = 1,
                 IPAddress = "127.0.0.1",
                 Port = 502,
                 BaudRate = 9600,

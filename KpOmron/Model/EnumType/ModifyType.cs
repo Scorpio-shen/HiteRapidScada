@@ -17,5 +17,6 @@ namespace KpOmron.Model.EnumType
         TagCount,
         DBNum,
         Tags, //绑定到datagridview的Tags集合变化
+        Connection
     }
 }

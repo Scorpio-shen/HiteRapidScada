@@ -12,14 +12,47 @@ namespace KpOmron.Model
     public class ConnectionOptions : ConnectionUnit
     {
         #region 公共参数
-        private byte station;
-        public byte Station
+        private byte unitnumber;
+        public byte UnitNumber
         {
-            get => station;
+            get => unitnumber;
             set
             {
-                station = value;
-                OnPropertyChanged(nameof(Station));
+                unitnumber = value;
+                OnPropertyChanged(nameof(UnitNumber));
+            }
+        }
+
+        private byte sid;
+        public byte SID
+        {
+            get=> sid;
+            set
+            {
+                sid= value;
+                OnPropertyChanged(nameof(SID));
+            }
+        }
+
+        private byte da2;
+        public byte DA2
+        {
+            get => da2;
+            set
+            {
+                da2= value;
+                OnPropertyChanged(nameof(DA2));
+            }
+        }
+
+        private byte sa2;
+        public byte SA2
+        {
+            get => sa2;
+            set
+            {
+                sa2= value;
+                OnPropertyChanged(nameof(SA2));
             }
         }
 

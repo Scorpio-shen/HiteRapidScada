@@ -1,5 +1,6 @@
 ﻿using KpCommon.Extend;
 using KpCommon.Helper;
+using KpOmron.Extend;
 using KpOmron.Model;
 using KpOmron.Model.EnumType;
 using Scada.UI;
@@ -7,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -16,7 +18,7 @@ namespace KpOmron.View
 
     public partial class CtrlRead : UserControl
     {
-        public event TagGroupChangedEventHandler TagGroupChanged;
+        public event ConfigChangedEventHandler TagGroupChanged;
         private TagGroup tagGroup;
         private ComboBox comboBox;
 
@@ -153,7 +155,7 @@ namespace KpOmron.View
                 //地址变化需要对当前数组进行重新排序
                 TagGroup.RefreshTagIndex();
             }
-            TagGroupChanged?.Invoke(sender,new TagGroupChangedEventArgs
+            TagGroupChanged?.Invoke(sender,new  ConfigChangedEventArgs
             {
                 ModifyType = ModifyType.Tags,
                 TagGroup = TagGroup,
@@ -230,9 +232,9 @@ namespace KpOmron.View
                 return;
             TagGroup.Name =txtGroupName.Text;
             //CtrlReadViewModel.GroupName = txtGroupName.Text; //Winform 虽然绑定了，但是得在焦点移开当前控件，Model里面的值才能变成textbox控件里的值,所以这里手动赋值
-            TagGroupChanged?.Invoke(sender,new ModbusConfigChangedEventArgs
+            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs
             {
-                ChangeType = Model.EnumType.ModifyType.GroupName,
+                ModifyType = ModifyType.GroupName,
                 TagGroup = TagGroup
             });
         }
@@ -242,36 +244,14 @@ namespace KpOmron.View
             if (TagGroup == null)
                 return;
             
-            var registerType = cbxRegisterType.SelectedValue as RegisterTypeEnum?;
+            var registerType = cbxRegisterType.SelectedValue as MemoryTypeEnum?;
             if (registerType == null)
                 return;
-
-            //根据不同的类型使能读写属性列
-            if(registerType == RegisterTypeEnum.Coils)
-            {
-                comboBox.DataSource = bindSourceDataTypeOnlyBool;
-                dgvTagCanWrite.ReadOnly = false;
-            }
-            else if(registerType == RegisterTypeEnum.DiscretesInputs)
-            {
-                comboBox.DataSource = bindSourceDataTypeOnlyBool;
-                dgvTagCanWrite.ReadOnly = true;
-            }
-            else if(registerType == RegisterTypeEnum.HoldingRegisters)
-            {
-                comboBox.DataSource = bindSourceDataTypeExceptBool;
-                dgvTagCanWrite.ReadOnly = false;
-            }
-            else
-            {
-                comboBox.DataSource = bindSourceDataTypeExceptBool;
-                dgvTagCanWrite.ReadOnly = true;
-            }
 
             RefreshDataGridView();
             if (IsShowTagGroup)
                 return;
-            OnTagGroupChanged(sender, ModifyType.RegisterType);
+            OnTagGroupChanged(sender, ModifyType.MemoryType);
         }
 
         private void btnAddRange_Click(object sender, EventArgs e)
@@ -371,9 +351,9 @@ namespace KpOmron.View
         #endregion
         public void OnTagGroupChanged(object sender,ModifyType changeType)
         {
-            TagGroupChanged?.Invoke(sender,new ModbusConfigChangedEventArgs
+            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs
             {
-                ChangeType = changeType,
+                ModifyType = changeType,
                 TagGroup = TagGroup
             });
         }
@@ -444,8 +424,8 @@ namespace KpOmron.View
                     exportTags = new List<Tag>
                     {
                         //当前导出为空模板时添加两条空数据,用于指示用户使用
-                        Model.Tag.CreateNewTag(tagID: 1, tagname: "xx1", dataType: DataTypeEnum.UShort, registerType: RegisterTypeEnum.HoldingRegisters, address: "1", canwrite: true),
-                        Model.Tag.CreateNewTag(tagID: 2, tagname: "xx2", dataType: DataTypeEnum.UShort, registerType: RegisterTypeEnum.HoldingRegisters, address: "2", canwrite: true)
+                        Model.Tag.CreateNewTag(tagID: 1, tagname: "xx1", dataType: DataTypeEnum.UInt, memoryType: MemoryTypeEnum.D, address: "1", canwrite: true),
+                        Model.Tag.CreateNewTag(tagID: 2, tagname: "xx2", dataType: DataTypeEnum.UInt, memoryType: MemoryTypeEnum.D, address: "2", canwrite: true)
                     };
                 }
                 using (var ms = ExcelHelper.ToExcel(exportTags, excelType))

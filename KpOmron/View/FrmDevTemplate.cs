@@ -1,5 +1,5 @@
-﻿using KpHiteModbus.Modbus.Model;
-using KpHiteModbus.Modbus.Model.EnumType;
+﻿using KpOmron.Model;
+using KpOmron.Model.EnumType;
 using Scada;
 using Scada.Comm;
 using Scada.UI;
@@ -7,7 +7,7 @@ using System;
 using System.IO;
 using System.Windows.Forms;
 
-namespace KpHiteModbus.Modbus.View
+namespace KpOmron.View
 {
     public partial class FrmDevTemplate : Form
     {
@@ -15,7 +15,7 @@ namespace KpHiteModbus.Modbus.View
         string _fileName;                                   //载入已定义模板时文件名称或者新建的模板文件名称
         AppDirs _appDirs;
         DeviceTemplate deviceTemplate;                      //模板文件
-        ModbusTagGroup tagGroup;                            //选中测点组的数据
+        TagGroup tagGroup;                            //选中测点组的数据
         TreeNode tagGroupRootNode;                          //Tag节点
         TreeNode currentNode;                               //当前选中节点
         
@@ -117,7 +117,7 @@ namespace KpHiteModbus.Modbus.View
         private void btnAddTagGroup_Click(object sender, EventArgs e)
         {
             var tagGroup = deviceTemplate.CreateTagGroup();
-            int index = currentNode != null && currentNode.Tag is ModbusTagGroup ? currentNode.Index + 1 : deviceTemplate.TagGroups.Count;
+            int index = currentNode != null && currentNode.Tag is TagGroup ? currentNode.Index + 1 : deviceTemplate.TagGroups.Count;
             deviceTemplate.TagGroups.Insert(index,tagGroup);
             RefreshTagGroupIndex();
 
@@ -137,7 +137,7 @@ namespace KpHiteModbus.Modbus.View
 
             if(tagGroup != null)
             {
-                var prevTagGroup = prevNode.Tag as ModbusTagGroup;
+                var prevTagGroup = prevNode.Tag as TagGroup;
                 deviceTemplate.TagGroups.RemoveAt(prevIndex);
                 deviceTemplate.TagGroups.Insert(prevIndex + 1,prevTagGroup);
 
@@ -182,7 +182,7 @@ namespace KpHiteModbus.Modbus.View
         {
             currentNode = e.Node;
             var tag = currentNode.Tag;
-            tagGroup = tag as ModbusTagGroup;
+            tagGroup = tag as TagGroup;
 
             if(currentNode == tagGroupRootNode)
                 btnDelete.Enabled = false;
@@ -246,14 +246,14 @@ namespace KpHiteModbus.Modbus.View
         #endregion
 
         #region TagGroup、Cmd事件
-        private void ctrlRead_TagGroupChanged(object sender, ModbusConfigChangedEventArgs e)
+        private void ctrlRead_TagGroupChanged(object sender, ConfigChangedEventArgs e)
         {
             Modified = true;
             if(tagGroup != null)
             {
                 if(currentNode != null)
                 {
-                    switch (e.ChangeType)
+                    switch (e.ModifyType)
                     {
                         case ModifyType.TagCount:
                             RefreshTagGroupIndex();
@@ -264,7 +264,7 @@ namespace KpHiteModbus.Modbus.View
                         case ModifyType.IsActive:
                             currentNode.ImageKey = currentNode.SelectedImageKey = tagGroup.Active ? "group.png" : "group_inactive.png";
                             break;
-                        case ModifyType.RegisterType:
+                        case ModifyType.MemoryType:
                             currentNode.Text = GetTagGroupDesc(tagGroup);
                             break;
                         case ModifyType.Tags:
@@ -343,10 +343,10 @@ namespace KpHiteModbus.Modbus.View
             FillTree();
         }
 
-        private void ShowTagGroupProps(ModbusTagGroup tagGroup)
+        private void ShowTagGroupProps(TagGroup tagGroup)
         {
             ctrlRead.Visible = true;
-            ctrlRead.ModbusTagGroup = tagGroup;
+            ctrlRead.TagGroup = tagGroup;
         }
 
 
@@ -364,14 +364,14 @@ namespace KpHiteModbus.Modbus.View
             treeView.BeginUpdate();
             tagGroupRootNode.Nodes.Clear();
 
-            foreach (ModbusTagGroup ModbusTagGroup in deviceTemplate.TagGroups)
-                tagGroupRootNode.Nodes.Add(NewTagGroupNode(ModbusTagGroup));
+            foreach (TagGroup tagGroup in deviceTemplate.TagGroups)
+                tagGroupRootNode.Nodes.Add(NewTagGroupNode(tagGroup));
 
             tagGroupRootNode.Expand();
             treeView.EndUpdate();
         }
 
-        private TreeNode NewTagGroupNode(ModbusTagGroup tagGroup)
+        private TreeNode NewTagGroupNode(TagGroup tagGroup)
         {
             //tagGroup.Name = "点组";
             TreeNode node = new TreeNode(GetTagGroupDesc(tagGroup));
@@ -381,10 +381,10 @@ namespace KpHiteModbus.Modbus.View
             return node;
         }
 
-        private string GetTagGroupDesc(ModbusTagGroup tagGroup)
+        private string GetTagGroupDesc(TagGroup tagGroup)
         {
             var groupName = string.IsNullOrEmpty(tagGroup.Name) ? TempleteKeyString.DefaultTagGroupName : tagGroup.Name;
-            var registerType = tagGroup.RegisterType;
+            var registerType = tagGroup.MemoryType;
             return $"{groupName} ({registerType})";
         }
 

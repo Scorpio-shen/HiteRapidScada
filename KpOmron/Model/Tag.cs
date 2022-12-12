@@ -17,7 +17,7 @@ namespace KpOmron.Model
         }
 
 
-        public static Tag CreateNewTag(int tagID = default, string tagname = "", DataTypeEnum dataType = DataTypeEnum.UInt, MemoryTypeEnum registerType = MemoryTypeEnum.D, string address = "", bool canwrite = false,int length = default)
+        public static Tag CreateNewTag(int tagID = default, string tagname = "", DataTypeEnum dataType = DataTypeEnum.UInt, MemoryTypeEnum memoryType = MemoryTypeEnum.D, string address = "", bool canwrite = false,int length = default)
         {
             return new Tag()
             {
@@ -26,7 +26,7 @@ namespace KpOmron.Model
                 DataType = dataType,
                 Address = address,
                 CanWrite = (byte)(canwrite ? 1 : 0),
-                MemoryType = registerType,
+                MemoryType = memoryType,
                 Length = length
             };
         }

@@ -1,5 +1,6 @@
 ﻿using KpOmron.Model;
 using KpOmron.Model.EnumType;
+using KpOmron.View;
 using Scada.Data.Configuration;
 using System.Collections.Generic;
 using System.IO;
