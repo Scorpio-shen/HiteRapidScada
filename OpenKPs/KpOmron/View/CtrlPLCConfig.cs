@@ -1,4 +1,5 @@
 ﻿using KpCommon.Extend;
+using KpCommon.Model;
 using KpOmron.Model;
 using KpOmron.Model.EnumType;
 using System;
@@ -9,7 +10,7 @@ namespace KpOmron.View
 {
     public partial class CtrlPLCConfig : UserControl
     {
-        public event ConfigChangedEventHandler ConfigChanged;
+        public event ConfigChangedEventHandler<Tag> ConfigChanged;
         private ConnectionOptions connectionOptions;
         public ConnectionOptions ConnectionOptions
         {
@@ -64,6 +65,9 @@ namespace KpOmron.View
             if (options == null)
                 return;
             txtStation.AddDataBindings( options, nameof(options.UnitNumber));
+            txtSID.AddDataBindings(options, nameof(options.SID));
+            txtDA2.AddDataBindings(options,nameof(options.DA2));
+            txtSA2.AddDataBindings(options, nameof(options.SA2));
             txtParams.AddDataBindings(options, nameof(options.ConsoleParamsStr));
             cbxConnectionType.AddDataBindings( options, nameof(options.ConnectionType));
             //cbxMode.AddDataBindings( options, nameof(options.ModbusMode));
@@ -71,7 +75,7 @@ namespace KpOmron.View
 
         private void OnConfigChanged(object sender)
         {
-            ConfigChanged?.Invoke(sender, new ConfigChangedEventArgs
+            ConfigChanged?.Invoke(sender, new ConfigChangedEventArgs<Tag>
             {
                 ConnectionOptions = ConnectionOptions
             });
@@ -101,15 +105,6 @@ namespace KpOmron.View
             var connectionType = cbxConnectionType.SelectedValue as ConnectionTypeEnum?;
             if(connectionType == null)
                 return;
-            switch (connectionType)
-            {
-                case ConnectionTypeEnum.SerialPort:
-                    cbxMode.Enabled = true;
-                    break;
-                case ConnectionTypeEnum.TcpIP:
-                    cbxMode.Enabled = false;
-                    break;
-            }
             OnConfigChanged(sender);
         }
 

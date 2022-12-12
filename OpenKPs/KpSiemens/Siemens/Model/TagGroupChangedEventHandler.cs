@@ -15,13 +15,6 @@ namespace KpSiemens.Siemens.Model
         public SiemensTagGroup ViewModel { get; set; }
         public ModifyType ModifyType { get; set; }
     }
-
-    //public class CmdGroupChangedEventArgs : EventArgs
-    //{
-    //    public SiemensCmdGroup ViewModel { get; set; }
-    //    public ModifyType ModifyType { get; set; }
-    //}
-
     public class PLCConfigChangedEventArgs : EventArgs
     {
         public PLCConnectionOptions ViewModel { get; set; }

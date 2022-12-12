@@ -1,10 +1,8 @@
 ﻿using KpCommon.Extend;
 using KpCommon.Helper;
-using KpCommon.Model;
-using KpCommon.Model.EnumType;
-using KpHiteModbus.Modbus.Extend;
-using KpHiteModbus.Modbus.Model;
-using KpHiteModbus.Modbus.Model.EnumType;
+using KpOmron.Extend;
+using KpOmron.Model;
+using KpOmron.Model.EnumType;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
@@ -15,18 +13,18 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace KpHiteModbus.Modbus.View
+namespace KpMelsec.View
 {
 
     public partial class CtrlRead : UserControl
     {
-        public event ConfigChangedEventHandler<Tag> TagGroupChanged;
-        private ModbusTagGroup tagGroup;
+        public event ConfigChangedEventHandler TagGroupChanged;
+        private TagGroup tagGroup;
         private ComboBox comboBox;
 
         BindingSource bindSourceDataTypeOnlyBool;
         BindingSource bindSourceDataTypeExceptBool;
-        public ModbusTagGroup ModbusTagGroup
+        public TagGroup TagGroup
         {
             get => tagGroup;
             set
@@ -57,8 +55,8 @@ namespace KpHiteModbus.Modbus.View
         private void InitDataSourceBind()
         {
             //绑定存储器类
-            Dictionary<string, RegisterTypeEnum> keyValueMemoryEnums = new Dictionary<string, RegisterTypeEnum>();
-            foreach (RegisterTypeEnum type in Enum.GetValues(typeof(RegisterTypeEnum)))
+            Dictionary<string, MemoryTypeEnum> keyValueMemoryEnums = new Dictionary<string, MemoryTypeEnum>();
+            foreach (MemoryTypeEnum type in Enum.GetValues(typeof(MemoryTypeEnum)))
                 keyValueMemoryEnums.Add(type.ToString(), type);
 
             BindingSource bindingSource = new BindingSource();
@@ -110,16 +108,16 @@ namespace KpHiteModbus.Modbus.View
 
         private void ShowTagGroup()
         {
-            if (ModbusTagGroup == null)
+            if (TagGroup == null)
                 return;
 
-            txtGroupName.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.Name));
-            chkActive.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.Active));
-            cbxRegisterType.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.RegisterType));
-            lblTagCount.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.TagCount));
-            txtMaxAddressLength.AddDataBindings(ModbusTagGroup, nameof(ModbusTagGroup.MaxRequestByteLength));
+            txtGroupName.AddDataBindings(TagGroup, nameof(TagGroup.Name));
+            chkActive.AddDataBindings(TagGroup, nameof(TagGroup.Active));
+            cbxRegisterType.AddDataBindings(TagGroup, nameof(TagGroup.MemoryType));
+            lblTagCount.AddDataBindings(TagGroup, nameof(TagGroup.TagCount));
+            txtMaxAddressLength.AddDataBindings(TagGroup, nameof(TagGroup.MaxRequestByteLength));
 
-            chkAllCanWrite.Checked = ModbusTagGroup.AllCanWrite;
+            chkAllCanWrite.Checked = TagGroup.AllCanWrite;
 
             //txtGroupName.Text = ModbusTagGroup.Name;
             //chkActive.Checked = ModbusTagGroup.Active;
@@ -128,7 +126,7 @@ namespace KpHiteModbus.Modbus.View
             //txtMaxAddressLength.Text = ModbusTagGroup.MaxRequestByteLength.ToString();
         }
 
-        private void BindTagGroupTags(ModbusTagGroup group)
+        private void BindTagGroupTags(TagGroup group)
         {
             if(group == null)
                 return ;
@@ -155,12 +153,12 @@ namespace KpHiteModbus.Modbus.View
             if (e.PropertyName.Equals(nameof(tag.Address)))
             {
                 //地址变化需要对当前数组进行重新排序
-                ModbusTagGroup.RefreshTagIndex();
+                TagGroup.RefreshTagIndex();
             }
-            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs<Tag>
+            TagGroupChanged?.Invoke(sender,new  ConfigChangedEventArgs
             {
                 ModifyType = ModifyType.Tags,
-                TagGroup = ModbusTagGroup,
+                TagGroup = TagGroup,
             });
         }
 
@@ -216,61 +214,39 @@ namespace KpHiteModbus.Modbus.View
 
         private void chkAllCanWrite_CheckedChanged(object sender, EventArgs e)
         {
-            if (ModbusTagGroup == null)
+            if (TagGroup == null)
                 return;
             if (IsShowTagGroup)
                 return;
 
             bool canwrite = chkAllCanWrite.Checked;
-            ModbusTagGroup.SetTagCanWrite(canwrite);
+            TagGroup.SetTagCanWrite(canwrite);
             RefreshDataGridView(false);
         }
 
         private void TxtGroupName_TextChanged(object sender, EventArgs e)
         {
-            if (ModbusTagGroup == null)
+            if (TagGroup == null)
                 return;
             if (IsShowTagGroup)
                 return;
-            ModbusTagGroup.Name =txtGroupName.Text;
+            TagGroup.Name =txtGroupName.Text;
             //CtrlReadViewModel.GroupName = txtGroupName.Text; //Winform 虽然绑定了，但是得在焦点移开当前控件，Model里面的值才能变成textbox控件里的值,所以这里手动赋值
-            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs<Tag>
+            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs
             {
                 ModifyType = ModifyType.GroupName,
-                TagGroup = ModbusTagGroup
+                TagGroup = TagGroup
             });
         }
 
         private void cbxRegisterType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (ModbusTagGroup == null)
+            if (TagGroup == null)
                 return;
             
-            var registerType = cbxRegisterType.SelectedValue as RegisterTypeEnum?;
+            var registerType = cbxRegisterType.SelectedValue as MemoryTypeEnum?;
             if (registerType == null)
                 return;
-
-            //根据不同的类型使能读写属性列
-            if(registerType == RegisterTypeEnum.Coils)
-            {
-                comboBox.DataSource = bindSourceDataTypeOnlyBool;
-                dgvTagCanWrite.ReadOnly = false;
-            }
-            else if(registerType == RegisterTypeEnum.DiscretesInputs)
-            {
-                comboBox.DataSource = bindSourceDataTypeOnlyBool;
-                dgvTagCanWrite.ReadOnly = true;
-            }
-            else if(registerType == RegisterTypeEnum.HoldingRegisters)
-            {
-                comboBox.DataSource = bindSourceDataTypeExceptBool;
-                dgvTagCanWrite.ReadOnly = false;
-            }
-            else
-            {
-                comboBox.DataSource = bindSourceDataTypeExceptBool;
-                dgvTagCanWrite.ReadOnly = true;
-            }
 
             RefreshDataGridView();
             if (IsShowTagGroup)
@@ -280,7 +256,7 @@ namespace KpHiteModbus.Modbus.View
 
         private void btnAddRange_Click(object sender, EventArgs e)
         {
-            var frm = new FrmDevAddRange(ModbusTagGroup);
+            var frm = new FrmDevAddRange(TagGroup);
             var dialogResult = frm.ShowDialog();
             if (dialogResult == DialogResult.Cancel)
                 return;
@@ -305,7 +281,7 @@ namespace KpHiteModbus.Modbus.View
                 //获取数据占据字节长度
                 var dataLength = currentTag.DataType.GetByteCount() + currentTag.Length;
                 //验证是否超出
-                var startAddress = ModbusTagGroup.StartAddress;
+                var startAddress = TagGroup.StartAddress;
 
                 double requestLength = default;
                 if(inputValue >= startAddress)
@@ -313,7 +289,7 @@ namespace KpHiteModbus.Modbus.View
                 else
                     requestLength = dataLength;
 
-                if (requestLength > ModbusTagGroup.MaxRequestByteLength)
+                if (requestLength > TagGroup.MaxRequestByteLength)
                 {
                     //超出最大地址限制
                     ScadaUiUtils.ShowError(TempleteKeyString.RangeOutOfMaxRequestLengthErrorMsg);
@@ -375,10 +351,10 @@ namespace KpHiteModbus.Modbus.View
         #endregion
         public void OnTagGroupChanged(object sender,ModifyType changeType)
         {
-            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs<Tag>
+            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs
             {
                 ModifyType = changeType,
-                TagGroup = ModbusTagGroup
+                TagGroup = TagGroup
             });
         }
 
@@ -393,7 +369,7 @@ namespace KpHiteModbus.Modbus.View
             dgvTags.Rows.RemoveAt(index);
             //numTagCount.Value = ModbusTagGroup.TagCount;
             //刷新地址显示
-            ModbusTagGroup.RefreshTagIndex();
+            TagGroup.RefreshTagIndex();
         }
         #endregion
 
@@ -418,7 +394,7 @@ namespace KpHiteModbus.Modbus.View
                 var listTagsDouble = listTags.Where(t => double.TryParse(t.Address, out double val)).ToList();
                 //数据添加到对象
 
-                if (!ModbusTagGroup.CheckAndAddTags(listTagsDouble, out string errorMsg,true))
+                if (!TagGroup.CheckAndAddTags(listTagsDouble, out string errorMsg,true))
                 {
                     ScadaUiUtils.ShowError(errorMsg);
                     return;
@@ -442,14 +418,14 @@ namespace KpHiteModbus.Modbus.View
                 Directory.CreateDirectory(directory);
             try
             {
-                var exportTags = ModbusTagGroup.Tags;
+                var exportTags = TagGroup.Tags;
                 if (exportTags.Count == 0)
                 {
                     exportTags = new List<Tag>
                     {
                         //当前导出为空模板时添加两条空数据,用于指示用户使用
-                        Model.Tag.CreateNewTag(tagID: 1, tagname: "xx1", dataType: DataTypeEnum.UShort, registerType: RegisterTypeEnum.HoldingRegisters, address: "1", canwrite: true),
-                        Model.Tag.CreateNewTag(tagID: 2, tagname: "xx2", dataType: DataTypeEnum.UShort, registerType: RegisterTypeEnum.HoldingRegisters, address: "2", canwrite: true)
+                        Model.Tag.CreateNewTag(tagID: 1, tagname: "xx1", dataType: DataTypeEnum.UInt, memoryType: MemoryTypeEnum.D, address: "1", canwrite: true),
+                        Model.Tag.CreateNewTag(tagID: 2, tagname: "xx2", dataType: DataTypeEnum.UInt, memoryType: MemoryTypeEnum.D, address: "2", canwrite: true)
                     };
                 }
                 using (var ms = ExcelHelper.ToExcel(exportTags, excelType))

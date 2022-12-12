@@ -562,9 +562,11 @@
     <Compile Include="InterFace\IDataUnit.cs" />
     <Compile Include="InterFace\IGroupUnit.cs" />
     <Compile Include="InterFace\ITemplateUnit.cs" />
+    <Compile Include="Model\ConfigChangedEventArgs.cs" />
     <Compile Include="Model\ConnectionUnit.cs" />
     <Compile Include="Model\DataUnit.cs" />
     <Compile Include="Model\DefineReadOnlyValues.cs" />
+    <Compile Include="Model\EnumType\ModifyType.cs" />
     <Compile Include="Model\GroupUnit.cs" />
     <Compile Include="Model\RequestModel.cs" />
     <Compile Include="Model\TemplateUnit.cs" />

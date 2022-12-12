@@ -4,15 +4,14 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C75B41C0-6DCC-454A-B36C-69DD01AFE5D5}</ProjectGuid>
+    <ProjectGuid>{1E86E89D-D3BD-449E-966B-74934DB089CC}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>KpHiteModbus</RootNamespace>
-    <AssemblyName>KpHiteModbus</AssemblyName>
+    <RootNamespace>KpOmron</RootNamespace>
+    <AssemblyName>KpOmron</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -31,14 +30,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Log, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Log\Log\bin\Debug\Log.dll</HintPath>
-    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -54,65 +46,66 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="KpHideModbusView.cs" />
-    <Compile Include="KpHiteModbusLogic.cs" />
-    <Compile Include="Modbus\DispatchRequest.cs" />
-    <Compile Include="Modbus\Extend\DataTypeEnumExtend.cs" />
-    <Compile Include="Modbus\Extend\RegisterTypeEnumExtend.cs" />
-    <Compile Include="Modbus\Model\FunctionCode.cs" />
-    <Compile Include="Modbus\Model\ConnectionOptions.cs" />
-    <Compile Include="Modbus\Model\DeviceTemplate.cs" />
-    <Compile Include="Modbus\Model\EnumType\DataTypeEnum.cs" />
-    <Compile Include="Modbus\Model\EnumType\ModbusConnectionTypeEnum.cs" />
-    <Compile Include="Modbus\Model\EnumType\ModbusModeEnum.cs" />
-    <Compile Include="Modbus\Model\EnumType\ReadWriteTypeEnum.cs" />
-    <Compile Include="Modbus\Model\EnumType\RegisterTypeEnum.cs" />
-    <Compile Include="Modbus\Model\EnumType\ModbusRegisterMaxDefine.cs" />
-    <Compile Include="Modbus\Model\Tag.cs" />
-    <Compile Include="Modbus\Model\TagGroup.cs" />
-    <Compile Include="Modbus\Model\TagGroupDefaultValues.cs" />
-    <Compile Include="Modbus\Model\TagGroupRequestModel.cs" />
-    <Compile Include="Modbus\Model\EnumType\TempleteKeyString.cs" />
-    <Compile Include="Modbus\ViewModel\FrmDevAddRangeViewModel.cs" />
-    <Compile Include="Modbus\View\CtrlPLCConfig.cs">
+    <Compile Include="Extend\DataTypeEnumExtend.cs" />
+    <Compile Include="KpOmronView.cs" />
+    <Compile Include="KpOmronLogic.cs" />
+    <Compile Include="Model\ConnectionOptions.cs" />
+    <Compile Include="Model\DeviceTemplate.cs" />
+    <Compile Include="Model\EnumType\DataTypeEnum.cs" />
+    <Compile Include="Model\EnumType\MemoryTypeEnum.cs" />
+    <Compile Include="Model\EnumType\ConnectionTypeEnum.cs" />
+    <Compile Include="Model\EnumType\TagGroupDefaultValues.cs" />
+    <Compile Include="Model\EnumType\TempleteKeyString.cs" />
+    <Compile Include="Model\Tag.cs" />
+    <Compile Include="Model\TagGroup.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ViewModel\FrmDevAddRangeViewModel.cs" />
+    <Compile Include="View\CtrlPLCConfig.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="Modbus\View\CtrlPLCConfig.Designer.cs">
+    <Compile Include="View\CtrlPLCConfig.Designer.cs">
       <DependentUpon>CtrlPLCConfig.cs</DependentUpon>
     </Compile>
-    <Compile Include="Modbus\View\CtrlRead.cs">
+    <Compile Include="View\CtrlRead.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="Modbus\View\CtrlRead.Designer.cs">
+    <Compile Include="View\CtrlRead.Designer.cs">
       <DependentUpon>CtrlRead.cs</DependentUpon>
     </Compile>
-    <Compile Include="Modbus\View\FrmDevAddRange.cs">
+    <Compile Include="View\FrmDevAddRange.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Modbus\View\FrmDevAddRange.Designer.cs">
+    <Compile Include="View\FrmDevAddRange.Designer.cs">
       <DependentUpon>FrmDevAddRange.cs</DependentUpon>
     </Compile>
-    <Compile Include="Modbus\View\FrmDevProps.cs">
+    <Compile Include="View\FrmDevProps.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Modbus\View\FrmDevProps.Designer.cs">
+    <Compile Include="View\FrmDevProps.Designer.cs">
       <DependentUpon>FrmDevProps.cs</DependentUpon>
     </Compile>
-    <Compile Include="Modbus\View\FrmDevTemplate.cs">
+    <Compile Include="View\FrmDevTemplate.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Modbus\View\FrmDevTemplate.Designer.cs">
+    <Compile Include="View\FrmDevTemplate.Designer.cs">
       <DependentUpon>FrmDevTemplate.cs</DependentUpon>
     </Compile>
-    <Compile Include="Modbus\View\FrmParaSet.cs">
+    <Compile Include="View\FrmParaSet.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Modbus\View\FrmParaSet.Designer.cs">
+    <Compile Include="View\FrmParaSet.Designer.cs">
       <DependentUpon>FrmParaSet.cs</DependentUpon>
     </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\KpCommon\KpCommon.csproj">
+      <Project>{2ba0bc26-8c82-4466-a0d1-92f0889c8a94}</Project>
+      <Name>KpCommon</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\ScadaComm\ScadaComm\ScadaCommCommon\ScadaCommCommon.csproj">
       <Project>{7baeae0e-4694-41d7-bc29-f205aef69741}</Project>
       <Name>ScadaCommCommon</Name>
@@ -121,31 +114,28 @@
       <Project>{c5dc293f-13ca-435f-a7db-4ba91639c292}</Project>
       <Name>ScadaData</Name>
     </ProjectReference>
-    <ProjectReference Include="..\KpCommon\KpCommon.csproj">
-      <Project>{2ba0bc26-8c82-4466-a0d1-92f0889c8a94}</Project>
-      <Name>KpCommon</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <EmbeddedResource Include="Modbus\View\CtrlPLCConfig.resx">
+    <EmbeddedResource Include="View\CtrlPLCConfig.resx">
       <DependentUpon>CtrlPLCConfig.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Modbus\View\CtrlRead.resx">
+    <EmbeddedResource Include="View\CtrlRead.resx">
       <DependentUpon>CtrlRead.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Modbus\View\FrmDevAddRange.resx">
+    <EmbeddedResource Include="View\FrmDevAddRange.resx">
       <DependentUpon>FrmDevAddRange.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Modbus\View\FrmDevProps.resx">
+    <EmbeddedResource Include="View\FrmDevProps.resx">
       <DependentUpon>FrmDevProps.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Modbus\View\FrmDevTemplate.resx">
+    <EmbeddedResource Include="View\FrmDevTemplate.resx">
       <DependentUpon>FrmDevTemplate.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Modbus\View\FrmParaSet.resx">
+    <EmbeddedResource Include="View\FrmParaSet.resx">
       <DependentUpon>FrmParaSet.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>

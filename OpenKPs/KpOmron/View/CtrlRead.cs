@@ -1,5 +1,7 @@
 ﻿using KpCommon.Extend;
 using KpCommon.Helper;
+using KpCommon.Model;
+using KpCommon.Model.EnumType;
 using KpOmron.Extend;
 using KpOmron.Model;
 using KpOmron.Model.EnumType;
@@ -18,7 +20,7 @@ namespace KpOmron.View
 
     public partial class CtrlRead : UserControl
     {
-        public event ConfigChangedEventHandler TagGroupChanged;
+        public event ConfigChangedEventHandler<Tag> TagGroupChanged;
         private TagGroup tagGroup;
         private ComboBox comboBox;
 
@@ -155,7 +157,7 @@ namespace KpOmron.View
                 //地址变化需要对当前数组进行重新排序
                 TagGroup.RefreshTagIndex();
             }
-            TagGroupChanged?.Invoke(sender,new  ConfigChangedEventArgs
+            TagGroupChanged?.Invoke(sender,new  ConfigChangedEventArgs<Tag>
             {
                 ModifyType = ModifyType.Tags,
                 TagGroup = TagGroup,
@@ -232,7 +234,7 @@ namespace KpOmron.View
                 return;
             TagGroup.Name =txtGroupName.Text;
             //CtrlReadViewModel.GroupName = txtGroupName.Text; //Winform 虽然绑定了，但是得在焦点移开当前控件，Model里面的值才能变成textbox控件里的值,所以这里手动赋值
-            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs
+            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs<Tag>
             {
                 ModifyType = ModifyType.GroupName,
                 TagGroup = TagGroup
@@ -351,7 +353,7 @@ namespace KpOmron.View
         #endregion
         public void OnTagGroupChanged(object sender,ModifyType changeType)
         {
-            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs
+            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs<Tag>
             {
                 ModifyType = changeType,
                 TagGroup = TagGroup

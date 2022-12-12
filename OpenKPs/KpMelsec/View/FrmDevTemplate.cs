@@ -7,11 +7,11 @@ using System;
 using System.IO;
 using System.Windows.Forms;
 
-namespace KpOmron.View
+namespace KpMelsec.View
 {
     public partial class FrmDevTemplate : Form
     {
-        const string NewFileName = "KpHiteModbus_NewTemplate.xml";
+        const string NewFileName = "KpHiteOmron_NewTemplate.xml";
         string _fileName;                                   //载入已定义模板时文件名称或者新建的模板文件名称
         AppDirs _appDirs;
         DeviceTemplate deviceTemplate;                      //模板文件

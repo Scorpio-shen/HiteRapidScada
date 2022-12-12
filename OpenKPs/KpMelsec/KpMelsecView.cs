@@ -7,17 +7,17 @@ using System.IO;
 
 namespace Scada.Comm.Devices
 {
-    public class KpOmronView : KPView
+    public class KpMelsecView : KPView
     {
-        public override string KPDescr => "Hite Modbus驱动v1.0";
+        public override string KPDescr => "Hite Omron驱动v1.0";
 
 
-        public KpOmronView() : base(0)
+        public KpMelsecView() : base(0)
         {
 
         }
 
-        public KpOmronView(int number) : base(number)
+        public KpMelsecView(int number) : base(number)
         {
             CanShowProps = true;
         }

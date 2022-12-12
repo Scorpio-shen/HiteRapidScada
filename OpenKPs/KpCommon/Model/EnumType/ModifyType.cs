@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KpOmron.Model.EnumType
+namespace KpCommon.Model.EnumType
 {
     /// <summary>
     /// 修改那个部分
