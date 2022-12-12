@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using KpOmron.Model;
+using KpOmron.Model.EnumType;
+using Scada.Data.Configuration;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Scada.Comm.Devices
@@ -8,12 +11,12 @@ namespace Scada.Comm.Devices
         public override string KPDescr => "Hite Modbus驱动v1.0";
 
 
-        public KpHiteModbusView() : base(0)
+        public KpOmronView() : base(0)
         {
 
         }
 
-        public KpHiteModbusView(int number) : base(number)
+        public KpOmronView(int number) : base(number)
         {
             CanShowProps = true;
         }

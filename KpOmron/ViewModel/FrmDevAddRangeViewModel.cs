@@ -1,4 +1,5 @@
 ﻿using KpHiteModbus.Modbus.Model;
+using KpOmron.Model.EnumType;
 using System;
 using System.ComponentModel;
 
@@ -12,7 +13,6 @@ namespace KpHiteModbus.Modbus.ViewModel
             get => namereplace;
             set
             {
-                using
                 namereplace = value;
                 OnPropertyChanged(nameof(NameReplace));
             }
@@ -57,7 +57,7 @@ namespace KpHiteModbus.Modbus.ViewModel
                 OnPropertyChanged(nameof(TagCount));
             }
         }
-        private DataTypeEnum datatype = DataTypeEnum.Byte;
+        private DataTypeEnum datatype = DataTypeEnum.UInt;
         public DataTypeEnum DataType
         {
             get => datatype;

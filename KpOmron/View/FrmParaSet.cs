@@ -1,11 +1,11 @@
 ﻿using KpCommon.Extend;
-using KpHiteModbus.Modbus.Model;
+using KpOmron.Model;
 using System;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Windows.Forms;
 
-namespace KpHiteModbus.Modbus.View
+namespace KpOmron.View
 {
     public partial class FrmParaSet : Form
     {
@@ -23,7 +23,7 @@ namespace KpHiteModbus.Modbus.View
         {
             isLoad = true;
 
-            if(_connectionOptions.ConnectionType == Model.EnumType.ModbusConnectionTypeEnum.SerialPort)
+            if(_connectionOptions.ConnectionType ==  Model.EnumType.ConnectionTypeEnum.SerialPort)
             {
                 gbxSerial.Enabled = true;
                 gbxTcp.Enabled = false;

@@ -1,13 +1,13 @@
 ﻿using KpCommon.Extend;
 using KpCommon.Model;
-using KpHiteModbus.Modbus.Model.EnumType;
+using KpOmron.Model.EnumType;
 using Scada;
 using System;
 using System.IO.Ports;
 using System.Text;
 using System.Xml;
 
-namespace KpHiteModbus.Modbus.Model
+namespace KpOmron.Model
 {
     public class ConnectionOptions : ConnectionUnit
     {
@@ -23,8 +23,8 @@ namespace KpHiteModbus.Modbus.Model
             }
         }
 
-        private ModbusConnectionTypeEnum connectiontype;
-        public ModbusConnectionTypeEnum ConnectionType
+        private ConnectionTypeEnum connectiontype;
+        public ConnectionTypeEnum ConnectionType
         {
             get => connectiontype;
             set
@@ -35,24 +35,13 @@ namespace KpHiteModbus.Modbus.Model
             }
         }
 
-        private ModbusModeEnum modbusmode;
-        public ModbusModeEnum ModbusMode
-        {
-            get => modbusmode;
-            set
-            {
-                modbusmode = value;
-                OnPropertyChanged(nameof(ModbusMode));
-                OnPropertyChanged(nameof(ConsoleParamsStr));
-            }
-        }
 
         public string ConsoleParamsStr
         {
             get
             {
                 StringBuilder sb = new StringBuilder();
-                if(ConnectionType == ModbusConnectionTypeEnum.SerialPort)
+                if(ConnectionType == ConnectionTypeEnum.SerialPort)
                 {
                     sb.AppendLine($"串口名:{PortName}");
                     sb.AppendLine($"波特率:{BaudRate}");
@@ -159,42 +148,6 @@ namespace KpHiteModbus.Modbus.Model
         }
         #endregion
 
-        public virtual void LoadFromXml(XmlElement optionElement)
-        {
-            if (optionElement == null)
-                throw new ArgumentNullException("OptionElement");
-
-
-            Station = optionElement.GetAttrAsString("Station").ToByte();
-            ConnectionType = optionElement.GetAttrAsEnum("ConnectionType", ModbusConnectionTypeEnum.TcpIP);
-            ModbusMode = optionElement.GetAttrAsEnum("ModbusMode", ModbusModeEnum.Rtu);
-
-            IPAddress = optionElement.GetAttrAsString("IPAddress");
-            Port = optionElement.GetAttrAsInt("Port");
-
-            PortName = optionElement.GetAttrAsString("PortName");
-            BaudRate = optionElement.GetAttrAsInt("BaudRate");
-            DataBits = optionElement.GetAttrAsInt("DataBits");
-            StopBits = optionElement.GetAttrAsEnum("StopBits", StopBits.None);
-            Parity = optionElement.GetAttrAsEnum("Parity", Parity.None);
-        }
-        public virtual void SaveToXml(XmlElement optionElement)
-        {
-            if (optionElement == null)
-                throw new ArgumentNullException("OptionElement");
-
-            optionElement.SetAttribute("Station", Station);
-            optionElement.SetAttribute("ConnectionType", ConnectionType);
-            optionElement.SetAttribute("ModbusMode", ModbusMode);
-
-            optionElement.SetAttribute("IPAddress", IPAddress);
-            optionElement.SetAttribute("Port", Port);
-
-            optionElement.SetAttribute("PortName", PortName);
-            optionElement.SetAttribute("BaudRate", BaudRate);
-            optionElement.SetAttribute("DataBits", DataBits);
-            optionElement.SetAttribute("StopBits", StopBits);
-            optionElement.SetAttribute("Parity", Parity);
-        }
+      
     }
 }

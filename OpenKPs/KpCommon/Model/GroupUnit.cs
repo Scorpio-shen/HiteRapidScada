@@ -1,4 +1,7 @@
-﻿using KpCommon.InterFace;
+﻿using KpCommon.Extend;
+using KpCommon.InterFace;
+using Scada;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -113,12 +116,59 @@ namespace KpCommon.Model
         /// 存储
         /// </summary>
         /// <param name="xmlElement"></param>
-        public abstract void SaveToXml(XmlElement xmlElement);
+        public virtual void SaveToXml(XmlElement tagGroupElement)
+        {
+            if (tagGroupElement == null)
+                throw new ArgumentNullException("TagGroupElement");
+
+            foreach (var p in GetType().GetProperties())
+            {
+                p.SetValue(this, p.GetValue(this, null), null);
+            }
+        }
         /// <summary>
         /// 载入
         /// </summary>
         /// <param name="xmlElement"></param>
-        public abstract void LoadFromXml(XmlElement xmlElement);
+        public virtual void LoadFromXml(XmlElement tagGroupElem)
+        {
+            if (tagGroupElem == null)
+                throw new ArgumentNullException("TagGroupElement");
+
+            foreach (var p in GetType().GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+            {
+                if (!p.CanWrite)
+                    continue;
+                if (p.PropertyType == typeof(bool))
+                {
+                    p.SetValue(this, tagGroupElem.GetAttrAsBool(p.Name), null);
+                }
+                else if (p.PropertyType == typeof(byte))
+                {
+                    p.SetValue(this, tagGroupElem.GetAttrAsByte(p.Name), null);
+                }
+                else if (p.PropertyType == typeof(string))
+                {
+                    p.SetValue(this, tagGroupElem.GetAttrAsString(p.Name), null);
+                }
+                else if (p.PropertyType == typeof(int))
+                {
+                    p.SetValue(this, tagGroupElem.GetAttrAsInt(p.Name), null);
+                }
+                else if (p.PropertyType.IsEnum)
+                {
+                    try
+                    {
+                        var enumValue = Enum.Parse(p.PropertyType, tagGroupElem.GetAttrAsString(p.Name), true);
+                        p.SetValue(this, enumValue, null);
+                    }
+                    catch
+                    {
+
+                    }
+                }
+            }
+        }
         #endregion
 
         #region 地址与索引刷新

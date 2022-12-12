@@ -1,15 +1,15 @@
 ﻿using KpCommon.Extend;
-using KpHiteModbus.Modbus.Model;
-using KpHiteModbus.Modbus.Model.EnumType;
+using KpOmron.Model;
+using KpOmron.Model.EnumType;
 using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 
-namespace KpHiteModbus.Modbus.View
+namespace KpOmron.View
 {
     public partial class CtrlPLCConfig : UserControl
     {
-        public event ModbusConfigChangedEventHandler ConfigChanged;
+        public event PLCConfigChangedEventHandler ConfigChanged;
         private ConnectionOptions connectionOptions;
         public ConnectionOptions ConnectionOptions
         {
@@ -35,8 +35,8 @@ namespace KpHiteModbus.Modbus.View
         private void CtrlPLCConfig_Load(object sender, EventArgs e)
         {
             //Combobox绑定数据源
-            var keyValueConnectionEnums = new Dictionary<string, ModbusConnectionTypeEnum>();
-            foreach (ModbusConnectionTypeEnum type in Enum.GetValues(typeof(ModbusConnectionTypeEnum)))
+            var keyValueConnectionEnums = new Dictionary<string, ConnectionTypeEnum>();
+            foreach (ConnectionTypeEnum type in Enum.GetValues(typeof(ConnectionTypeEnum)))
                 keyValueConnectionEnums.Add(type.GetDescription(), type);
 
             BindingSource bindingSource = new BindingSource();
@@ -47,15 +47,15 @@ namespace KpHiteModbus.Modbus.View
 
 
 
-            var keyValueModeEnums = new Dictionary<string, ModbusModeEnum>();
-            foreach (ModbusModeEnum type in Enum.GetValues(typeof(ModbusModeEnum)))
-                keyValueModeEnums.Add(type.ToString(), type);
+            //var keyValueModeEnums = new Dictionary<string, ModbusModeEnum>();
+            //foreach (ModbusModeEnum type in Enum.GetValues(typeof(ModbusModeEnum)))
+            //    keyValueModeEnums.Add(type.ToString(), type);
 
-            BindingSource bindingSource2 = new BindingSource();
-            bindingSource2.DataSource = keyValueModeEnums;
-            cbxMode.DataSource = bindingSource2;
-            cbxMode.DisplayMember = "Key";
-            cbxMode.ValueMember = "Value";
+            //BindingSource bindingSource2 = new BindingSource();
+            //bindingSource2.DataSource = keyValueModeEnums;
+            //cbxMode.DataSource = bindingSource2;
+            //cbxMode.DisplayMember = "Key";
+            //cbxMode.ValueMember = "Value";
 
         }
 
@@ -66,14 +66,14 @@ namespace KpHiteModbus.Modbus.View
             txtStation.AddDataBindings( options, nameof(options.Station));
             txtParams.AddDataBindings(options, nameof(options.ConsoleParamsStr));
             cbxConnectionType.AddDataBindings( options, nameof(options.ConnectionType));
-            cbxMode.AddDataBindings( options, nameof(options.ModbusMode));
+            //cbxMode.AddDataBindings( options, nameof(options.ModbusMode));
         }
 
         private void OnConfigChanged(object sender)
         {
-            ConfigChanged?.Invoke(sender, new  ModbusConfigChangedEventArgs
+            ConfigChanged?.Invoke(sender, new PLCConfigChangedEventArgs
             {
-                ConnectionOptions = ConnectionOptions
+                Options = ConnectionOptions
             });
         }
 
@@ -98,18 +98,15 @@ namespace KpHiteModbus.Modbus.View
             if (IsShowProps)
                 return;
 
-            var connectionType = cbxConnectionType.SelectedValue as ModbusConnectionTypeEnum?;
+            var connectionType = cbxConnectionType.SelectedValue as ConnectionTypeEnum?;
             if(connectionType == null)
                 return;
             switch (connectionType)
             {
-                case ModbusConnectionTypeEnum.SerialPort:
-                //case ModbusConnectionTypeEnum.RTUASCIIOverUdp:
-                case ModbusConnectionTypeEnum.RTUASCIIOverTcp:
+                case ConnectionTypeEnum.SerialPort:
                     cbxMode.Enabled = true;
                     break;
-                case ModbusConnectionTypeEnum.TcpIP:
-                case ModbusConnectionTypeEnum.Udp:
+                case ConnectionTypeEnum.TcpIP:
                     cbxMode.Enabled = false;
                     break;
             }

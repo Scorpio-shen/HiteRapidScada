@@ -1,4 +1,4 @@
-﻿namespace KpHiteModbus.Modbus.View
+﻿namespace KpOmron.View
 {
     partial class CtrlRead
     {

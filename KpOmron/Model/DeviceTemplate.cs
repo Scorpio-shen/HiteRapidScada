@@ -1,14 +1,11 @@
 ﻿using KpCommon.Model;
-using KpHiteModbus.Modbus.Model;
+using KpOmron.Model.EnumType;
 using Scada;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Xml;
 
-namespace KpHiteModbus.Modbus.Model
+namespace KpOmron.Model
 {
-    public class DeviceTemplate : TemplateUnit<ModbusTagGroup,Tag,ConnectionOptions>
+    public class DeviceTemplate : TemplateUnit<TagGroup,Tag,ConnectionOptions>
     {
 
         public DeviceTemplate() : base()
@@ -24,7 +21,7 @@ namespace KpHiteModbus.Modbus.Model
                 XmlNodeList tagGroupsNodes = tagGroupsNode.SelectNodes("TagGroup");
                 foreach(XmlElement tagGroupElem in tagGroupsNodes)
                 {
-                    var tagGroup = new ModbusTagGroup();
+                    var tagGroup = new TagGroup();
                     tagGroup.LoadFromXml(tagGroupElem);
 
                     if(tagGroup.TagCount >= 0)
@@ -33,19 +30,6 @@ namespace KpHiteModbus.Modbus.Model
                     }
                 }
             }
-
-            //XmlNode cmdsNode = rootNode.SelectSingleNode("Cmds");
-            //if (cmdsNode != null)
-            //{
-            //    XmlNodeList cmdNodes = cmdsNode.SelectNodes("Cmd");
-            //    foreach (XmlElement cmdNode in cmdNodes)
-            //    {
-            //        SiemensCmdGroup cmd = new SiemensCmdGroup();
-            //        cmd.LoadFromXml(cmdNode);
-
-            //        Cmds.Add(cmd);
-            //    }
-            //}
 
             XmlNode optionNode = rootNode.SelectSingleNode("ConnectionOptions");
             if (optionNode != null)
@@ -58,14 +42,9 @@ namespace KpHiteModbus.Modbus.Model
         protected override void SaveToXml(XmlElement rootElement)
         {
             XmlElement tagGroupElem = rootElement.AppendElem("TagGroups");
-            foreach (ModbusTagGroup tagGroup in TagGroups)
+            foreach (TagGroup tagGroup in TagGroups)
                 tagGroup.SaveToXml(tagGroupElem.AppendElem("TagGroup"));
 
-            //XmlElement cmdsElem = rootElement.AppendElem("Cmds");
-            //foreach( SiemensCmdGroup cmd in Cmds)
-            //{
-            //    cmd.SaveToXml(cmdsElem.AppendElem("Cmd"));
-            //}
 
             XmlElement optionElem = rootElement.AppendElem("ConnectionOptions");
             ConnectionOptions.SaveToXml(optionElem);
@@ -111,9 +90,9 @@ namespace KpHiteModbus.Modbus.Model
         //    }
         //}
 
-        public ModbusTagGroup CreateTagGroup(RegisterTypeEnum registerType = RegisterTypeEnum.HoldingRegisters)
+        public TagGroup CreateTagGroup(MemoryTypeEnum memoryType = MemoryTypeEnum.D)
         {
-            var tagGroup = new ModbusTagGroup(registerType);
+            var tagGroup = new TagGroup(memoryType);
             return tagGroup;
         }
 

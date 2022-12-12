@@ -1,9 +1,10 @@
 ﻿using KpCommon.Attributes;
 using KpCommon.Model;
+using KpOmron.Model.EnumType;
 using System;
 using System.ComponentModel;
 
-namespace KpHiteModbus.Modbus.Model
+namespace KpOmron.Model
 {
     /// <summary>
     /// 通讯点
@@ -16,7 +17,7 @@ namespace KpHiteModbus.Modbus.Model
         }
 
 
-        public static Tag CreateNewTag(int tagID = default, string tagname = "", DataTypeEnum dataType = DataTypeEnum.Byte, RegisterTypeEnum registerType = RegisterTypeEnum.HoldingRegisters, string address = "", bool canwrite = false,int length = default)
+        public static Tag CreateNewTag(int tagID = default, string tagname = "", DataTypeEnum dataType = DataTypeEnum.UInt, MemoryTypeEnum registerType = MemoryTypeEnum.D, string address = "", bool canwrite = false,int length = default)
         {
             return new Tag()
             {
@@ -25,7 +26,7 @@ namespace KpHiteModbus.Modbus.Model
                 DataType = dataType,
                 Address = address,
                 CanWrite = (byte)(canwrite ? 1 : 0),
-                RegisterType = registerType,
+                MemoryType = registerType,
                 Length = length
             };
         }
@@ -62,7 +63,7 @@ namespace KpHiteModbus.Modbus.Model
 
         public dynamic Data { get; set; }
 
-        public RegisterTypeEnum RegisterType { get; set; }
+        public MemoryTypeEnum MemoryType { get; set; }
 
         public bool CanWriteBool
         {
@@ -82,35 +83,38 @@ namespace KpHiteModbus.Modbus.Model
         {
             switch (DataType)
             {
-                case DataTypeEnum.UShort:
-                    Data = (ushort)cmdVal;
-                    break;
-                case DataTypeEnum.Short:
-                    Data = (short)cmdVal;
-                    break;
-                case DataTypeEnum.UInt:
-                    Data = (uint)cmdVal;
-                    break;
-                case DataTypeEnum.Int:
-                    Data = (int)cmdVal;
-                    break;
-                case DataTypeEnum.ULong:
-                    Data = (ulong)cmdVal;
-                    break;
-                case DataTypeEnum.Long:
-                    Data = (long)cmdVal;
-                    break;
-                case DataTypeEnum.Float:
-                    Data = (float)cmdVal;
-                    break;
-                case DataTypeEnum.Double:
-                    Data = cmdVal;
-                    break;
                 case DataTypeEnum.Bool:
                     Data = cmdVal > 0 ? true : false;
                     break;
+                case DataTypeEnum.Int: 
+                    Data = (short)cmdVal; 
+                    break;
+                    case DataTypeEnum.DInt: 
+                    Data = (int)cmdVal; 
+                    break;
+                case DataTypeEnum.LInt:
+                    Data = (long)cmdVal;
+                    break;
+                case DataTypeEnum.UInt:
+                case DataTypeEnum.Word:
+                    Data = (ushort)cmdVal;
+                    break;
+                case DataTypeEnum.UDInt:
+                case DataTypeEnum.DWord:
+                    Data = (uint)cmdVal;
+                    break;
+                case DataTypeEnum.ULInt:
+                case DataTypeEnum.LWord:
+                    Data = (ulong)cmdVal;
+                    break;
+                case DataTypeEnum.Real:
+                    Data = (float)cmdVal;
+                    break;
+                case DataTypeEnum.LReal:
+                    Data = cmdVal;
+                    break;
                 default:
-                    Data = (double)cmdVal;
+                    Data = cmdVal;
                     break;
             }
         }
