@@ -1,5 +1,6 @@
 ﻿using HslCommunication;
 using HslCommunication.ModBus;
+using KpCommon.Hsl.ModBus;
 using KpCommon.Model;
 using KpHiteModbus.Modbus;
 using KpHiteModbus.Modbus.Extend;
@@ -11,11 +12,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Scada.Comm.Devices
 {

@@ -1,8 +1,6 @@
 ﻿using HslCommunication;
-using HslCommunication.ModBus;
 using HslCommunication.Profinet.Omron;
-using HslCommunication.Profinet.Omron.Helper;
-using HslCommunication.Profinet.Siemens;
+using KpCommon.Hsl.Profinet.Omron.InterFace;
 using KpCommon.Model;
 using KpOmron.Model;
 using KpOmron.Model.EnumType;
@@ -12,7 +10,6 @@ using Scada.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 

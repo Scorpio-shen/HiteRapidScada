@@ -35,9 +35,6 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HslCommunication, Version=11.2.2.0, Culture=neutral, PublicKeyToken=3d72ad3b6b5ec0e3, processorArchitecture=MSIL">
-      <HintPath>..\packages\HslCommunication.11.2.2\lib\net451\HslCommunication.dll</HintPath>
-    </Reference>
     <Reference Include="Log, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Log\Log\bin\Debug\Log.dll</HintPath>
