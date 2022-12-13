@@ -68,7 +68,10 @@ namespace KpCommon.Model
 
             foreach(var p in GetType().GetProperties())
             {
-                p.SetValue(this,p.GetValue(this,null),null);
+                if (!p.CanWrite)
+                    continue;
+                //p.SetValue(this,p.GetValue(this,null),null);
+                optionElement.SetAttribute(p.Name, p.GetValue(this, null));
             }
             //optionElement.SetAttribute("Station", Station);
             //optionElement.SetAttribute("ConnectionType", ConnectionType);

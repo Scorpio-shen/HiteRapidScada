@@ -226,6 +226,20 @@ namespace KpMelsec.View
             RefreshDataGridView(false);
         }
 
+        private void chkActive_CheckedChanged(object sender, EventArgs e)
+        {
+            if (TagGroup == null)
+                return;
+            if (IsShowTagGroup)
+                return;
+
+            TagGroupChanged?.Invoke(sender, new ConfigChangedEventArgs<Tag>
+            {
+                ModifyType = ModifyType.IsActive,
+                TagGroup = TagGroup
+            });
+        }
+
         private void TxtGroupName_TextChanged(object sender, EventArgs e)
         {
             if (TagGroup == null)
@@ -446,6 +460,7 @@ namespace KpMelsec.View
                 ScadaUiUtils.ShowError($"导出异常,{ex.Message}");
             }
         }
+
 
 
         #endregion

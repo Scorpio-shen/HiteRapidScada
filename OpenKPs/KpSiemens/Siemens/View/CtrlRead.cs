@@ -199,11 +199,21 @@ namespace KpSiemens.Siemens.View
         //            SiemensTagGroup.Tags.RemoveAt(i);
         //        }
         //    }
-            
+
         //    bdsTags.ResetBindings(false);
         //    SiemensTagGroup.RefreshTagIndex();
         //    OnTagGroupChanged(sender, ModifyType.TagCount);
         //}
+
+        private void chkActive_CheckedChanged(object sender, EventArgs e)
+        {
+            if (SiemensTagGroup == null)
+                return;
+            if (IsShowTagGroup)
+                return;
+
+            OnTagGroupChanged(sender, ModifyType.IsActive);
+        }
 
         private void chkAllCanWrite_CheckedChanged(object sender, EventArgs e)
         {
@@ -464,5 +474,7 @@ namespace KpSiemens.Siemens.View
         }
 
         #endregion
+
+       
     }
 }

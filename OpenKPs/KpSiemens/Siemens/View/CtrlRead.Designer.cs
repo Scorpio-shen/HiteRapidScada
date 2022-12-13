@@ -163,6 +163,7 @@
             this.chkActive.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.chkActive.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.chkActive.UseVisualStyleBackColor = true;
+            this.chkActive.CheckedChanged += new System.EventHandler(this.chkActive_CheckedChanged);
             // 
             // label4
             // 

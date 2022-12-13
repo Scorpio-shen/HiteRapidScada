@@ -123,7 +123,10 @@ namespace KpCommon.Model
 
             foreach (var p in GetType().GetProperties())
             {
-                p.SetValue(this, p.GetValue(this, null), null);
+                if(!p.CanWrite)
+                    continue;
+                //p.SetValue(this, p.GetValue(this, null), null);
+                tagGroupElement.SetAttribute(p.Name,p.GetValue(this, null));
             }
         }
         /// <summary>

@@ -214,6 +214,20 @@ namespace KpHiteModbus.Modbus.View
         //    OnTagGroupChanged(sender, ModifyType.TagCount);
         //}
 
+        private void chkActive_CheckedChanged(object sender, EventArgs e)
+        {
+            if (ModbusTagGroup == null)
+                return;
+            if (IsShowTagGroup)
+                return;
+
+            TagGroupChanged?.Invoke(sender, new ConfigChangedEventArgs<Tag>
+            {
+                ModifyType = ModifyType.IsActive,
+                TagGroup = ModbusTagGroup
+            });
+        }
+
         private void chkAllCanWrite_CheckedChanged(object sender, EventArgs e)
         {
             if (ModbusTagGroup == null)
@@ -224,6 +238,7 @@ namespace KpHiteModbus.Modbus.View
             bool canwrite = chkAllCanWrite.Checked;
             ModbusTagGroup.SetTagCanWrite(canwrite);
             RefreshDataGridView(false);
+
         }
 
         private void TxtGroupName_TextChanged(object sender, EventArgs e)
@@ -468,6 +483,7 @@ namespace KpHiteModbus.Modbus.View
                 ScadaUiUtils.ShowError($"导出异常,{ex.Message}");
             }
         }
+
 
 
         #endregion
