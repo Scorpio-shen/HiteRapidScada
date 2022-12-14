@@ -36,37 +36,24 @@ namespace KpMelsec.View
         private void CtrlPLCConfig_Load(object sender, EventArgs e)
         {
             //Combobox绑定数据源
-            var keyValueConnectionEnums = new Dictionary<string, ConnectionTypeEnum>();
-            foreach (ConnectionTypeEnum type in Enum.GetValues(typeof(ConnectionTypeEnum)))
+            var keyValueConnectionEnums = new Dictionary<string, ProtocolTypeEnum>();
+            foreach (ProtocolTypeEnum type in Enum.GetValues(typeof(ProtocolTypeEnum)))
                 keyValueConnectionEnums.Add(type.GetDescription(), type);
 
             BindingSource bindingSource = new BindingSource();
             bindingSource.DataSource = keyValueConnectionEnums;
-            cbxConnectionType.DataSource = bindingSource;
-            cbxConnectionType.DisplayMember = "Key";
-            cbxConnectionType.ValueMember = "Value";
-
-
-
-            //var keyValueModeEnums = new Dictionary<string, ModbusModeEnum>();
-            //foreach (ModbusModeEnum type in Enum.GetValues(typeof(ModbusModeEnum)))
-            //    keyValueModeEnums.Add(type.ToString(), type);
-
-            //BindingSource bindingSource2 = new BindingSource();
-            //bindingSource2.DataSource = keyValueModeEnums;
-            //cbxMode.DataSource = bindingSource2;
-            //cbxMode.DisplayMember = "Key";
-            //cbxMode.ValueMember = "Value";
-
+            cbxProtocolType.DataSource = bindingSource;
+            cbxProtocolType.DisplayMember = "Key";
+            cbxProtocolType.ValueMember = "Value";
         }
 
         private void BindControls(ConnectionOptions options)
         {
             if (options == null)
                 return;
-            txtIPAddress.AddDataBindings( options, nameof(options.IPAddress));
-            txtPort.AddDataBindings(options, nameof(options.Port));
-            cbxConnectionType.AddDataBindings( options, nameof(options.ConnectionType));
+            //txtIPAddress.AddDataBindings( options, nameof(options.IPAddress));
+            //txtPort.AddDataBindings(options, nameof(options.Port));
+            cbxProtocolType.AddDataBindings( options, nameof(options.ConnectionType));
         }
 
         private void OnConfigChanged(object sender)
@@ -98,7 +85,7 @@ namespace KpMelsec.View
             if (IsShowProps)
                 return;
 
-            var connectionType = cbxConnectionType.SelectedValue as ConnectionTypeEnum?;
+            var connectionType = cbxProtocolType.SelectedValue as ProtocolTypeEnum?;
             if(connectionType == null)
                 return;
             OnConfigChanged(sender);
@@ -112,6 +99,7 @@ namespace KpMelsec.View
             OnConfigChanged(sender);
         }
         #endregion
+
 
     }
 }

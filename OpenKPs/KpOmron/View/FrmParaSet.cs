@@ -17,13 +17,15 @@ namespace KpOmron.View
             InitializeComponent();
             _connectionOptions = connectionOptions;
             _onConfigChanged = OnConfigChanged;
+
+            BindEvent(Controls);
         }
 
         private void FrmParaSet_Load(object sender, EventArgs e)
         {
             isLoad = true;
 
-            if(_connectionOptions.ConnectionType ==  Model.EnumType.ConnectionTypeEnum.SerialPort)
+            if(_connectionOptions.ProtocolType == Model.EnumType.ProtocolTypeEnum.HostLinkSerial || _connectionOptions.ProtocolType == Model.EnumType.ProtocolTypeEnum.HostLinkCMode)
             {
                 gbxSerial.Enabled = true;
                 gbxTcp.Enabled = false;
@@ -81,6 +83,13 @@ namespace KpOmron.View
             cbxDataBits.AddDataBindings(_connectionOptions, nameof(_connectionOptions.DataBits));
             cbxParity.AddDataBindings(_connectionOptions, nameof(_connectionOptions.Parity));
             cbxStopBits.AddDataBindings(_connectionOptions, nameof(_connectionOptions.StopBits));
+
+            txtStation.AddDataBindings(_connectionOptions, nameof(_connectionOptions.UnitNumber));
+            txtSlot.AddDataBindings(_connectionOptions, nameof(_connectionOptions.Slot));
+            txtSA1.AddDataBindings(_connectionOptions, nameof(_connectionOptions.SA1));
+            txtSID.AddDataBindings(_connectionOptions,nameof(_connectionOptions.SID));
+            txtSA2.AddDataBindings(_connectionOptions, nameof(_connectionOptions.SA2));
+            txtDA2.AddDataBindings(_connectionOptions, nameof(_connectionOptions.DA2));
         }
 
         private void btnConfirm_Click(object sender, EventArgs e)
@@ -91,6 +100,26 @@ namespace KpOmron.View
         private void btnCancle_Click(object sender, EventArgs e)
         {
             DialogResult = DialogResult.Cancel;
+        }
+
+        private void BindEvent(Control.ControlCollection collection)
+        {
+            foreach(Control control in collection)
+            {
+                if (control.HasChildren)
+                    BindEvent(control.Controls);
+                else
+                {
+                    if(control is ComboBox comboBox)
+                    {
+                        comboBox.SelectedIndexChanged += ControlChanged;
+                    }
+                    else if(control is TextBox textBox)
+                    {
+                        textBox.TextChanged += ControlChanged;
+                    }
+                }
+            }
         }
 
         private void ControlChanged(object sender,EventArgs e)

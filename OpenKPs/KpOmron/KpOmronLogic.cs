@@ -1,4 +1,5 @@
 ﻿using HslCommunication;
+using HslCommunication.Core;
 using HslCommunication.Profinet.Omron;
 using KpCommon.Hsl.Profinet.Omron.InterFace;
 using KpCommon.Model;
@@ -10,6 +11,7 @@ using Scada.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 
@@ -20,7 +22,7 @@ namespace Scada.Comm.Devices
         protected DeviceTemplate deviceTemplate;
         private HashSet<int> floatSignals;
         private List<KpOmron.Model.TagGroup> tagGroupsActive;
-        IHostLink hostLink;
+        IReadWriteDevice readWriteDevice;
         string templateName;
         bool IsConnected = false;
 
@@ -162,40 +164,102 @@ namespace Scada.Comm.Devices
             try
             {
                 var option = deviceTemplate.ConnectionOptions;
+                var ipaddress = option.IPAddress;
+                var port = option.Port; 
                 var unitnumber = option.UnitNumber;
                 var sid = option.SID;
                 var da2 = option.DA2;
+                var sa1 = option.SA1;
                 var sa2 = option.SA2;
+                var slot = option.Slot; 
                 OperateResult initResult = null;
+                IPStatus status;
                 var timeOut = ReqParams.Timeout;
                 if (timeOut <= 0)
                     timeOut = DefineReadOnlyValues.DefaultRequestTimeOut;
-                switch (option.ConnectionType)
+                switch (option.ProtocolType)
                 {
-                    case ConnectionTypeEnum.SerialPort:
-                        var omronHostLink = new OmronHostLink
+                    case ProtocolTypeEnum.FinsTcp:
                         {
-                            UnitNumber = unitnumber,
-                            SID = sid,
-                            DA2 = da2,
-                            SA2 = sa2
-                        };
-                        omronHostLink.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
-                        hostLink = omronHostLink;
-                        IsConnected= true;
+                            var omronFinsNet = new OmronFinsNet(ipaddress, port)
+                            {
+                                DA2= da2
+                            };
+                            initResult = omronFinsNet.ConnectServer();
+                            readWriteDevice = omronFinsNet;
+                        }
                         break;
-                    case ConnectionTypeEnum.TcpIP:
-                        var omronHostLinkOverTcp = new OmronHostLinkOverTcp(option.IPAddress, option.Port)
+                    case ProtocolTypeEnum.FinsUdp:
                         {
-                            ReceiveTimeOut = timeOut
-                        };
-                        initResult = omronHostLinkOverTcp.ConnectServer();
-                        IsConnected = initResult.IsSuccess;
-                        if (initResult.IsSuccess)
-                            hostLink = omronHostLinkOverTcp;
-                            break;
-
+                            var omronFinsUdp = new OmronFinsUdp(ipaddress, port) { SA1 = sa1};
+                            initResult = new OperateResult { IsSuccess = false };
+                            status = omronFinsUdp.IpAddressPing();
+                            initResult.IsSuccess = status == IPStatus.Success;
+                            initResult.Message = status.ToString();
+                            readWriteDevice = omronFinsUdp;
+                        }
+                        break;
+                        case ProtocolTypeEnum.EtherNetIP_CIP:
+                        {
+                            var omronCipNet = new OmronCipNet(ipaddress, port) { Slot = slot};
+                            initResult = omronCipNet.ConnectServer();
+                            readWriteDevice= omronCipNet;
+                        }
+                        break;
+                        case ProtocolTypeEnum.ConnectedCIP:
+                        {
+                            var omronConnectedCipNet = new OmronConnectedCipNet(ipaddress, port) { };
+                            initResult = omronConnectedCipNet.ConnectServer();
+                            readWriteDevice= omronConnectedCipNet;
+                        }
+                        break;
+                        case ProtocolTypeEnum.HostLinkSerial:
+                        {
+                            var omronHostLink = new OmronHostLink() { UnitNumber = unitnumber,SID = sid,DA2 = da2,SA2 = sa2};
+                            omronHostLink.SerialPortInni(o =>
+                            {
+                                o.PortName = option.PortName;
+                                o.BaudRate = option.BaudRate;
+                                o.Parity = option.Parity;
+                                o.StopBits = option.StopBits;
+                                o.DataBits = option.DataBits;
+                            });
+                            initResult = omronHostLink.Open();
+                            readWriteDevice= omronHostLink;
+                        }
+                        break;
+                    case ProtocolTypeEnum.HostLinkOverTcp:
+                        {
+                            var omronHostLink = new OmronHostLinkOverTcp(ipaddress,port) { UnitNumber = unitnumber, SID = sid, DA2 = da2, SA2 = sa2 };
+                            initResult = omronHostLink.ConnectServer();
+                            readWriteDevice= omronHostLink;
+                        }
+                        break;
+                    case ProtocolTypeEnum.HostLinkCMode:
+                        {
+                            var omronHostLink = new OmronHostLinkCMode() { UnitNumber = unitnumber };
+                            omronHostLink.SerialPortInni(o =>
+                            {
+                                o.PortName = option.PortName;
+                                o.PortName = option.PortName;
+                                o.BaudRate = option.BaudRate;
+                                o.Parity = option.Parity;
+                                o.StopBits = option.StopBits;
+                                o.DataBits = option.DataBits;
+                            });
+                            initResult= omronHostLink.Open();
+                            readWriteDevice= omronHostLink;
+                        }
+                        break;
+                        case ProtocolTypeEnum.CModeOverTcp:
+                        {
+                            var omronHostLink = new OmronHostLinkCModeOverTcp(ipaddress, port) { UnitNumber = unitnumber };
+                            initResult = omronHostLink.ConnectServer();
+                            readWriteDevice= omronHostLink;
+                        }
+                        break;
                 }
+                IsConnected = initResult.IsSuccess;
 
                 if (!initResult.IsSuccess)
                     WriteToLog($"Name:{Name},Number:{Number},初始化连接失败,{initResult.Message}");
@@ -270,7 +334,7 @@ namespace Scada.Comm.Devices
 
             try
             {
-                var result = hostLink.Read(model.Address, model.Length);
+                var result = readWriteDevice.Read(model.Address, model.Length);
                 WriteToLog($"Name:{Name},Number:{Number},数据请求结束,IsSuccess:{result.IsSuccess},Message:{result.Message},Data:{result.Content.ToJsonString()}");
                 if (result.IsSuccess && result.Content?.Length > 0)
                 {
@@ -311,37 +375,37 @@ namespace Scada.Comm.Devices
                 switch (tag.DataType)
                 {
                     case DataTypeEnum.Bool:
-                        operateResult = hostLink.Write(address,(bool)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(bool)tag.Data);
                         break;
                     case DataTypeEnum.Int:
-                        operateResult = hostLink.Write(address, (short)tag.Data);
+                        operateResult = readWriteDevice.Write(address, (short)tag.Data);
                         break;
                     case DataTypeEnum.DInt:
-                        operateResult = hostLink.Write(address,(int)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(int)tag.Data);
                         break;
                     case DataTypeEnum.LInt:
-                        operateResult = hostLink.Write(address, (long)tag.Data);
+                        operateResult = readWriteDevice.Write(address, (long)tag.Data);
                         break;
                     case DataTypeEnum.UInt:
                     case DataTypeEnum.Word:
-                        operateResult = hostLink.Write(address,(ushort)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(ushort)tag.Data);
                         break;
                     case DataTypeEnum.UDInt:
                     case DataTypeEnum.DWord:
-                        operateResult = hostLink.Write(address,(uint)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(uint)tag.Data);
                         break;
                     case DataTypeEnum.ULInt:
                     case DataTypeEnum.LWord:
-                        operateResult = hostLink.Write(address,(ulong)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(ulong)tag.Data);
                         break;
                     case DataTypeEnum.Real:
-                        operateResult = hostLink.Write(address,(float)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(float)tag.Data);
                         break;
                     case DataTypeEnum.LReal:
-                        operateResult = hostLink.Write(address,(double)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(double)tag.Data);
                         break;
                     case DataTypeEnum.String:
-                        operateResult = hostLink.Write(address,(string)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(string)tag.Data);
                         break;
                     default:
                         operateResult.Message = $"未知数据类型,{tag.DataType}";

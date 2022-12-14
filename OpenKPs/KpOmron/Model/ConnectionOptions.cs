@@ -13,6 +13,9 @@ namespace KpOmron.Model
     {
         #region 公共参数
         private byte unitnumber;
+        /// <summary>
+        /// 站号
+        /// </summary>
         public byte UnitNumber
         {
             get => unitnumber;
@@ -20,6 +23,17 @@ namespace KpOmron.Model
             {
                 unitnumber = value;
                 OnPropertyChanged(nameof(UnitNumber));
+            }
+        }
+
+        public byte slot;
+        public byte Slot
+        {
+            get => slot;
+            set
+            {
+                slot = value;
+                OnPropertyChanged(nameof(Slot));
             }
         }
 
@@ -31,6 +45,16 @@ namespace KpOmron.Model
             {
                 sid= value;
                 OnPropertyChanged(nameof(SID));
+            }
+        }
+
+        private byte sa1;
+        public byte SA1
+        {
+            get => sa1;
+            set
+            {
+                sa1 = value; OnPropertyChanged(nameof(SA1));
             }
         }
 
@@ -56,14 +80,26 @@ namespace KpOmron.Model
             }
         }
 
-        private ConnectionTypeEnum connectiontype;
-        public ConnectionTypeEnum ConnectionType
+        //private ConnectionTypeEnum connectiontype;
+        //public ConnectionTypeEnum ConnectionType
+        //{
+        //    get => connectiontype;
+        //    set
+        //    {
+        //        connectiontype = value;
+        //        OnPropertyChanged(nameof(ConnectionType));
+        //        OnPropertyChanged(nameof(ConsoleParamsStr));
+        //    }
+        //}
+
+        private ProtocolTypeEnum protocolType;
+        public ProtocolTypeEnum ProtocolType
         {
-            get => connectiontype;
+            get => protocolType;
             set
             {
-                connectiontype = value;
-                OnPropertyChanged(nameof(ConnectionType));
+                protocolType = value;
+                OnPropertyChanged(nameof(ProtocolType));
                 OnPropertyChanged(nameof(ConsoleParamsStr));
             }
         }
@@ -74,7 +110,7 @@ namespace KpOmron.Model
             get
             {
                 StringBuilder sb = new StringBuilder();
-                if(ConnectionType == ConnectionTypeEnum.SerialPort)
+                if(ProtocolType == ProtocolTypeEnum.HostLinkSerial)
                 {
                     sb.AppendLine($"串口名:{PortName}");
                     sb.AppendLine($"波特率:{BaudRate}");

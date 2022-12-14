@@ -12,6 +12,7 @@ namespace KpOmron.Model.EnumType
         [Description("SerialPort")]
         SerialPort,
         [Description("TcpIP")]
-        TcpIP
+        TcpIP,
+
     }
 }

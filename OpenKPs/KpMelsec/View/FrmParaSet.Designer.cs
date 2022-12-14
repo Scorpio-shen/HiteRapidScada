@@ -46,8 +46,18 @@
             this.gbxSerial = new System.Windows.Forms.GroupBox();
             this.btnConfirm = new System.Windows.Forms.Button();
             this.btnCancle = new System.Windows.Forms.Button();
+            this.gbxPLCOptions = new System.Windows.Forms.GroupBox();
+            this.checkBox1 = new System.Windows.Forms.CheckBox();
+            this.comboBox1 = new System.Windows.Forms.ComboBox();
+            this.label8 = new System.Windows.Forms.Label();
+            this.label9 = new System.Windows.Forms.Label();
+            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.checkBox2 = new System.Windows.Forms.CheckBox();
+            this.textBox2 = new System.Windows.Forms.TextBox();
+            this.label10 = new System.Windows.Forms.Label();
             this.gbxTcp.SuspendLayout();
             this.gbxSerial.SuspendLayout();
+            this.gbxPLCOptions.SuspendLayout();
             this.SuspendLayout();
             // 
             // txtIPAddress
@@ -206,7 +216,6 @@
             this.gbxTcp.Controls.Add(this.txtPort);
             this.gbxTcp.Controls.Add(this.label2);
             this.gbxTcp.Controls.Add(this.label1);
-            this.gbxTcp.Dock = System.Windows.Forms.DockStyle.Top;
             this.gbxTcp.Location = new System.Drawing.Point(0, 0);
             this.gbxTcp.Name = "gbxTcp";
             this.gbxTcp.Size = new System.Drawing.Size(399, 100);
@@ -226,7 +235,6 @@
             this.gbxSerial.Controls.Add(this.cbxDataBits);
             this.gbxSerial.Controls.Add(this.cbxParity);
             this.gbxSerial.Controls.Add(this.label5);
-            this.gbxSerial.Dock = System.Windows.Forms.DockStyle.Top;
             this.gbxSerial.Location = new System.Drawing.Point(0, 100);
             this.gbxSerial.Name = "gbxSerial";
             this.gbxSerial.Size = new System.Drawing.Size(399, 171);
@@ -254,11 +262,98 @@
             this.btnCancle.UseVisualStyleBackColor = true;
             this.btnCancle.Click += new System.EventHandler(this.btnCancle_Click);
             // 
+            // gbxPLCOptions
+            // 
+            this.gbxPLCOptions.Controls.Add(this.textBox2);
+            this.gbxPLCOptions.Controls.Add(this.label10);
+            this.gbxPLCOptions.Controls.Add(this.checkBox2);
+            this.gbxPLCOptions.Controls.Add(this.textBox1);
+            this.gbxPLCOptions.Controls.Add(this.label9);
+            this.gbxPLCOptions.Controls.Add(this.label8);
+            this.gbxPLCOptions.Controls.Add(this.comboBox1);
+            this.gbxPLCOptions.Controls.Add(this.checkBox1);
+            this.gbxPLCOptions.Location = new System.Drawing.Point(405, 0);
+            this.gbxPLCOptions.Name = "gbxPLCOptions";
+            this.gbxPLCOptions.Size = new System.Drawing.Size(341, 271);
+            this.gbxPLCOptions.TabIndex = 56;
+            this.gbxPLCOptions.TabStop = false;
+            this.gbxPLCOptions.Text = "PLC参数";
+            // 
+            // checkBox1
+            // 
+            this.checkBox1.AutoSize = true;
+            this.checkBox1.Location = new System.Drawing.Point(42, 227);
+            this.checkBox1.Name = "checkBox1";
+            this.checkBox1.Size = new System.Drawing.Size(72, 16);
+            this.checkBox1.TabIndex = 0;
+            this.checkBox1.Text = "SumCheck";
+            this.checkBox1.UseVisualStyleBackColor = true;
+            // 
+            // comboBox1
+            // 
+            this.comboBox1.FormattingEnabled = true;
+            this.comboBox1.Location = new System.Drawing.Point(199, 225);
+            this.comboBox1.Name = "comboBox1";
+            this.comboBox1.Size = new System.Drawing.Size(121, 20);
+            this.comboBox1.TabIndex = 1;
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(164, 228);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(29, 12);
+            this.label8.TabIndex = 41;
+            this.label8.Text = "格式";
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(53, 94);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(29, 12);
+            this.label9.TabIndex = 42;
+            this.label9.Text = "Slot";
+            // 
+            // textBox1
+            // 
+            this.textBox1.Location = new System.Drawing.Point(88, 90);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(58, 21);
+            this.textBox1.TabIndex = 43;
+            // 
+            // checkBox2
+            // 
+            this.checkBox2.AutoSize = true;
+            this.checkBox2.Location = new System.Drawing.Point(182, 186);
+            this.checkBox2.Name = "checkBox2";
+            this.checkBox2.Size = new System.Drawing.Size(84, 16);
+            this.checkBox2.TabIndex = 44;
+            this.checkBox2.Text = "新版本报文";
+            this.checkBox2.UseVisualStyleBackColor = true;
+            // 
+            // textBox2
+            // 
+            this.textBox2.Location = new System.Drawing.Point(72, 182);
+            this.textBox2.Name = "textBox2";
+            this.textBox2.Size = new System.Drawing.Size(58, 21);
+            this.textBox2.TabIndex = 46;
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(37, 187);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(29, 12);
+            this.label10.TabIndex = 45;
+            this.label10.Text = "站号";
+            // 
             // FrmParaSet
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(399, 334);
+            this.ClientSize = new System.Drawing.Size(757, 330);
+            this.Controls.Add(this.gbxPLCOptions);
             this.Controls.Add(this.btnCancle);
             this.Controls.Add(this.btnConfirm);
             this.Controls.Add(this.gbxSerial);
@@ -273,6 +368,8 @@
             this.gbxTcp.PerformLayout();
             this.gbxSerial.ResumeLayout(false);
             this.gbxSerial.PerformLayout();
+            this.gbxPLCOptions.ResumeLayout(false);
+            this.gbxPLCOptions.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -297,5 +394,14 @@
         private System.Windows.Forms.GroupBox gbxSerial;
         private System.Windows.Forms.Button btnConfirm;
         private System.Windows.Forms.Button btnCancle;
+        private System.Windows.Forms.GroupBox gbxPLCOptions;
+        private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.CheckBox checkBox2;
+        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.ComboBox comboBox1;
+        private System.Windows.Forms.CheckBox checkBox1;
     }
 }

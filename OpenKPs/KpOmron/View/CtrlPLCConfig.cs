@@ -36,27 +36,15 @@ namespace KpOmron.View
         private void CtrlPLCConfig_Load(object sender, EventArgs e)
         {
             //Combobox绑定数据源
-            var keyValueConnectionEnums = new Dictionary<string, ConnectionTypeEnum>();
-            foreach (ConnectionTypeEnum type in Enum.GetValues(typeof(ConnectionTypeEnum)))
+            var keyValueConnectionEnums = new Dictionary<string, ProtocolTypeEnum>();
+            foreach (ProtocolTypeEnum type in Enum.GetValues(typeof(ProtocolTypeEnum)))
                 keyValueConnectionEnums.Add(type.GetDescription(), type);
 
             BindingSource bindingSource = new BindingSource();
             bindingSource.DataSource = keyValueConnectionEnums;
-            cbxConnectionType.DataSource = bindingSource;
-            cbxConnectionType.DisplayMember = "Key";
-            cbxConnectionType.ValueMember = "Value";
-
-
-
-            //var keyValueModeEnums = new Dictionary<string, ModbusModeEnum>();
-            //foreach (ModbusModeEnum type in Enum.GetValues(typeof(ModbusModeEnum)))
-            //    keyValueModeEnums.Add(type.ToString(), type);
-
-            //BindingSource bindingSource2 = new BindingSource();
-            //bindingSource2.DataSource = keyValueModeEnums;
-            //cbxMode.DataSource = bindingSource2;
-            //cbxMode.DisplayMember = "Key";
-            //cbxMode.ValueMember = "Value";
+            cbxProtocolType.DataSource = bindingSource;
+            cbxProtocolType.DisplayMember = "Key";
+            cbxProtocolType.ValueMember = "Value";
 
         }
 
@@ -64,12 +52,12 @@ namespace KpOmron.View
         {
             if (options == null)
                 return;
-            txtStation.AddDataBindings( options, nameof(options.UnitNumber));
-            txtSID.AddDataBindings(options, nameof(options.SID));
-            txtDA2.AddDataBindings(options,nameof(options.DA2));
-            txtSA2.AddDataBindings(options, nameof(options.SA2));
+            //txtStation.AddDataBindings( options, nameof(options.UnitNumber));
+            //txtSID.AddDataBindings(options, nameof(options.SID));
+            //txtDA2.AddDataBindings(options,nameof(options.DA2));
+            //txtSA2.AddDataBindings(options, nameof(options.SA2));
             txtParams.AddDataBindings(options, nameof(options.ConsoleParamsStr));
-            cbxConnectionType.AddDataBindings( options, nameof(options.ConnectionType));
+            cbxProtocolType.AddDataBindings( options, nameof(options.ProtocolType));
             //cbxMode.AddDataBindings( options, nameof(options.ModbusMode));
         }
 
@@ -102,7 +90,7 @@ namespace KpOmron.View
             if (IsShowProps)
                 return;
 
-            var connectionType = cbxConnectionType.SelectedValue as ConnectionTypeEnum?;
+            var connectionType = cbxProtocolType.SelectedValue as ConnectionTypeEnum?;
             if(connectionType == null)
                 return;
             OnConfigChanged(sender);

@@ -54,6 +54,7 @@
     <Compile Include="Model\EnumType\ConnectionTypeEnum.cs" />
     <Compile Include="Model\EnumType\DataTypeEnum.cs" />
     <Compile Include="Model\EnumType\MemoryTypeEnum.cs" />
+    <Compile Include="Model\EnumType\ProtocolTypeEnum.cs" />
     <Compile Include="Model\EnumType\TagGroupDefaultValues.cs" />
     <Compile Include="Model\EnumType\TempleteKeyString.cs" />
     <Compile Include="Model\Tag.cs" />

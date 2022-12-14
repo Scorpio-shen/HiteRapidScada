@@ -7,17 +7,17 @@ using System.Threading.Tasks;
 
 namespace KpMelsec.Model.EnumType
 {
-    public enum ConnectionTypeEnum
-    {
-        [Description("McBinary")]
-        McBinary,
-        [Description("McUDPBinary")]
-        McUDPBinary,
-        [Description("McAscii")]
-        McAscii,
-        [Description("McUDPAscii")]
-        McUDPAscii,
-        [Description("McRBinary")]
-        McRBinary
-    }
+    //public enum ConnectionTypeEnum
+    //{
+    //    [Description("McBinary")]
+    //    McBinary,
+    //    [Description("McUDPBinary")]
+    //    McUDPBinary,
+    //    [Description("McAscii")]
+    //    McAscii,
+    //    [Description("McUDPAscii")]
+    //    McUDPAscii,
+    //    [Description("McRBinary")]
+    //    McRBinary
+    //}
 }
