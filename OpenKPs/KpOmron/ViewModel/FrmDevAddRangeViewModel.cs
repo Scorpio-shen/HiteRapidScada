@@ -1,4 +1,5 @@
 ﻿using KpOmron.Model.EnumType;
+using System;
 using System.ComponentModel;
 
 namespace KpOmron.ViewModel
@@ -71,7 +72,31 @@ namespace KpOmron.ViewModel
         }
         public string AddressOutput
         {
-            get=> $"{StartAddress}~{StartAddress + AddressIncrement * (TagCount - 1)}";
+            get
+            {
+                double address = StartAddress;
+                if (DataType == DataTypeEnum.Bool)
+                {
+                    for (int i = 0; i < TagCount; i++)
+                    {
+                        double dPart = Math.Round((address % 1), 2); //小数部分
+                        int iPart = (int)address;
+                        if (dPart + addressincrement < 0.15d)
+                            dPart += addressincrement;
+                        else
+                        {
+                            iPart++;
+                            dPart = 0.0d;
+                        }
+
+                        address = iPart + dPart;
+                    }
+
+                    return $"{StartAddress}~{address}";
+                }
+                else
+                    return $"{StartAddress}~{StartAddress + AddressIncrement * (TagCount - 1)}";
+            }
         }
 
         private int length;

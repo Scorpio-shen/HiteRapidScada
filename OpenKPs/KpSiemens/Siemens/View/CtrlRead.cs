@@ -1,5 +1,6 @@
 ﻿using KpCommon.Extend;
 using KpCommon.Helper;
+using KpCommon.Model;
 using KpSiemens.Siemens.Extend;
 using KpSiemens.Siemens.Model;
 using Scada.UI;
@@ -105,7 +106,6 @@ namespace KpSiemens.Siemens.View
             txtGroupName.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.Name));
             chkActive.AddDataBindings(SiemensTagGroup,nameof(SiemensTagGroup.Active));
             cbxMemoryType.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.MemoryType));
-            lblDbNum.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.DBNum));
             lblTagCount.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.TagCount));
             txtMaxAddressLength.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.MaxRequestByteLength));
             //chkAllCanWrite.AddDataBindings(SiemensTagGroup, nameof(SiemensTagGroup.AllCanWrite));
@@ -134,7 +134,27 @@ namespace KpSiemens.Siemens.View
                 tag.PropertyChanged -= Tag_PropertyChanged;
                 tag.PropertyChanged += Tag_PropertyChanged;
             }
+
+            //tags数目变化通知
+            group.PropertyChanged -= TagGroup_PropertyChanged;
+            group.PropertyChanged += TagGroup_PropertyChanged;
         }
+
+        private void TagGroup_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (IsShowTagGroup)
+                return;
+
+            if (e.PropertyName != nameof(SiemensTagGroup.TagCount))
+                return;
+
+            TagGroupChanged?.Invoke(sender, new TagGroupChangedEventArgs
+            {
+                ModifyType = ModifyType.Tags,
+                ViewModel = SiemensTagGroup
+            });
+        }
+
         /// <summary>
         /// 修改datagridview中tag内容通知父窗体修改按钮使能
         /// </summary>
@@ -234,7 +254,7 @@ namespace KpSiemens.Siemens.View
                 return;
             if (IsShowTagGroup)
                 return;
-            //SiemensTagGroup.Name =txtGroupName.Text;
+            SiemensTagGroup.Name =txtGroupName.Text;
             //CtrlReadViewModel.GroupName = txtGroupName.Text; //Winform 虽然绑定了，但是得在焦点移开当前控件，Model里面的值才能变成textbox控件里的值,所以这里手动赋值
             OnTagGroupChanged(sender, ModifyType.GroupName);
         }

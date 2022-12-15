@@ -54,17 +54,17 @@ namespace KpMelsec.Model
             }
         }
         private void SetMemoryType(MemoryTypeEnum registerType)=> Tags.ForEach(t => t.MemoryType = memoryType);
-        private double maxrequestbytelength;
+        private int maxrequestbytelength;
 
         /// <summary>
         /// 限制一组Tag最大请求数据字节长度
         /// </summary>
-        public override double MaxRequestByteLength
+        public override int MaxRequestByteLength
         {
             get
             {
                 if(maxrequestbytelength <= 0)
-                    maxrequestbytelength = TagGroupDefaultValues.MaxAddressLength;
+                    maxrequestbytelength = TagGroupDefaultValues.MaxAddressRequestLength;
                 return maxrequestbytelength;
             }
             set => maxrequestbytelength = value;
@@ -116,6 +116,7 @@ namespace KpMelsec.Model
                 result = false;
             }
             RefreshTagIndex();
+            OnPropertyChanged(nameof(TagCount));
             return result;
         }
 

@@ -55,17 +55,17 @@ namespace KpOmron.Model
             }
         }
         private void SetMemoryType(MemoryTypeEnum registerType)=> Tags.ForEach(t => t.MemoryType = memoryType);
-        private double maxrequestbytelength;
+        private int maxrequestbytelength;
 
         /// <summary>
         /// 限制一组Tag最大请求数据字节长度
         /// </summary>
-        public override double MaxRequestByteLength
+        public override int MaxRequestByteLength
         {
             get
             {
                 if(maxrequestbytelength <= 0)
-                    maxrequestbytelength = TagGroupDefaultValues.MaxAddressLength;
+                    maxrequestbytelength = TagGroupDefaultValues.MaxAddressRequestLength;
                 return maxrequestbytelength;
             }
             set => maxrequestbytelength = value;
@@ -117,6 +117,7 @@ namespace KpOmron.Model
                 result = false;
             }
             RefreshTagIndex();
+            OnPropertyChanged(nameof(Tags));
             return result;
         }
 
@@ -128,19 +129,19 @@ namespace KpOmron.Model
                 model.Length = 0;
             else
             {
-                var tag = Tags.Last();
-                if (double.TryParse(tag.Address, out double address))
+                var tagLast = Tags.Last();
+                if (double.TryParse(tagLast.Address, out double address))
                 {
-                    var length = address + tag.DataType.GetByteCount() - StartAddress;
-                    double dPart = length % 1; //小数部分
-                    int iPart = (int)length;   //整数部分
-
-                    model.Length += (ushort)iPart;
-
-                    if (dPart > 0)
-                        model.Length += 1;
-                    if (tag.Length > 0)
-                        model.Length += (ushort)tag.Length;
+                    //根据最后一个Tag的数据类型占据的字节数
+                    var lastByteCount = tagLast.DataType.GetByteCount();
+                    if (tagLast.DataType == DataTypeEnum.String)
+                        lastByteCount += tagLast.Length;
+                    //计算需要请求的字的个数
+                    var length = address - StartAddress;
+                    //除以2看需要请求几个字
+                    var regCount = (ushort)(lastByteCount / 2 + lastByteCount % 2);
+                    model.Length += (ushort)length;
+                    model.Length += regCount;
                 }
                 else
                     model.Length = 0;
@@ -178,21 +179,22 @@ namespace KpOmron.Model
 
                 if (tag.DataType == DataTypeEnum.Bool)
                 {
-                    if (Data.Length >= iPart + 1)
+                    if (Data.Length >= iPart + 2)
                     {
-                        var bitArray = new BitArray(Data.Skip(iPart).Take(1).ToArray());
-                        if (iPart < 8)
+                        var bitArray = new BitArray(Data.Skip(iPart).Take(2).ToArray());
+                        if (iPart <= 15)
                         {
-                            int bitIndex = (int)(dPart * 10);
+                            int bitIndex = (int)(dPart * 100);
                             result = bitArray.Get(bitIndex) ? 1.0 : 0.0;
                         }
                     }
                     return result;
                 }
+                var skipByte = iPart * 2;
                 var byteCount = tag.DataType.GetByteCount();
-                if (Data.Length < iPart + byteCount)    //超出数据长度
+                if (skipByte + byteCount > Data.Length)
                     return result;
-                byte[] buf = Data.Skip(iPart).Take(byteCount).Reverse().ToArray();
+                byte[] buf = Data.Skip(skipByte).Take(byteCount).Reverse().ToArray();
                 switch (tag.DataType)
                 {
                     case DataTypeEnum.Int:

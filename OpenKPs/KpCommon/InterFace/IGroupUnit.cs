@@ -46,7 +46,7 @@ namespace KpCommon.InterFace
         /// <summary>
         /// 最大地址长度（限制配置点时防止超出最大地址长度）
         /// </summary>
-        double MaxRequestByteLength { get; set; }
+        int MaxRequestByteLength { get; set; }
         #endregion
 
         #region 方法

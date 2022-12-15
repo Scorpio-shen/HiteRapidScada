@@ -28,6 +28,27 @@ using System.ServiceProcess;
 
 namespace Scada.Comm.Svc
 {
+
+
+#if DEBUG
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            var temp = new SvcMain();
+            temp.StartSerice();
+        }
+    }
+
+#else
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            var temp = new SvcMain();
+            temp.StartSerice();
+        }
+    }
     //static class Program
     //{
     //    /// <summary>
@@ -57,13 +78,5 @@ namespace Scada.Comm.Svc
     //    }
     //}
 
-
-    internal class Program
-    {
-        static void Main(string[] args)
-        {
-            var temp = new SvcMain();
-            temp.StartSerice();
-        }
-    }
+#endif
 }

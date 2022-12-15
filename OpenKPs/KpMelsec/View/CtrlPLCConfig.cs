@@ -53,7 +53,7 @@ namespace KpMelsec.View
                 return;
             //txtIPAddress.AddDataBindings( options, nameof(options.IPAddress));
             //txtPort.AddDataBindings(options, nameof(options.Port));
-            cbxProtocolType.AddDataBindings( options, nameof(options.ConnectionType));
+            cbxProtocolType.AddDataBindings( options, nameof(options.ProtocolType));
         }
 
         private void OnConfigChanged(object sender)

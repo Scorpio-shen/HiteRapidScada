@@ -37,6 +37,8 @@
             this.label4 = new System.Windows.Forms.Label();
             this.numTagCount = new System.Windows.Forms.NumericUpDown();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.chkCanWrite = new System.Windows.Forms.CheckBox();
+            this.label10 = new System.Windows.Forms.Label();
             this.txtLength = new System.Windows.Forms.TextBox();
             this.lblLength = new System.Windows.Forms.Label();
             this.numNameStartIndex = new System.Windows.Forms.NumericUpDown();
@@ -50,8 +52,6 @@
             this.label9 = new System.Windows.Forms.Label();
             this.lblNameOutput = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
-            this.chkCanWrite = new System.Windows.Forms.CheckBox();
-            this.label10 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.numAddressIncrement)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numTagCount)).BeginInit();
             this.groupBox1.SuspendLayout();
@@ -94,12 +94,12 @@
             // 
             // numAddressIncrement
             // 
-            this.numAddressIncrement.DecimalPlaces = 1;
+            this.numAddressIncrement.DecimalPlaces = 2;
             this.numAddressIncrement.Increment = new decimal(new int[] {
             1,
             0,
             0,
-            65536});
+            131072});
             this.numAddressIncrement.Location = new System.Drawing.Point(92, 97);
             this.numAddressIncrement.Maximum = new decimal(new int[] {
             65535,
@@ -175,6 +175,26 @@
             this.groupBox1.TabIndex = 8;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "参数";
+            // 
+            // chkCanWrite
+            // 
+            this.chkCanWrite.AutoSize = true;
+            this.chkCanWrite.Checked = true;
+            this.chkCanWrite.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkCanWrite.Location = new System.Drawing.Point(240, 62);
+            this.chkCanWrite.Name = "chkCanWrite";
+            this.chkCanWrite.Size = new System.Drawing.Size(15, 14);
+            this.chkCanWrite.TabIndex = 19;
+            this.chkCanWrite.UseVisualStyleBackColor = true;
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(181, 61);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(53, 12);
+            this.label10.TabIndex = 18;
+            this.label10.Text = "支持写入";
             // 
             // txtLength
             // 
@@ -308,26 +328,6 @@
             this.label6.Size = new System.Drawing.Size(45, 14);
             this.label6.TabIndex = 11;
             this.label6.Text = "名称:";
-            // 
-            // chkCanWrite
-            // 
-            this.chkCanWrite.AutoSize = true;
-            this.chkCanWrite.Checked = true;
-            this.chkCanWrite.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkCanWrite.Location = new System.Drawing.Point(240, 62);
-            this.chkCanWrite.Name = "chkCanWrite";
-            this.chkCanWrite.Size = new System.Drawing.Size(15, 14);
-            this.chkCanWrite.TabIndex = 19;
-            this.chkCanWrite.UseVisualStyleBackColor = true;
-            // 
-            // label10
-            // 
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(181, 61);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(53, 12);
-            this.label10.TabIndex = 18;
-            this.label10.Text = "支持写入";
             // 
             // FrmDevAddRange
             // 

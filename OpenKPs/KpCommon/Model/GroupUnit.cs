@@ -1,10 +1,12 @@
 ﻿using KpCommon.Extend;
 using KpCommon.InterFace;
+using NPOI.SS.Formula.Functions;
 using Scada;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Xml;
 
 namespace KpCommon.Model
@@ -81,6 +83,7 @@ namespace KpCommon.Model
         /// 起始点在所有Group包含的Tag的起始索引
         /// </summary>
         public int StartKpTagIndex { get; set; }
+
         /// <summary>
         /// 测点集合
         /// </summary>
@@ -99,7 +102,7 @@ namespace KpCommon.Model
         /// <summary>
         /// 最大地址长度（限制配置点时防止超出最大地址长度）
         /// </summary>
-        public abstract double MaxRequestByteLength { get; set; }
+        public abstract int MaxRequestByteLength { get; set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -126,7 +129,30 @@ namespace KpCommon.Model
                 if(!p.CanWrite)
                     continue;
                 //p.SetValue(this, p.GetValue(this, null), null);
+                if (p.Name.Equals(nameof(Tags)))
+                {
+                    SaveTagsToXml(tagGroupElement, Tags);
+                    continue;
+                }
                 tagGroupElement.SetAttribute(p.Name,p.GetValue(this, null));
+            }
+        }
+        /// <summary>
+        /// 存储Tags集合
+        /// </summary>
+        /// <param name="tagGroupElement"></param>
+        /// <param name="tags"></param>
+        public virtual void SaveTagsToXml(XmlElement tagGroupElement, List<T> tags)
+        {
+            foreach (var tag in tags)
+            {
+                XmlElement tagElem = tagGroupElement.AppendElem("Tag");
+                foreach (var tagProperty in tag.GetType().GetProperties())
+                {
+                    if (!tagProperty.CanWrite)
+                        continue;
+                    tagElem.SetAttribute(tagProperty.Name, tagProperty.GetValue(tag));
+                }
             }
         }
         /// <summary>
@@ -142,6 +168,12 @@ namespace KpCommon.Model
             {
                 if (!p.CanWrite)
                     continue;
+                if(p.Name.Equals(nameof(Tags)))
+                {
+                    LoadTagsFromXml(tagGroupElem);
+                    continue;
+                }
+
                 if (p.PropertyType == typeof(bool))
                 {
                     p.SetValue(this, tagGroupElem.GetAttrAsBool(p.Name), null);
@@ -170,6 +202,54 @@ namespace KpCommon.Model
 
                     }
                 }
+            }
+        }
+
+        public virtual void LoadTagsFromXml(XmlElement tagGroupElem)
+        {
+            XmlNodeList tagNodes = tagGroupElem.SelectNodes("Tag");
+            foreach(XmlElement tagElem in tagNodes)
+            {
+                T t = Activator.CreateInstance(typeof(T)) as T;
+                foreach (var p in typeof(T).GetProperties())
+                {
+                    if (!p.CanWrite)
+                        continue;
+                    if (t == null)
+                        return;
+
+                    if (p.PropertyType == typeof(bool))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsBool(p.Name), null);
+                    }
+                    else if (p.PropertyType == typeof(byte))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsByte(p.Name), null);
+                    }
+                    else if (p.PropertyType == typeof(string))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsString(p.Name), null);
+                    }
+                    else if (p.PropertyType == typeof(int))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsInt(p.Name), null);
+                    }
+                    else if (p.PropertyType.IsEnum)
+                    {
+                        try
+                        {
+                            var enumValue = Enum.Parse(p.PropertyType, tagElem.GetAttrAsString(p.Name), true);
+                            p.SetValue(t, enumValue, null);
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+                    
+                }
+
+                Tags.Add(t);
             }
         }
         #endregion

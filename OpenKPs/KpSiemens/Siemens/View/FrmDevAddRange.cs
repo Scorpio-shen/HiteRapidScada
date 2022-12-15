@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace KpSiemens.Siemens.View
 {
@@ -109,26 +110,31 @@ namespace KpSiemens.Siemens.View
         {
             List<Tag> result = new List<Tag>();
             var address = ViewModel.StartAddress;
+
+
             for (int i = 0; i < ViewModel.TagCount; i++)
             {
                 var name = $"{ViewModel.NameReplace}{ViewModel.NameStartIndex + i}";
-
-                if (ViewModel.DataType == DataTypeEnum.Bool)
+                if(i > 0)
                 {
-                    double dPart = address % 1; //小数部分
-                    int iPart = (int)address;
-                    if (dPart < 0.7)
-                        dPart += 0.1d;
-                    else
+                    if (ViewModel.DataType == DataTypeEnum.Bool)
                     {
-                        iPart++;
-                        dPart = 0.0d;
-                    }
+                        double dPart = address % 1; //小数部分
+                        int iPart = (int)address;
 
-                    address = iPart + dPart;
+                        if (dPart < 0.7)
+                            dPart += 0.1d;
+                        else
+                        {
+                            iPart++;
+                            dPart = 0.0d;
+                        }
+                        address = iPart + dPart;
+                    }
+                    else
+                        address = ViewModel.StartAddress + ViewModel.AddressIncrement * i;
                 }
-                else
-                    address = ViewModel.StartAddress + ViewModel.AddressIncrement * i;
+                
                 Tag tag = Model.Tag.CreateNewTag(tagname: name, dataType: ViewModel.DataType, memoryType: _siemensTagGroup.MemoryType, address: address.ToString(), canwrite: (byte)(ViewModel.CanWrite ? 1 : 0),length: ViewModel.Length);
                 result.Add(tag);
             }

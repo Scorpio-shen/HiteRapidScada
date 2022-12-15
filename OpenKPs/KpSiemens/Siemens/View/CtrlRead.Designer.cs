@@ -95,7 +95,6 @@
             // 
             // txtMaxAddressLength
             // 
-            this.txtMaxAddressLength.Enabled = false;
             this.txtMaxAddressLength.Location = new System.Drawing.Point(470, 64);
             this.txtMaxAddressLength.Name = "txtMaxAddressLength";
             this.txtMaxAddressLength.Size = new System.Drawing.Size(65, 21);

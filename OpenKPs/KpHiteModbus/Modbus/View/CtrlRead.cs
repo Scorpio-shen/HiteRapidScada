@@ -141,6 +141,25 @@ namespace KpHiteModbus.Modbus.View
                 tag.PropertyChanged -= Tag_PropertyChanged;
                 tag.PropertyChanged += Tag_PropertyChanged;
             }
+
+            //tags数目变化通知
+            group.PropertyChanged -= TagGroup_PropertyChanged;
+            group.PropertyChanged += TagGroup_PropertyChanged;
+        }
+
+        private void TagGroup_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (IsShowTagGroup)
+                return;
+
+            if (e.PropertyName != nameof(ModbusTagGroup.TagCount))
+                return;
+
+            TagGroupChanged?.Invoke(sender, new ConfigChangedEventArgs<Tag>
+            {
+                ModifyType = ModifyType.Tags,
+                TagGroup = ModbusTagGroup,
+            });
         }
         /// <summary>
         /// 修改datagridview中tag内容通知父窗体修改按钮使能

@@ -5,6 +5,7 @@ using Scada;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing.Printing;
 using System.Linq;
 using System.Text;
 using System.Xml;
@@ -53,13 +54,25 @@ namespace KpSiemens.Siemens.Model
                 OnPropertyChanged(nameof(MemoryType));
             }
         }
+        private int maxRequestbytelength;
         /// <summary>
         /// 最大地址长度（限制配置点时防止超出最大地址长度）
         /// </summary>
-        public override double MaxRequestByteLength { get; set; }
+        public override int MaxRequestByteLength
+        {
+            get
+            {
+                if(maxRequestbytelength == 0)
+                {
+                    maxRequestbytelength = TagGroupDefaultValues.MaxAddressRequestLength;
+                }
+                return maxRequestbytelength;
+            }
+            set => maxRequestbytelength = value;
+        }
         #endregion
 
-        #region 存储载入XML
+            #region 存储载入XML
         public override void LoadFromXml(XmlElement tagGroupElement)
         {
             if (tagGroupElement == null)
@@ -70,9 +83,9 @@ namespace KpSiemens.Siemens.Model
             Active = tagGroupElement.GetAttrAsBool("Active", true);
             MemoryType = tagGroupElement.GetAttrAsEnum("MemoryType", MemoryTypeEnum.DB);
             DBNum = tagGroupElement.GetAttrAsInt("DBNum");
-            MaxRequestByteLength = tagGroupElement.GetAttrAsDouble("MaxRequestByteLength");
+            MaxRequestByteLength = tagGroupElement.GetAttrAsInt("MaxAddressRequestLength");
             if (MaxRequestByteLength == 0)
-                MaxRequestByteLength = TagGroupDefaultValues.MaxAddressLength;
+                MaxRequestByteLength = TagGroupDefaultValues.MaxAddressRequestLength;
             XmlNodeList tagNodes = tagGroupElement.SelectNodes("Tag");
             int maxTagCount = MaxTagCount;
             MemoryTypeEnum memoryType = MemoryType;
@@ -160,6 +173,7 @@ namespace KpSiemens.Siemens.Model
                 result = false;
             }
             RefreshTagIndex();
+            OnPropertyChanged(nameof(TagCount));
             return result;
         }
         #endregion

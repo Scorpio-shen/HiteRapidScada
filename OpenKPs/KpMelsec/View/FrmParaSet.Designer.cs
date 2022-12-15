@@ -47,14 +47,14 @@
             this.btnConfirm = new System.Windows.Forms.Button();
             this.btnCancle = new System.Windows.Forms.Button();
             this.gbxPLCOptions = new System.Windows.Forms.GroupBox();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
-            this.comboBox1 = new System.Windows.Forms.ComboBox();
-            this.label8 = new System.Windows.Forms.Label();
-            this.label9 = new System.Windows.Forms.Label();
-            this.textBox1 = new System.Windows.Forms.TextBox();
-            this.checkBox2 = new System.Windows.Forms.CheckBox();
-            this.textBox2 = new System.Windows.Forms.TextBox();
+            this.txtStation = new System.Windows.Forms.TextBox();
             this.label10 = new System.Windows.Forms.Label();
+            this.chkNewVersionMessage = new System.Windows.Forms.CheckBox();
+            this.txtSlot = new System.Windows.Forms.TextBox();
+            this.label9 = new System.Windows.Forms.Label();
+            this.label8 = new System.Windows.Forms.Label();
+            this.cbxFormat = new System.Windows.Forms.ComboBox();
+            this.chkSumCheck = new System.Windows.Forms.CheckBox();
             this.gbxTcp.SuspendLayout();
             this.gbxSerial.SuspendLayout();
             this.gbxPLCOptions.SuspendLayout();
@@ -244,7 +244,7 @@
             // 
             // btnConfirm
             // 
-            this.btnConfirm.Location = new System.Drawing.Point(101, 284);
+            this.btnConfirm.Location = new System.Drawing.Point(295, 280);
             this.btnConfirm.Name = "btnConfirm";
             this.btnConfirm.Size = new System.Drawing.Size(96, 38);
             this.btnConfirm.TabIndex = 53;
@@ -254,7 +254,7 @@
             // 
             // btnCancle
             // 
-            this.btnCancle.Location = new System.Drawing.Point(225, 284);
+            this.btnCancle.Location = new System.Drawing.Point(405, 280);
             this.btnCancle.Name = "btnCancle";
             this.btnCancle.Size = new System.Drawing.Size(96, 38);
             this.btnCancle.TabIndex = 54;
@@ -264,14 +264,14 @@
             // 
             // gbxPLCOptions
             // 
-            this.gbxPLCOptions.Controls.Add(this.textBox2);
+            this.gbxPLCOptions.Controls.Add(this.txtStation);
             this.gbxPLCOptions.Controls.Add(this.label10);
-            this.gbxPLCOptions.Controls.Add(this.checkBox2);
-            this.gbxPLCOptions.Controls.Add(this.textBox1);
+            this.gbxPLCOptions.Controls.Add(this.chkNewVersionMessage);
+            this.gbxPLCOptions.Controls.Add(this.txtSlot);
             this.gbxPLCOptions.Controls.Add(this.label9);
             this.gbxPLCOptions.Controls.Add(this.label8);
-            this.gbxPLCOptions.Controls.Add(this.comboBox1);
-            this.gbxPLCOptions.Controls.Add(this.checkBox1);
+            this.gbxPLCOptions.Controls.Add(this.cbxFormat);
+            this.gbxPLCOptions.Controls.Add(this.chkSumCheck);
             this.gbxPLCOptions.Location = new System.Drawing.Point(405, 0);
             this.gbxPLCOptions.Name = "gbxPLCOptions";
             this.gbxPLCOptions.Size = new System.Drawing.Size(341, 271);
@@ -279,74 +279,86 @@
             this.gbxPLCOptions.TabStop = false;
             this.gbxPLCOptions.Text = "PLC参数";
             // 
-            // checkBox1
+            // txtStation
             // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(42, 227);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(72, 16);
-            this.checkBox1.TabIndex = 0;
-            this.checkBox1.Text = "SumCheck";
-            this.checkBox1.UseVisualStyleBackColor = true;
+            this.txtStation.Location = new System.Drawing.Point(89, 84);
+            this.txtStation.Name = "txtStation";
+            this.txtStation.Size = new System.Drawing.Size(58, 21);
+            this.txtStation.TabIndex = 46;
+            this.txtStation.Text = "0";
             // 
-            // comboBox1
+            // label10
             // 
-            this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(199, 225);
-            this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(121, 20);
-            this.comboBox1.TabIndex = 1;
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(54, 88);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(29, 12);
+            this.label10.TabIndex = 45;
+            this.label10.Text = "站号";
             // 
-            // label8
+            // chkNewVersionMessage
             // 
-            this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(164, 228);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(29, 12);
-            this.label8.TabIndex = 41;
-            this.label8.Text = "格式";
+            this.chkNewVersionMessage.AutoSize = true;
+            this.chkNewVersionMessage.Checked = true;
+            this.chkNewVersionMessage.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkNewVersionMessage.Location = new System.Drawing.Point(202, 45);
+            this.chkNewVersionMessage.Name = "chkNewVersionMessage";
+            this.chkNewVersionMessage.Size = new System.Drawing.Size(84, 16);
+            this.chkNewVersionMessage.TabIndex = 44;
+            this.chkNewVersionMessage.Text = "新版本报文";
+            this.chkNewVersionMessage.UseVisualStyleBackColor = true;
+            // 
+            // txtSlot
+            // 
+            this.txtSlot.Location = new System.Drawing.Point(89, 43);
+            this.txtSlot.Name = "txtSlot";
+            this.txtSlot.Size = new System.Drawing.Size(58, 21);
+            this.txtSlot.TabIndex = 43;
+            this.txtSlot.Text = "0";
             // 
             // label9
             // 
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(53, 94);
+            this.label9.Location = new System.Drawing.Point(54, 47);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(29, 12);
             this.label9.TabIndex = 42;
             this.label9.Text = "Slot";
             // 
-            // textBox1
+            // label8
             // 
-            this.textBox1.Location = new System.Drawing.Point(88, 90);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(58, 21);
-            this.textBox1.TabIndex = 43;
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(54, 129);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(29, 12);
+            this.label8.TabIndex = 41;
+            this.label8.Text = "格式";
             // 
-            // checkBox2
+            // cbxFormat
             // 
-            this.checkBox2.AutoSize = true;
-            this.checkBox2.Location = new System.Drawing.Point(182, 186);
-            this.checkBox2.Name = "checkBox2";
-            this.checkBox2.Size = new System.Drawing.Size(84, 16);
-            this.checkBox2.TabIndex = 44;
-            this.checkBox2.Text = "新版本报文";
-            this.checkBox2.UseVisualStyleBackColor = true;
+            this.cbxFormat.FormattingEnabled = true;
+            this.cbxFormat.Items.AddRange(new object[] {
+            "1",
+            "2",
+            "3",
+            "4"});
+            this.cbxFormat.Location = new System.Drawing.Point(89, 125);
+            this.cbxFormat.Name = "cbxFormat";
+            this.cbxFormat.Size = new System.Drawing.Size(58, 20);
+            this.cbxFormat.TabIndex = 1;
+            this.cbxFormat.Text = "1";
             // 
-            // textBox2
+            // chkSumCheck
             // 
-            this.textBox2.Location = new System.Drawing.Point(72, 182);
-            this.textBox2.Name = "textBox2";
-            this.textBox2.Size = new System.Drawing.Size(58, 21);
-            this.textBox2.TabIndex = 46;
-            // 
-            // label10
-            // 
-            this.label10.AutoSize = true;
-            this.label10.Location = new System.Drawing.Point(37, 187);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(29, 12);
-            this.label10.TabIndex = 45;
-            this.label10.Text = "站号";
+            this.chkSumCheck.AutoSize = true;
+            this.chkSumCheck.Checked = true;
+            this.chkSumCheck.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkSumCheck.Location = new System.Drawing.Point(202, 86);
+            this.chkSumCheck.Name = "chkSumCheck";
+            this.chkSumCheck.Size = new System.Drawing.Size(72, 16);
+            this.chkSumCheck.TabIndex = 0;
+            this.chkSumCheck.Text = "SumCheck";
+            this.chkSumCheck.UseVisualStyleBackColor = true;
             // 
             // FrmParaSet
             // 
@@ -395,13 +407,13 @@
         private System.Windows.Forms.Button btnConfirm;
         private System.Windows.Forms.Button btnCancle;
         private System.Windows.Forms.GroupBox gbxPLCOptions;
-        private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.TextBox txtStation;
         private System.Windows.Forms.Label label10;
-        private System.Windows.Forms.CheckBox checkBox2;
-        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.CheckBox chkNewVersionMessage;
+        private System.Windows.Forms.TextBox txtSlot;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.Label label8;
-        private System.Windows.Forms.ComboBox comboBox1;
-        private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.ComboBox cbxFormat;
+        private System.Windows.Forms.CheckBox chkSumCheck;
     }
 }

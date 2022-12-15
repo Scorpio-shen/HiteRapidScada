@@ -100,9 +100,9 @@ namespace KpOmron.Model
         {
             var option = new ConnectionOptions()
             {
-                UnitNumber = 1,
+                UnitNumber = 0,
                 IPAddress = "127.0.0.1",
-                Port = 502,
+                Port = 9600,
                 BaudRate = 9600,
                 DataBits = 8,
                 Parity = System.IO.Ports.Parity.None,

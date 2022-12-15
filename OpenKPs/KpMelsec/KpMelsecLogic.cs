@@ -13,8 +13,10 @@ using Scada.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace Scada.Comm.Devices
 {
@@ -23,7 +25,7 @@ namespace Scada.Comm.Devices
         protected DeviceTemplate deviceTemplate;
         private HashSet<int> floatSignals;
         private List<KpMelsec.Model.TagGroup> tagGroupsActive;
-        IReadWriteMc readWriteMc;
+        IReadWriteDevice readWriteDevice;
         string templateName;
         bool IsConnected = false;
 
@@ -167,50 +169,136 @@ namespace Scada.Comm.Devices
                 var option = deviceTemplate.ConnectionOptions;
                 var ipaddress = option.IPAddress;
                 var port = option.Port;
+
                 OperateResult initResult = null;
                 var timeOut = ReqParams.Timeout;
                 if (timeOut <= 0)
                     timeOut = DefineReadOnlyValues.DefaultRequestTimeOut;
-                switch (option.ConnectionType)
+                switch (option.ProtocolType)
                 {
-                    case ConnectionTypeEnum.McBinary:
-                        var mcNet = new MelsecMcNet(ipaddress, port);
-                        mcNet.ReceiveTimeOut = timeOut;
-                        initResult = mcNet.ConnectServer();
-                        readWriteMc = mcNet;
-                        break;
-                    case ConnectionTypeEnum.McUDPBinary:
-                        var mcUdp = new MelsecMcUdp(ipaddress, port);
-                        mcUdp.ReceiveTimeout = timeOut;
-                        initResult = new OperateResult() { IsSuccess = false };
-                        if(mcUdp.IpAddressPing() == System.Net.NetworkInformation.IPStatus.Success)
+                    case ProtocolTypeEnum.MelsecCIP:
                         {
-                            initResult.IsSuccess = true;
+                            var mc = new MelsecCipNet(ipaddress, port) { Slot = option.Slot};
+                            mc.ReceiveTimeOut= timeOut;
+                            initResult = mc.ConnectServer();
+                            readWriteDevice = mc;
                         }
-                        readWriteMc = mcUdp;
                         break;
-                    case ConnectionTypeEnum.McAscii:
-                       var mcAsciiNet = new MelsecMcAsciiNet(ipaddress, port);
-                        mcAsciiNet.ReceiveTimeOut = timeOut;
-                        initResult = mcAsciiNet.ConnectServer();
-                        readWriteMc = mcAsciiNet;
+                    case ProtocolTypeEnum.McQna1EBinary:
+                        {
+                            var mc = new MelsecA1ENet(ipaddress, port);
+                            mc.ReceiveTimeOut= timeOut;
+                            initResult = mc.ConnectServer();
+                            readWriteDevice = mc;
+                        }
                         break;
-                    case ConnectionTypeEnum.McUDPAscii:
-                        var mcAsciiUdp = new MelsecMcAsciiUdp(ipaddress, port);
-                        mcAsciiUdp.ReceiveTimeout= timeOut;
-                        initResult = new OperateResult() { IsSuccess = false };
-                        if(mcAsciiUdp.IpAddressPing() == System.Net.NetworkInformation.IPStatus.Success)
-                            initResult.IsSuccess= true;
-                        readWriteMc= mcAsciiUdp;
+                    case ProtocolTypeEnum.McQna1EAscii:
+                        {
+                            var mc = new MelsecA1EAsciiNet(ipaddress,port);
+                            mc.ReceiveTimeOut= timeOut;
+                            initResult = mc.ConnectServer();
+                            readWriteDevice = mc;
+                        }
                         break;
-                    case ConnectionTypeEnum.McRBinary:
-                        var mcRNet = new MelsecMcRNet(ipaddress, port);
-                        mcRNet.ReceiveTimeOut = timeOut;
-                        initResult = mcRNet.ConnectServer();
-                        readWriteMc = mcRNet;
+                    case ProtocolTypeEnum.McQna3EBinary:
+                        {
+                            var mc = new MelsecMcNet(ipaddress,port);
+                            mc.ReceiveTimeOut= timeOut;
+                            initResult = mc.ConnectServer();
+                            readWriteDevice = mc;
+                        }
+                        break;
+                    case ProtocolTypeEnum.MCQna3EBinaryUdp:
+                        {
+                            var mc = new MelsecMcUdp(ipaddress,port);
+                            initResult = new OperateResult { IsSuccess = false };
+                            var status = mc.IpAddressPing();
+                            mc.ReceiveTimeout= timeOut;
+                            initResult.IsSuccess = status == IPStatus.Success;
+                            initResult.Message = status.ToString();
+                            readWriteDevice= mc;
+                        }
+                        break;
+                    case ProtocolTypeEnum.McQna3EASCII:
+                        {
+                            var mc = new MelsecMcAsciiNet(ipaddress,port);
+                            mc.ReceiveTimeOut= timeOut;
+                            initResult = mc.ConnectServer();
+                            readWriteDevice = mc;
+                        }
+                        break;
+                    case ProtocolTypeEnum.MCQna3EASCIIUdp:
+                        {
+                            var mc = new MelsecMcAsciiUdp(ipaddress, port);
+                            initResult = new OperateResult { IsSuccess = false };
+                            var status = mc.IpAddressPing();
+                            mc.ReceiveTimeout = timeOut;
+                            initResult.IsSuccess = status == IPStatus.Success;
+                            initResult.Message = status.ToString();
+                            readWriteDevice = mc;
+                        }
+                        break;
+                    case ProtocolTypeEnum.MCRSerialQna3EBinary:
+                        {
+                            var mc = new MelsecMcRNet(ipaddress, port);
+                            mc.ReceiveTimeOut = timeOut;
+                            initResult = mc.ConnectServer();
+                            readWriteDevice = mc;
+                        }
+                        break;
+                    case ProtocolTypeEnum.FxSerial:
+                        {
+                            var mc = new MelsecFxSerial() { IsNewVersion = option.NewVersionMessage };
+                            mc.ReceiveTimeout= timeOut;
+                            mc.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
+                            initResult = mc.Open();
+                            readWriteDevice= mc;
+                        }
+                        break;
+                    case ProtocolTypeEnum.FxSerialOverTcp:
+                        {
+                            var mc = new MelsecFxSerialOverTcp(ipaddress, port) { IsNewVersion = option.NewVersionMessage };
+                            mc.ReceiveTimeOut= timeOut;
+                            initResult = mc.ConnectServer();
+                            readWriteDevice = mc;
+                        }
+                        break;
+                    case ProtocolTypeEnum.FxLinks485:
+                        {
+                            var mc = new MelsecFxLinks() { Station = option.Station, SumCheck = option.SumCheck };
+                            mc.ReceiveTimeout= timeOut;
+                            mc.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
+                            initResult = mc.Open();
+                            readWriteDevice= mc;
+                        }
+                        break;
+                    case ProtocolTypeEnum.FxLinksOverTcp:
+                        {
+                            var mc = new MelsecFxLinksOverTcp(ipaddress, port) { Station = option.Station, SumCheck = option.SumCheck };
+                            mc.ReceiveTimeOut= timeOut;
+                            initResult = mc.ConnectServer();
+                            readWriteDevice = mc;
+                        }
+                        break;
+                    case ProtocolTypeEnum.Qna3c:
+                        {
+                            var mc = new MelsecA3CNet() { Station = option.Station, SumCheck = option.SumCheck, Format = option.Format };
+                            mc.ReceiveTimeout = timeOut;
+                            mc.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
+                            initResult = mc.Open();
+                            readWriteDevice = mc;
+                        }
+                        break;
+                    case ProtocolTypeEnum.Qna3cOverTcp:
+                        {
+                            var mc = new MelsecA3CNetOverTcp(ipaddress, port) { Station = option.Station, SumCheck = option.SumCheck, Format = option.Format };
+                            mc.ReceiveTimeOut = timeOut;
+                            initResult = mc.ConnectServer();
+                            readWriteDevice = mc;
+                        }
                         break;
                     default:
-                        initResult = new OperateResult() { IsSuccess = false };
+                        initResult = new OperateResult() { IsSuccess = false,Message = "未知协议类型!"};
                         break;
                 }
 
@@ -289,7 +377,7 @@ namespace Scada.Comm.Devices
 
             try
             {
-                var result = readWriteMc.Read(model.Address, model.Length);
+                var result = readWriteDevice.Read(model.Address, model.Length);
                 WriteToLog($"Name:{Name},Number:{Number},数据请求结束,IsSuccess:{result.IsSuccess},Message:{result.Message},Data:{result.Content.ToJsonString()}");
                 if (result.IsSuccess && result.Content?.Length > 0)
                 {
@@ -330,37 +418,37 @@ namespace Scada.Comm.Devices
                 switch (tag.DataType)
                 {
                     case DataTypeEnum.Bool:
-                        operateResult = readWriteMc.Write(address,(bool)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(bool)tag.Data);
                         break;
                     case DataTypeEnum.Int:
-                        operateResult = readWriteMc.Write(address, (short)tag.Data);
+                        operateResult = readWriteDevice.Write(address, (short)tag.Data);
                         break;
                     case DataTypeEnum.DInt:
-                        operateResult = readWriteMc.Write(address,(int)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(int)tag.Data);
                         break;
                     case DataTypeEnum.LInt:
-                        operateResult = readWriteMc.Write(address, (long)tag.Data);
+                        operateResult = readWriteDevice.Write(address, (long)tag.Data);
                         break;
                     case DataTypeEnum.UInt:
                     case DataTypeEnum.Word:
-                        operateResult = readWriteMc.Write(address,(ushort)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(ushort)tag.Data);
                         break;
                     case DataTypeEnum.UDInt:
                     case DataTypeEnum.DWord:
-                        operateResult = readWriteMc.Write(address,(uint)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(uint)tag.Data);
                         break;
                     case DataTypeEnum.ULInt:
                     case DataTypeEnum.LWord:
-                        operateResult = readWriteMc.Write(address,(ulong)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(ulong)tag.Data);
                         break;
                     case DataTypeEnum.Real:
-                        operateResult = readWriteMc.Write(address,(float)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(float)tag.Data);
                         break;
                     case DataTypeEnum.LReal:
-                        operateResult = readWriteMc.Write(address,(double)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(double)tag.Data);
                         break;
                     case DataTypeEnum.String:
-                        operateResult = readWriteMc.Write(address,(string)tag.Data);
+                        operateResult = readWriteDevice.Write(address,(string)tag.Data);
                         break;
                     default:
                         operateResult.Message = $"未知数据类型,{tag.DataType}";

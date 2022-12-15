@@ -6,6 +6,7 @@ using Scada.UI;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Security.Principal;
 using System.Windows.Forms;
 
 namespace KpOmron.View
@@ -116,7 +117,27 @@ namespace KpOmron.View
             for (int i = 0; i < ViewModel.TagCount; i++)
             {
                 var name = $"{ViewModel.NameReplace}{ViewModel.NameStartIndex + i}";
-                address = ViewModel.StartAddress + ViewModel.AddressIncrement * i;
+                if (i > 0)
+                {
+                    if (ViewModel.DataType == DataTypeEnum.Bool)
+                    {
+
+                        double dPart = address % 1; //小数部分
+                        int iPart = (int)address;
+                        if (dPart + ViewModel.AddressIncrement < 0.15d)
+                            dPart += ViewModel.AddressIncrement;
+                        else
+                        {
+                            iPart++;
+                            dPart = 0.0d;
+                        }
+
+                        address = iPart + dPart;
+                    }
+                    else
+                        address = ViewModel.StartAddress + ViewModel.AddressIncrement * i;
+                }
+                
                 Tag tag = Model.Tag.CreateNewTag(tagname: name, dataType: ViewModel.DataType, memoryType: _tagGroup.MemoryType, address: address.ToString(), canwrite:ViewModel.CanWrite,length: ViewModel.Length);
                 result.Add(tag);
             }
