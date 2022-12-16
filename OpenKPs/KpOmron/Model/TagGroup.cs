@@ -181,7 +181,7 @@ namespace KpOmron.Model
                 {
                     if (Data.Length >= iPart + 2)
                     {
-                        var bitArray = new BitArray(Data.Skip(iPart).Take(2).ToArray());
+                        var bitArray = new BitArray(Data.Skip(iPart).Take(2).Reverse().ToArray());
                         if (iPart <= 15)
                         {
                             int bitIndex = (int)(dPart * 100);
