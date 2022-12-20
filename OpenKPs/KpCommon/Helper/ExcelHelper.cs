@@ -53,7 +53,6 @@ namespace KpCommon.Helper
             ISheet sheet;
             using (var file = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
-                MemoryStream ms = new MemoryStream();
                 if (Path.GetExtension(path) == ".xls")
                 {
                     HSSFWorkbook workbook = new HSSFWorkbook(file);
