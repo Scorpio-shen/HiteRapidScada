@@ -11,6 +11,9 @@ using HslCommunication.Core.Net;
 using HslCommunication.Reflection;
 using HslCommunication.MQTT;
 using HslCommunication.Core;
+using System.IO;
+using System.Text.RegularExpressions;
+
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -21,6 +24,11 @@ namespace HslCommunication.Enthernet
 	/// 一个支持完全自定义的Http服务器，支持返回任意的数据信息，方便调试信息，详细的案例请查看API文档信息<br />
 	/// A Http server that supports fully customized, supports returning arbitrary data information, which is convenient for debugging information. For detailed cases, please refer to the API documentation information
 	/// </summary>
+	/// <remarks>
+	/// 使用RPC接口注册的方式，可以更加便捷快速的实现webapi接口创建及设计，自带接口列表浏览查看，注释查看，签名查看，甚至调用次数及耗时查看。<br />
+	/// Using the RPC interface registration method, you can more conveniently and quickly realize the creation and design of webapi interfaces, browse and view the built-in interface list, 
+	/// view comments, view signatures, and even view the number of calls and time-consuming.
+	/// </remarks>
 	/// <example>
 	/// 我们先来看看一个最简单的例子，如何进行实例化的操作。
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Enthernet\HttpServerSample.cs" region="Sample1" title="基本的实例化" />
@@ -32,7 +40,9 @@ namespace HslCommunication.Enthernet
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Enthernet\HttpServerSample.cs" region="Sample4" title="安全实现" />
 	/// 当然了，如果我们想反回一个完整的html网页，也是可以实现的，甚至添加一些js的脚本，下面的例子就简单的说明了如何操作
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Enthernet\HttpServerSample.cs" region="Sample5" title="返回html" />
-	/// 如果需要实现跨域的操作，可以将属性<see cref="IsCrossDomain"/> 设置为<c>True</c>
+	/// 如果需要实现跨域的操作，可以将属性<see cref="IsCrossDomain"/> 设置为<c>True</c><br /><br />
+	/// 上述的代码编写接口还是很费劲的，接口的方法还不能在服务器复用，所以参考下面的代码来编写接口会更加的高级和便捷。
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Enthernet\HttpServerSample.cs" region="Sample6" title="高级RPC注册" />
 	/// </example>
 	public class HttpServer
 	{
@@ -129,8 +139,8 @@ namespace HslCommunication.Enthernet
 							context.Response.AppendHeader( "Access-Control-Allow-Credentials", "true" );
 							context.Response.AppendHeader( "Access-Control-Max-Age", "3600" );
 						}
-						context.Response.AddHeader( "Content-type", "Content-Type: text/html; charset=utf-8" ); // 添加响应头信息
-						//context.Response.ContentType = "Content-Type: text/html; charset=utf-8";
+						context.Response.AddHeader( "Content-type", "text/html; charset=utf-8" ); // 添加响应头信息
+						//context.Response.ContentType = "text/html; charset=utf-8";
 						//context.Response.ContentEncoding = encoding;
 					}
 					catch(Exception ex)
@@ -139,7 +149,7 @@ namespace HslCommunication.Enthernet
 					}
 				}
 
-				string data = GetDataFromRequest( request );
+				byte[] data = GetDataFromRequest( request );
 				response.StatusCode = 200;
 				try
 				{
@@ -219,8 +229,8 @@ namespace HslCommunication.Enthernet
 							context.Response.AppendHeader( "Access-Control-Allow-Credentials", "true" );
 							context.Response.AppendHeader( "Access-Control-Max-Age", "3600" );
 						}
-						context.Response.AddHeader( "Content-type", "Content-Type: text/html; charset=utf-8" ); // 添加响应头信息
-						//context.Response.ContentType = "Content-Type: text/html; charset=utf-8";
+						context.Response.AddHeader( "Content-type", "text/html; charset=utf-8" ); // 添加响应头信息
+						//context.Response.ContentType = "text/html; charset=utf-8";
 						//context.Response.ContentEncoding = encoding;
 					}
 					catch (Exception ex)
@@ -229,7 +239,7 @@ namespace HslCommunication.Enthernet
 					}
 				}
 
-				string data = await GetDataFromRequestAsync( request );
+				byte[] data = await GetDataFromRequestAsync( request );
 				response.StatusCode = 200;
 				try
 				{
@@ -257,52 +267,50 @@ namespace HslCommunication.Enthernet
 			}
 		}
 #endif
-		private string GetDataFromRequest( HttpListenerRequest request )
+		private byte[] GetDataFromRequest( HttpListenerRequest request )
 		{
 			try
 			{
-				var byteList = new List<byte>( );
+				MemoryStream ms = new MemoryStream( );
 				var byteArr = new byte[receiveBufferSize];
 				int readLen = 0;
-				int len = 0;
 				// 接收客户端传过来的数据并转成字符串类型
 				do
 				{
 					readLen = request.InputStream.Read( byteArr, 0, byteArr.Length );
-					len += readLen;
-					byteList.AddRange( SoftBasic.ArraySelectBegin( byteArr, readLen ) );
+					if (readLen > 0) ms.Write( byteArr, 0, readLen );
 				} 
 				while (readLen != 0);
-				return encoding.GetString( byteList.ToArray( ), 0, len );
+
+				return ms.ToArray( );
 			}
 			catch
 			{
-				return string.Empty;
+				return new byte[0];
 			}
 		}
 
 #if !NET35 && !NET20
-		private async Task<string> GetDataFromRequestAsync( HttpListenerRequest request )
+		private async Task<byte[]> GetDataFromRequestAsync( HttpListenerRequest request )
 		{
 			try
 			{
-				var byteList = new List<byte>( );
+				MemoryStream ms = new MemoryStream( );
 				var byteArr = new byte[receiveBufferSize];
 				int readLen = 0;
-				int len = 0;
 				// 接收客户端传过来的数据并转成字符串类型
 				do
 				{
 					readLen = await request.InputStream.ReadAsync( byteArr, 0, byteArr.Length );
-					len += readLen;
-					byteList.AddRange( SoftBasic.ArraySelectBegin( byteArr, readLen ) );
+					if (readLen > 0) ms.Write( byteArr, 0, readLen );
 				} 
 				while (readLen != 0);
-				return encoding.GetString( byteList.ToArray( ), 0, len );
+
+				return ms.ToArray( );
 			}
 			catch
 			{
-				return string.Empty;
+				return new byte[0];
 			}
 		}
 #endif
@@ -316,11 +324,16 @@ namespace HslCommunication.Enthernet
 		/// <param name="data">Body数据</param>
 		/// <returns>返回的内容</returns>
 #if NET20 || NET35
-		protected virtual string HandleRequest( HttpListenerRequest request, HttpListenerResponse response, string data )
+		protected virtual string HandleRequest( HttpListenerRequest request, HttpListenerResponse response, byte[] data )
 #else
-		protected virtual async Task<string> HandleRequest( HttpListenerRequest request, HttpListenerResponse response, string data )
+		protected virtual async Task<string> HandleRequest( HttpListenerRequest request, HttpListenerResponse response, byte[] data )
 #endif
 		{
+			if (request.HttpMethod == "OPTIONS")
+			{
+				return "OK";
+			}
+
 			if (loginAccess)
 			{
 				string[] values = request.Headers.GetValues( "Authorization" );
@@ -373,18 +386,18 @@ namespace HslCommunication.Enthernet
 			{
 				if(request.RawUrl.StartsWith("/Apis"))
 				{
-					response.AddHeader( "Content-type", $"Content-Type: application/json; charset=utf-8" );
+					response.AddHeader( "Content-type", $"application/json; charset=utf-8" );
 					return GetAllRpcApiInfo( ).ToJsonString( );
 				}
 				else if(request.RawUrl.StartsWith( "/Logs" ))
 				{
-					response.AddHeader( "Content-type", $"Content-Type: application/json; charset=utf-8" );
+					response.AddHeader( "Content-type", $"application/json; charset=utf-8" );
 					if (request.RawUrl == "/Logs" || request.RawUrl == "/Logs/")
 						return LogStatistics.LogStat.GetStatisticsSnapshot( ).ToJsonString( );
 					else
 						return LogStatistics.GetStatisticsSnapshot( request.RawUrl.Substring( 6 ) ).ToJsonString( );
 				}
-				response.AddHeader( "Content-type", $"Content-Type: application/json; charset=utf-8" );
+				response.AddHeader( "Content-type", $"application/json; charset=utf-8" );
 				return GetAllRpcApiInfo( ).ToJsonString( );
 			}
 			else if (request.HttpMethod == "OPTIONS")
@@ -396,18 +409,61 @@ namespace HslCommunication.Enthernet
 			MqttRpcApiInfo apiInformation = GetMqttRpcApiInfo( GetMethodName( System.Web.HttpUtility.UrlDecode( request.RawUrl ) ) );
 			if (apiInformation == null)
 			{
-				if (HandleRequestFunc != null) return HandleRequestFunc.Invoke( request, response, data );
+				if (request.ContentType != null && request.ContentType.StartsWith( "multipart/form-data; boundary=--------------------------" ))
+				{
+					// 文件，先寻找起始数据
+					int index = -1;
+					for (int i = 0; i < data.Length - 4; i++)
+					{
+						if (data[i + 0] == 0x0d &&
+							data[i + 1] == 0x0a &&
+							data[i + 2] == 0x0d &&
+							data[i + 3] == 0x0a)
+						{
+							index = i + 4;
+							break;
+						}
+					}
+
+					if (index == -1) return "Not file content!";
+					// 再寻找结果索引
+					int last = data.Length - 3;
+					for (int i = last; i > 0; i--)
+					{
+						if (data[i + 0] == 0x0d &&
+							data[i + 1] == 0x0a)
+						{
+							last = i;
+							break;
+						}
+					}
+
+					if (HandleFileUpload != null)
+					{
+						string context = encoding.GetString( data, 0, index - 4 );
+						HttpUploadFile uploadFile = new HttpUploadFile( );
+						uploadFile.FileName = SoftBasic.UrlDecode( Regex.Match( context, "filename=\"[^\"]+" ).Value.Substring( 10 ), Encoding.UTF8 );
+						uploadFile.Name = Regex.Match( context, "name=\"[^\"]+" ).Value.Substring( 6 );
+						uploadFile.Content = data.SelectMiddle( index, last - index );
+
+						return HandleFileUpload.Invoke( request, response, uploadFile );
+					}
+				}
+				else
+				{
+					if (HandleRequestFunc != null) return HandleRequestFunc.Invoke( request, response, encoding.GetString( data ) );
+				}
 				return "This is HslWebServer, Thank you for use!";
 			}
 			else
 			{
-				response.AddHeader( "Content-type", $"Content-Type: application/json; charset=utf-8" );
+				response.AddHeader( "Content-type", $"application/json; charset=utf-8" );
 				// 存在相关的服务，优先调度服务
 				DateTime dateTime = DateTime.Now;
 #if NET20 || NET35
-				string result = HandleObjectMethod( request, System.Web.HttpUtility.UrlDecode( request.RawUrl ), data, apiInformation );
+				string result = HandleObjectMethod( request, System.Web.HttpUtility.UrlDecode( request.RawUrl ), encoding.GetString( data ), apiInformation, this.DealWithHttpListenerRequest );
 #else
-				string result = await HandleObjectMethod( request, System.Web.HttpUtility.UrlDecode( request.RawUrl ), data, apiInformation );
+				string result = await HandleObjectMethod( request, System.Web.HttpUtility.UrlDecode( request.RawUrl ), encoding.GetString( data ), apiInformation, this.DealWithHttpListenerRequest );
 #endif
 				double timeSpend = Math.Round( (DateTime.Now - dateTime).TotalSeconds, 5 );
 				apiInformation.CalledCountAddOne( (long)(timeSpend * 100_000) );
@@ -419,6 +475,13 @@ namespace HslCommunication.Enthernet
 
 		#region Public Properties
 
+		/// <summary>
+		/// 额外的处理请求信息的委托定义，将可以自定义处理一些特殊的请求头数据，例如一些账户相关的其他属性，语言属性等等。<br />
+		/// Additional delegate definitions for processing request information will be able to customize some special request header data, 
+		/// such as some other account-related attributes, language attributes, and so on.
+		/// </summary>
+		public Action<HttpListenerRequest, ISessionContext> DealWithHttpListenerRequest { get; set; }
+		
 		/// <summary>
 		/// 获取当前的日志统计信息，可以获取到每个API的每天的调度次数信息，缓存60天数据，如果需要存储本地，需要调用<see cref="LogStatisticsDict.SaveToFile(string)"/>方法。<br />
 		/// Get the current log statistics, you can get the daily scheduling times information of each API, and cache 60-day data. 
@@ -463,6 +526,11 @@ namespace HslCommunication.Enthernet
 			get => handleRequestFunc;
 			set => handleRequestFunc = value;
 		}
+
+		/// <summary>
+		/// 获取或设置当前的自定义处理文件上传的信息，自动解析好文件的基本信息
+		/// </summary>
+		public Func<HttpListenerRequest, HttpListenerResponse, HttpUploadFile, string> HandleFileUpload { get; set; }
 
 		/// <summary>
 		/// 获取当前的端口号信息<br />
@@ -581,11 +649,12 @@ namespace HslCommunication.Enthernet
 		/// <param name="deceodeUrl">已经解码过的Url地址信息</param>
 		/// <param name="json">json格式的参数信息</param>
 		/// <param name="obj">等待解析的api解析的对象</param>
+		/// <param name="action">额外的解析Request参数的方法</param>
 		/// <returns>等待返回客户的结果</returns>
 #if NET20 || NET35
-		public static string HandleObjectMethod( HttpListenerRequest request, string deceodeUrl, string json, object obj )
+		public static string HandleObjectMethod( HttpListenerRequest request, string deceodeUrl, string json, object obj, Action<HttpListenerRequest, ISessionContext> action )
 #else
-		public static async Task<string> HandleObjectMethod( HttpListenerRequest request, string deceodeUrl, string json, object obj )
+		public static async Task<string> HandleObjectMethod( HttpListenerRequest request, string deceodeUrl, string json, object obj, Action<HttpListenerRequest, ISessionContext> action )
 #endif
 		{
 			string method = GetMethodName( deceodeUrl );
@@ -597,9 +666,9 @@ namespace HslCommunication.Enthernet
 			var apiResult = MqttHelper.GetMqttSyncServicesApiFromMethod( "", methodInfo, obj );
 			if (!apiResult.IsSuccess) return OperateResult.CreateFailedResult<string>( apiResult ).ToJsonString( );
 #if NET20 || NET35
-			return HandleObjectMethod( request, deceodeUrl, json, apiResult.Content );
+			return HandleObjectMethod( request, deceodeUrl, json, apiResult.Content, action );
 #else
-			return await HandleObjectMethod( request, deceodeUrl, json, apiResult.Content );
+			return await HandleObjectMethod( request, deceodeUrl, json, apiResult.Content, action );
 #endif
 		}
 
@@ -618,7 +687,7 @@ namespace HslCommunication.Enthernet
 			return result;
 		}
 
-		private static ISessionContext GetSessionContextFromHeaders( HttpListenerRequest request )
+		private static ISessionContext GetSessionContextFromHeaders( HttpListenerRequest request, Action<HttpListenerRequest, ISessionContext> userParse )
 		{
 			try
 			{
@@ -631,7 +700,9 @@ namespace HslCommunication.Enthernet
 
 				if (account.Length < 1) return null;
 
-				return new SessionContext( ) { UserName = account[0] };
+				SessionContext sessionContext = new SessionContext( ) { UserName = account[0] };
+				userParse?.Invoke(request, sessionContext);                                                 // 可能还有其他参数是需要从 request 中解析出来的
+				return sessionContext;
 			}
 			catch
 			{
@@ -649,15 +720,16 @@ namespace HslCommunication.Enthernet
 		/// <param name="deceodeUrl">已经解码过的Url地址信息</param>
 		/// <param name="json">json格式的参数信息</param>
 		/// <param name="apiInformation">等待解析的api解析的对象</param>
+		/// <param name="action">额外的解析Request参数的方法</param>
 		/// <returns>等待返回客户的结果</returns>
 #if NET20 || NET35
-		public static string HandleObjectMethod( HttpListenerRequest request, string deceodeUrl, string json, MqttRpcApiInfo apiInformation )
+		public static string HandleObjectMethod( HttpListenerRequest request, string deceodeUrl, string json, MqttRpcApiInfo apiInformation, Action<HttpListenerRequest, ISessionContext> action )
 #else
-		public static async Task<string> HandleObjectMethod( HttpListenerRequest request, string deceodeUrl, string json, MqttRpcApiInfo apiInformation )
+		public static async Task<string> HandleObjectMethod( HttpListenerRequest request, string deceodeUrl, string json, MqttRpcApiInfo apiInformation, Action<HttpListenerRequest, ISessionContext> action )
 #endif
 		{
 			object[] paras;
-			ISessionContext context = GetSessionContextFromHeaders( request );
+			ISessionContext context = GetSessionContextFromHeaders( request, action );
 			
 			if (apiInformation.PermissionAttribute != null)
 			{

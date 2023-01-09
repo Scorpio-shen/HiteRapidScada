@@ -103,13 +103,13 @@ namespace HslCommunication.ModBus
 		#region Core Override
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command )
+		public override byte[] PackCommandWithHeader( byte[] command )
 		{
 			return ModbusInfo.PackCommandToTcp( command, (ushort)softIncrementCount.GetCurrentValue( ) );
 		}
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
 		{
 			return ModbusInfo.ExtractActualData( ModbusInfo.ExplodeTcpCommandToCore( response ) );
 		}

@@ -9,6 +9,7 @@ using HslCommunication.Core.Net;
 using HslCommunication.Core.Address;
 using HslCommunication.BasicFramework;
 using HslCommunication.Reflection;
+using HslCommunication.Profinet.Siemens.Helper;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -34,7 +35,8 @@ namespace HslCommunication.Profinet.Siemens
 	/// </summary>
 	/// <remarks>
 	/// 暂时不支持bool[]的批量写入操作，请使用 Write(string, byte[]) 替换。<br />
-	/// <note type="important">对于200smartPLC的V区，就是DB1.X，例如，V100=DB1.100，当然了你也可以输入V100</note>
+	/// <note type="important">对于200smartPLC的V区，就是DB1.X，例如，V100=DB1.100，当然了你也可以输入V100</note><br />
+	/// 如果读取PLC的字符串string数据，可以使用 <see cref="ReadString(string)"/>
 	/// </remarks>
 	/// <example>
 	/// 地址支持的列表如下：
@@ -138,8 +140,12 @@ namespace HslCommunication.Profinet.Siemens
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\SiemensS7Net.cs" region="ReadExample2" title="Read示例" />
 	/// 以下是读取不同类型数据的示例
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\SiemensS7Net.cs" region="ReadExample1" title="Read示例" />
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\SiemensS7Net.cs" region="WriteExample1" title="Write示例" />
 	/// 以下是一个复杂的读取示例
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\SiemensS7Net.cs" region="ReadExample3" title="Read示例" />
+	/// 在西门子PLC，字符串分为普通的string，和WString类型，前者为单字节的类型，后者为双字节的字符串类型<br />
+	/// 一个字符串除了本身的数据信息，还有字符串的长度信息，比如字符串 "12345"，比如在PLC的地址 DB1.0 存储的字节是 FE 05 31 32 33 34 35, 第一个字节是最大长度，第二个字节是当前长度，后面的才是字符串的数据信息。<br />
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\SiemensS7Net.cs" region="ReadWriteString" title="字符串读写示例" />
 	/// </example>
 	public class SiemensS7Net : NetworkDeviceBase
 	{
@@ -531,7 +537,7 @@ namespace HslCommunication.Profinet.Siemens
 			if (!read.IsSuccess) return read;
 
 			// 分析结果 -> Analysis read result
-			return AnalysisReadBit( read.Content );
+			return Helper.SiemensS7Helper.AnalysisReadBit( read.Content );
 		}
 
 		/// <summary>
@@ -641,7 +647,12 @@ namespace HslCommunication.Profinet.Siemens
 		{
 			OperateResult<S7AddressData> analysis = S7AddressData.ParseFrom( address );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-			
+
+			return Write( analysis.Content, value );
+		}
+
+		private OperateResult Write( S7AddressData address, byte[] value )
+		{
 			int length = value.Length;
 			ushort alreadyFinished = 0;
 			while (alreadyFinished < length)
@@ -649,14 +660,14 @@ namespace HslCommunication.Profinet.Siemens
 				ushort writeLength = (ushort)Math.Min( length - alreadyFinished, pdu_length );
 				byte[] buffer = ByteTransform.TransByte( value, alreadyFinished, writeLength );
 
-				OperateResult<byte[]> command = BuildWriteByteCommand( analysis, buffer );
+				OperateResult<byte[]> command = BuildWriteByteCommand( address, buffer );
 				if (!command.IsSuccess) return command;
 
 				OperateResult write = WriteBase( command.Content );
 				if (!write.IsSuccess) return write;
-				
+
 				alreadyFinished += writeLength;
-				analysis.Content.AddressStart += writeLength * 8;
+				address.AddressStart += writeLength * 8;
 			}
 
 			return OperateResult.CreateSuccessResult( );
@@ -677,7 +688,7 @@ namespace HslCommunication.Profinet.Siemens
 			ushort alreadyFinished = 0;
 			while (alreadyFinished < length)
 			{
-				ushort readLength = (ushort)Math.Min( length - alreadyFinished, 200 );
+				ushort readLength = (ushort)Math.Min( length - alreadyFinished, pdu_length );
 				addressResult.Content.Length = readLength;
 				OperateResult<byte[]> read = await ReadAsync( new S7AddressData[] { addressResult.Content } );
 				if (!read.IsSuccess) return read;
@@ -705,7 +716,7 @@ namespace HslCommunication.Profinet.Siemens
 			if (!read.IsSuccess) return read;
 
 			// 分析结果 -> Analysis read result
-			return AnalysisReadBit( read.Content );
+			return Helper.SiemensS7Helper.AnalysisReadBit( read.Content );
 		}
 
 		/// <inheritdoc cref="Read(string[], ushort[])"/>
@@ -770,21 +781,26 @@ namespace HslCommunication.Profinet.Siemens
 			OperateResult<S7AddressData> analysis = S7AddressData.ParseFrom( address );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
+			return await WriteAsync( analysis.Content, value );
+		}
+
+		private async Task<OperateResult> WriteAsync( S7AddressData address, byte[] value )
+		{
 			int length = value.Length;
 			ushort alreadyFinished = 0;
 			while (alreadyFinished < length)
 			{
-				ushort writeLength = (ushort)Math.Min( length - alreadyFinished, 200 );
+				ushort writeLength = (ushort)Math.Min( length - alreadyFinished, pdu_length );
 				byte[] buffer = ByteTransform.TransByte( value, alreadyFinished, writeLength );
 
-				OperateResult<byte[]> command = BuildWriteByteCommand( analysis, buffer );
+				OperateResult<byte[]> command = BuildWriteByteCommand( address, buffer );
 				if (!command.IsSuccess) return command;
 
 				OperateResult write = await WriteBaseAsync( command.Content );
 				if (!write.IsSuccess) return write;
 
 				alreadyFinished += writeLength;
-				analysis.Content.AddressStart += writeLength * 8;
+				address.AddressStart += writeLength * 8;
 			}
 
 			return OperateResult.CreateSuccessResult( );
@@ -873,21 +889,41 @@ namespace HslCommunication.Profinet.Siemens
 		}
 
 		/// <summary>
-		/// [危险] 向PLC中写入bool数组，比如你写入M100,那么data[0]对应M100.0<br />
-		/// [Danger] Write the bool array to the PLC, for example, if you write M100, then data[0] corresponds to M100.0
+		/// [警告] 向PLC中写入bool数组，比如你写入M100,那么data[0]对应M100.0，写入的长度应该小于1600位<br />
+		/// [Warn] Write the bool array to the PLC, for example, if you write M100, then data[0] corresponds to M100.0, 
+		/// The length of the write should be less than 1600 bits
 		/// </summary>
 		/// <param name="address">起始地址，格式为I100，M100，Q100，DB20.100 -> Starting address, formatted as I100,mM100,Q100,DB20.100</param>
 		/// <param name="values">要写入的bool数组，长度为8的倍数 -> The bool array to write, a multiple of 8 in length</param>
 		/// <returns>是否写入成功的结果对象 -> Whether to write a successful result object</returns>
 		/// <remarks>
 		/// <note type="warning">
-		/// 批量写入bool数组存在一定的风险，原因是只能批量写入长度为8的倍数的数组，否则会影响其他的位的数据，请谨慎使用。<br />
-		/// There is a certain risk in batch writing to bool arrays, because you can only batch write arrays whose length is a multiple of 8, 
-		/// otherwise it will affect other bit data. Please use it with caution.
+		/// 批量写入bool数组存在一定的风险，举例写入M100.5的值 [true,false,true,true,false,true]，会读取M100-M101的byte[]，然后修改中间的位，再写入回去，
+		/// 如果读取之后写入之前，PLC修改了其他位，则会影响其他的位的数据，请谨慎使用。<br />
+		/// There is a certain risk in batch writing bool arrays. For example, writing the value of M100.5 [true,false,true,true,false,true], 
+		/// will read the byte[] of M100-M101, then modify the middle bit, and then Write back. 
+		/// If the PLC modifies other bits after reading and before writing, it will affect the data of other bits. Please use it with caution.
 		/// </note>
 		/// </remarks>
 		[HslMqttApi( "WriteBoolArray", "" )]
-		public override OperateResult Write( string address, bool[] values ) => Write( address, SoftBasic.BoolArrayToByte( values ) );
+		public override OperateResult Write( string address, bool[] values )
+		{
+			// 先读取出来字节数据，修改位，再写入操作
+			OperateResult<S7AddressData> analysis = S7AddressData.ParseFrom( address );
+			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
+
+			HslHelper.CalculateStartBitIndexAndLength( analysis.Content.AddressStart, (ushort)values.Length, out int newStart, out ushort byteLength, out int offset );
+			analysis.Content.AddressStart = newStart;
+			analysis.Content.Length = byteLength;
+
+			OperateResult<byte[]> read = Read( new S7AddressData[] { analysis.Content } );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
+
+			bool[] boolArray = read.Content.ToBoolArray( );
+			Array.Copy( values, 0, boolArray, offset, values.Length );
+
+			return Write( analysis.Content, SoftBasic.BoolArrayToByte( boolArray ) );
+		}
 
 		#endregion
 
@@ -931,7 +967,24 @@ namespace HslCommunication.Profinet.Siemens
 		}
 
 		/// <inheritdoc cref="Write(string, bool[])"/>
-		public override async Task<OperateResult> WriteAsync( string address, bool[] values ) => await WriteAsync( address, SoftBasic.BoolArrayToByte( values ) );
+		public override async Task<OperateResult> WriteAsync( string address, bool[] values )
+		{
+			// 先读取出来字节数据，修改位，再写入操作
+			OperateResult<S7AddressData> analysis = S7AddressData.ParseFrom( address );
+			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
+
+			HslHelper.CalculateStartBitIndexAndLength( analysis.Content.AddressStart, (ushort)values.Length, out int newStart, out ushort byteLength, out int offset );
+			analysis.Content.AddressStart = newStart;
+			analysis.Content.Length = byteLength;
+
+			OperateResult<byte[]> read = await ReadAsync( new S7AddressData[] { analysis.Content } );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
+
+			bool[] boolArray = read.Content.ToBoolArray( );
+			Array.Copy( values, 0, boolArray, offset, values.Length );
+
+			return await WriteAsync( analysis.Content, SoftBasic.BoolArrayToByte( boolArray ) );
+		}
 #endif
 		#endregion
 
@@ -973,80 +1026,21 @@ namespace HslCommunication.Profinet.Siemens
 		#region ReadWrite String
 
 		/// <inheritdoc/>
-		public override OperateResult Write( string address, string value, Encoding encoding )
-		{
-			if (value == null) value = string.Empty;
+		public override OperateResult Write( string address, string value, Encoding encoding ) => SiemensS7Helper.Write( this, this.CurrentPlc, address, value, encoding );
 
-			byte[] buffer = encoding.GetBytes( value );
-			if (encoding == Encoding.Unicode) buffer = SoftBasic.BytesReverseByWord( buffer );
-
-			if (CurrentPlc != SiemensPLCS.S200Smart)
-			{
-				// need read one time
-				OperateResult<byte[]> readLength = Read( address, 2 );
-				if (!readLength.IsSuccess) return readLength;
-
-				if (readLength.Content[0] == 255) return new OperateResult<string>( "Value in plc is not string type" );
-				if (readLength.Content[0] == 0) readLength.Content[0] = 254; // allow to create new string
-				if (value.Length > readLength.Content[0]) return new OperateResult<string>( "String length is too long than plc defined" );
-
-				return Write( address, SoftBasic.SpliceArray( new byte[] { readLength.Content[0], (byte)value.Length }, buffer ) );
-			}
-			else
-			{
-				return Write( address, SoftBasic.SpliceArray( new byte[] { (byte)value.Length }, buffer ) );
-			}
-		}
-
-		/// <summary>
-		/// 使用双字节编码的方式，将字符串以 Unicode 编码写入到PLC的地址里，可以使用中文。<br />
-		/// Use the double-byte encoding method to write the character string to the address of the PLC in Unicode encoding. Chinese can be used.
-		/// </summary>
-		/// <param name="address">起始地址，格式为I100，M100，Q100，DB20.100 -> Starting address, formatted as I100,mM100,Q100,DB20.100</param>
-		/// <param name="value">字符串的值</param>
-		/// <returns>是否写入成功的结果对象</returns>
+		/// <inheritdoc cref="SiemensS7Helper.WriteWString(IReadWriteNet, SiemensPLCS, string, string)"/>
 		[HslMqttApi( ApiTopic = "WriteWString", Description = "写入unicode编码的字符串，支持中文" )]
-		public OperateResult WriteWString( string address, string value ) => Write( address, value, Encoding.Unicode );
+		public OperateResult WriteWString( string address, string value ) => SiemensS7Helper.WriteWString( this, this.CurrentPlc, address, value );
 
 		/// <inheritdoc/>
-		public override OperateResult<string> ReadString( string address, ushort length, Encoding encoding )
-		{
-			if (length == 0) return ReadString( address );
-			return base.ReadString( address, length, encoding );
-		}
+		public override OperateResult<string> ReadString( string address, ushort length, Encoding encoding ) => (length == 0) ? ReadString( address, encoding ) : base.ReadString( address, length, encoding );
 
-		/// <summary>
-		/// 读取西门子的地址的字符串信息，这个信息是和西门子绑定在一起，长度随西门子的信息动态变化的<br />
-		/// Read the Siemens address string information. This information is bound to Siemens and its length changes dynamically with the Siemens information
-		/// </summary>
-		/// <param name="address">数据地址，具体的格式需要参照类的说明文档</param>
-		/// <returns>带有是否成功的字符串结果类对象</returns>
+		/// <inheritdoc cref="ReadString(string, Encoding)"/>
 		[HslMqttApi( "ReadS7String", "读取S7格式的字符串" )]
-		public OperateResult<string> ReadString( string address )
-		{
-			if (CurrentPlc != SiemensPLCS.S200Smart)
-			{
-				var read = Read( address, 2 );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
+		public OperateResult<string> ReadString( string address ) => ReadString( address, Encoding.ASCII );
 
-				if (read.Content[0] == 0 || read.Content[0] == 255) return new OperateResult<string>( "Value in plc is not string type" );    // max string length can't be zero
-
-				var readString = Read( address, (ushort)(2 + read.Content[1]) );
-				if (!readString.IsSuccess) return OperateResult.CreateFailedResult<string>( readString );
-
-				return OperateResult.CreateSuccessResult( Encoding.ASCII.GetString( readString.Content, 2, readString.Content.Length - 2 ) );
-			}
-			else
-			{
-				var read = Read( address, 1 );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-				var readString = Read( address, (ushort)(1 + read.Content[0]) );
-				if (!readString.IsSuccess) return OperateResult.CreateFailedResult<string>( readString );
-
-				return OperateResult.CreateSuccessResult( Encoding.ASCII.GetString( readString.Content, 1, readString.Content.Length - 1 ) );
-			}
-		}
+		/// <inheritdoc cref="SiemensS7Helper.ReadString(IReadWriteNet, SiemensPLCS, string, Encoding)"/>
+		public OperateResult<string> ReadString( string address, Encoding encoding ) => SiemensS7Helper.ReadString( this, this.CurrentPlc, address, encoding );
 
 		/// <summary>
 		/// 读取西门子的地址的字符串信息，这个信息是和西门子绑定在一起，长度随西门子的信息动态变化的<br />
@@ -1055,126 +1049,30 @@ namespace HslCommunication.Profinet.Siemens
 		/// <param name="address">数据地址，具体的格式需要参照类的说明文档</param>
 		/// <returns>带有是否成功的字符串结果类对象</returns>
 		[HslMqttApi( "ReadWString", "读取S7格式的双字节字符串" )]
-		public OperateResult<string> ReadWString( string address )
-		{
-			if (CurrentPlc != SiemensPLCS.S200Smart)
-			{
-				var read = Read( address, 2 );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-				if (read.Content[0] == 0 || read.Content[0] == 255) return new OperateResult<string>( "Value in plc is not string type" );    // max string length can't be zero
-
-				var readString = Read( address, (ushort)(2 + read.Content[1] * 2) );
-				if (!readString.IsSuccess) return OperateResult.CreateFailedResult<string>( readString );
-
-				return OperateResult.CreateSuccessResult( Encoding.Unicode.GetString( SoftBasic.BytesReverseByWord( readString.Content.RemoveBegin( 2 ) ) ) );
-			}
-			else
-			{
-				var read = Read( address, 1 );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-				var readString = Read( address, (ushort)(1 + read.Content[0] * 2) );
-				if (!readString.IsSuccess) return OperateResult.CreateFailedResult<string>( readString );
-
-				return OperateResult.CreateSuccessResult( Encoding.Unicode.GetString( readString.Content, 1, readString.Content.Length - 1 ) );
-			}
-		}
+		public OperateResult<string> ReadWString( string address ) => SiemensS7Helper.ReadWString( this, this.CurrentPlc, address );
 
 		#endregion
 
 		#region Async ReadWrite String
 #if !NET35 && !NET20
 
-		/// <inheritdoc/>
-		public override async Task<OperateResult> WriteAsync( string address, string value, Encoding encoding )
-		{
-			if (value == null) value = string.Empty;
-
-			byte[] buffer = encoding.GetBytes( value );
-			if (encoding == Encoding.Unicode) buffer = SoftBasic.BytesReverseByWord( buffer );
-
-			if (CurrentPlc != SiemensPLCS.S200Smart)
-			{
-				// need read one time
-				OperateResult<byte[]> readLength = await ReadAsync( address, 2 );
-				if (!readLength.IsSuccess) return readLength;
-
-				if (readLength.Content[0] == 255) return new OperateResult<string>( "Value in plc is not string type" );
-				if (readLength.Content[0] == 0) readLength.Content[0] = 254; // allow to create new string
-				if (value.Length > readLength.Content[0]) return new OperateResult<string>( "String length is too long than plc defined" );
-
-				return await WriteAsync( address, SoftBasic.SpliceArray( new byte[] { readLength.Content[0], (byte)value.Length }, buffer ) );
-			}
-			else
-			{
-				return await WriteAsync( address, SoftBasic.SpliceArray( new byte[] { (byte)value.Length }, buffer ) );
-			}
-		}
+		/// <inheritdoc cref="SiemensS7Helper.Write(IReadWriteNet, SiemensPLCS, string, string, Encoding)"/>
+		public override async Task<OperateResult> WriteAsync( string address, string value, Encoding encoding ) => await SiemensS7Helper.WriteAsync( this, this.CurrentPlc, address, value, encoding );
 
 		/// <inheritdoc cref="WriteWString(string, string)"/>
-		public async Task<OperateResult> WriteWStringAsync( string address, string value ) => await WriteAsync( address, value, Encoding.Unicode );
+		public async Task<OperateResult> WriteWStringAsync( string address, string value ) => await SiemensS7Helper.WriteWStringAsync( this, this.CurrentPlc, address, value );
 
 		/// <inheritdoc/>
-		public async override Task<OperateResult<string>> ReadStringAsync( string address, ushort length, Encoding encoding )
-		{
-			if (length == 0) return await ReadStringAsync( address );
-			return await base.ReadStringAsync( address, length, encoding );
-		}
-
+		public async override Task<OperateResult<string>> ReadStringAsync( string address, ushort length, Encoding encoding ) => (length == 0) ? await ReadStringAsync( address, encoding ) : await base.ReadStringAsync( address, length, encoding );
+		
 		/// <inheritdoc cref="ReadString(string)"/>
-		public async Task<OperateResult<string>> ReadStringAsync( string address )
-		{
-			if (CurrentPlc != SiemensPLCS.S200Smart)
-			{
-				var read = await ReadAsync( address, 2 );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
+		public async Task<OperateResult<string>> ReadStringAsync( string address ) => await ReadStringAsync( address, Encoding.ASCII );
 
-				if (read.Content[0] == 0 || read.Content[0] == 255) return new OperateResult<string>( "Value in plc is not string type" );    // max string length can't be zero
-
-				var readString = await ReadAsync( address, (ushort)(2 + read.Content[1]) );
-				if (!readString.IsSuccess) return OperateResult.CreateFailedResult<string>( readString );
-
-				return OperateResult.CreateSuccessResult( Encoding.ASCII.GetString( readString.Content, 2, readString.Content.Length - 2 ) );
-			}
-			else
-			{
-				var read = await ReadAsync( address, 1 );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-				var readString = await ReadAsync( address, (ushort)(1 + read.Content[0]) );
-				if (!readString.IsSuccess) return OperateResult.CreateFailedResult<string>( readString );
-
-				return OperateResult.CreateSuccessResult( Encoding.ASCII.GetString( readString.Content, 1, readString.Content.Length - 1 ) );
-			}
-		}
+		/// <inheritdoc cref="ReadString(string, Encoding)"/>
+		public async Task<OperateResult<string>> ReadStringAsync( string address, Encoding encoding ) => await SiemensS7Helper.ReadStringAsync( this, this.CurrentPlc, address, encoding );
 
 		/// <inheritdoc cref="ReadWString(string)"/>
-		public async Task<OperateResult<string>> ReadWStringAsync( string address )
-		{
-			if (CurrentPlc != SiemensPLCS.S200Smart)
-			{
-				var read = await ReadAsync( address, 2 );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-				if (read.Content[0] == 0 || read.Content[0] == 255) return new OperateResult<string>( "Value in plc is not string type" );    // max string length can't be zero
-
-				var readString = await ReadAsync( address, (ushort)(2 + read.Content[1] * 2) );
-				if (!readString.IsSuccess) return OperateResult.CreateFailedResult<string>( readString );
-
-				return OperateResult.CreateSuccessResult( Encoding.Unicode.GetString( SoftBasic.BytesReverseByWord( readString.Content.RemoveBegin( 2 ) ) ) );
-			}
-			else
-			{
-				var read = await ReadAsync( address, 1 );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-				var readString = await ReadAsync( address, (ushort)(1 + read.Content[0] * 2) );
-				if (!readString.IsSuccess) return OperateResult.CreateFailedResult<string>( readString );
-
-				return OperateResult.CreateSuccessResult( Encoding.Unicode.GetString( readString.Content, 1, readString.Content.Length - 1 ) );
-			}
-		}
+		public async Task<OperateResult<string>> ReadWStringAsync( string address ) => await SiemensS7Helper.ReadWStringAsync( this, this.CurrentPlc, address );
 
 #endif
 		#endregion
@@ -1191,6 +1089,28 @@ namespace HslCommunication.Profinet.Siemens
 		public OperateResult<DateTime> ReadDateTime( string address ) => ByteTransformHelper.GetResultFromBytes( Read( address, 8 ), SiemensDateTime.FromByteArray );
 
 		/// <summary>
+		/// 从PLC中读取DTL时间格式的数据
+		/// </summary>
+		/// <param name="address">地址信息</param>
+		/// <returns>时间对象</returns>
+		[HslMqttApi( "ReadDTLDataTime", "读取PLC的时间格式的数据，这个格式是s7的DTL格式" )]
+		public OperateResult<DateTime> ReadDTLDataTime( string address )
+		{
+			OperateResult<byte[]> read = Read( address, 12 );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<DateTime>( read );
+
+			return OperateResult.CreateSuccessResult( SiemensDateTime.GetDTLTime( this.ByteTransform, read.Content, 0 ) );
+		}
+
+		/// <summary>
+		/// 从PLC中读取日期格式的数据<br />
+		/// Read data in date format from PLC
+		/// </summary>
+		/// <param name="address">PLC的地址</param>
+		/// <returns>日期对象</returns>
+		public OperateResult<DateTime> ReadDate( string address ) => ReadUInt16( address ).Then( m => OperateResult.CreateSuccessResult( new DateTime( 1990, 1, 1 ).AddDays( m ) ) );
+
+		/// <summary>
 		/// 向PLC中写入时间格式的数据<br />
 		/// Writes data in time format to the PLC
 		/// </summary>
@@ -1198,7 +1118,25 @@ namespace HslCommunication.Profinet.Siemens
 		/// <param name="dateTime">时间</param>
 		/// <returns>是否写入成功</returns>
 		[HslMqttApi( "WriteDateTime", "写入PLC的时间格式的数据，这个格式是s7格式的一种" )]
-		public OperateResult Write(string address, DateTime dateTime ) => Write( address, SiemensDateTime.ToByteArray( dateTime ) );
+		public OperateResult Write( string address, DateTime dateTime ) => Write( address, SiemensDateTime.ToByteArray( dateTime ) );
+
+		/// <summary>
+		/// 向PLC中写入DTL格式的时间数据信息
+		/// </summary>
+		/// <param name="address">写入的地址信息</param>
+		/// <param name="dateTime">时间</param>
+		/// <returns>是否写入成功</returns>
+		[HslMqttApi( "WriteDTLTime", "写入PLC的时间格式的数据，这个格式是s7格式的DTL格式" )]
+		public OperateResult WriteDTLTime( string address, DateTime dateTime ) => Write( address, SiemensDateTime.GetBytesFromDTLTime( this.ByteTransform, dateTime ) );
+
+		/// <summary>
+		/// 向PLC中写入日期格式的数据，日期格式里只有年，月，日<br />
+		/// Write data in date format to PLC, only year, month, day in date format
+		/// </summary>
+		/// <param name="address">等待写入的PLC地址</param>
+		/// <param name="dateTime">等待写入的日期</param>
+		/// <returns>是否写入成功</returns>
+		public OperateResult WriteDate( string address, DateTime dateTime ) => Write( address, Convert.ToUInt16( (dateTime - new DateTime( 1990, 1, 1 )).TotalDays ) );
 
 		#endregion
 
@@ -1207,24 +1145,45 @@ namespace HslCommunication.Profinet.Siemens
 		/// <inheritdoc cref="ReadDateTime(string)"/>
 		public async Task<OperateResult<DateTime>> ReadDateTimeAsync( string address ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, 8 ), SiemensDateTime.FromByteArray );
 
+		/// <inheritdoc cref="ReadDTLDataTime(string)"/>
+		public async Task<OperateResult<DateTime>> ReadDTLDataTimeAsync( string address )
+		{
+			OperateResult<byte[]> read = await ReadAsync( address, 12 );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<DateTime>( read );
+
+			return OperateResult.CreateSuccessResult( SiemensDateTime.GetDTLTime( this.ByteTransform, read.Content, 0 ) );
+		}
+
+		/// <inheritdoc cref="ReadDate(string)"/>
+		public async Task<OperateResult<DateTime>> ReadDateAsync( string address ) => (await ReadUInt16Async( address )).Then( m => OperateResult.CreateSuccessResult( new DateTime( 1990, 1, 1 ).AddDays( m ) ) );
+
 		/// <inheritdoc cref="Write(string, DateTime)"/>
 		public async Task<OperateResult> WriteAsync( string address, DateTime dateTime ) => await WriteAsync( address, SiemensDateTime.ToByteArray( dateTime ) );
+
+		/// <inheritdoc cref="WriteDTLTime(string, DateTime)"/>
+		public async Task<OperateResult> WriteDTLTimeAsync( string address, DateTime dateTime ) => await WriteAsync( address, SiemensDateTime.GetBytesFromDTLTime( this.ByteTransform, dateTime ) );
+
+		/// <inheritdoc cref="WriteDate(string, DateTime)"/>
+		public async Task<OperateResult> WriteDateAsync( string address, DateTime dateTime ) => await WriteAsync( address, Convert.ToUInt16( (dateTime - new DateTime( 1990, 1, 1 )).TotalDays ) );
 #endif
 		#endregion
 
 		#region Head Codes
-
 		//private byte[] plcHead1 = "03 00 00 16 11 E0 00 00 00 02 00 C1 02 01 00 C2 02 01 02 C0 01 0A".ToHexBytes( );
 		//private byte[] plcHead2 = "03 00 00 19 02 F0 80 32 01 00 00 02 00 00 08 00 00 F0 00 00 01 00 01 01 E0".ToHexBytes( );
 		private byte[] plcHead1 = new byte[22]
 		{
 			0x03,0x00,0x00,0x16,0x11,0xE0,0x00,0x00,0x00,0x01,0x00,0xC0,0x01,0x0A,0xC1,0x02,
 			0x01,0x02,0xC2,0x02,0x01,0x00 
+			//0x03,0x00,0x00,0x16,0x11,0xE0,0x00,0x00,0x00,0x01,0x00,0xC1,0x02,0x01,0x00,0xC2,
+			//0x02,0x01,0x01,0xC0,0x01,0x09
 		};
 		private byte[] plcHead2 = new byte[25]
 		{
 			0x03,0x00,0x00,0x19,0x02,0xF0,0x80,0x32,0x01,0x00,0x00,0x04,0x00,0x00,0x08,0x00,
 			0x00,0xF0,0x00,0x00,0x01,0x00,0x01,0x01,0xE0
+			//0x03,0x00,0x00,0x19,0x02,0xF0,0x80,0x32,0x01,0x00,0x00,0xFF,0xFF,0x00,0x08,0x00,
+			//0x00,0xF0,0x00,0x00,0x01,0x00,0x01,0x07,0x80
 		};
 		private byte[] plcOrderNumber = new byte[]
 		{
@@ -1279,7 +1238,7 @@ namespace HslCommunication.Profinet.Siemens
 
 		private byte plc_rack = 0x00;
 		private byte plc_slot = 0x00;
-		private int pdu_length = 0;
+		private int pdu_length = 200;
 
 		const byte pduStart = 0x28;            // CPU start
 		const byte pduStop = 0x29;             // CPU stop
@@ -1448,10 +1407,10 @@ namespace HslCommunication.Profinet.Siemens
 		/// <summary>
 		/// 生成一个写入字节数据的指令 -> Generate an instruction to write byte data
 		/// </summary>
-		/// <param name="analysis">起始地址，示例M100,I100,Q100,DB1.100 -> Start Address, example M100,I100,Q100,DB1.100</param>
+		/// <param name="s7Address">起始地址，示例M100,I100,Q100,DB1.100 -> Start Address, example M100,I100,Q100,DB1.100</param>
 		/// <param name="data">原始的字节数据 -> Raw byte data</param>
 		/// <returns>包含结果对象的报文 -> Message containing the result object</returns>
-		public static OperateResult<byte[]> BuildWriteByteCommand( OperateResult<S7AddressData> analysis, byte[] data )
+		public static OperateResult<byte[]> BuildWriteByteCommand( S7AddressData s7Address, byte[] data )
 		{
 			byte[] _PLCCommand = new byte[35 + data.Length];
 			_PLCCommand[0] = 0x03;
@@ -1485,7 +1444,7 @@ namespace HslCommunication.Profinet.Siemens
 			_PLCCommand[19] = 0x12;
 			_PLCCommand[20] = 0x0A;
 			_PLCCommand[21] = 0x10;
-			if(analysis.Content.DataCode == 0x06 || analysis.Content.DataCode == 0x07)
+			if(s7Address.DataCode == 0x06 || s7Address.DataCode == 0x07)
 			{
 				// 写入方式，1是按位，2是按字 -> Write mode, 1 is bitwise, 2 is by byte, 4 is by word
 				_PLCCommand[22] = 0x04;
@@ -1502,14 +1461,14 @@ namespace HslCommunication.Profinet.Siemens
 				_PLCCommand[24] = (byte)(data.Length % 256);
 			}
 			// DB块编号，如果访问的是DB块的话 -> DB block number, if you are accessing a DB block
-			_PLCCommand[25] = (byte)(analysis.Content.DbBlock / 256);
-			_PLCCommand[26] = (byte)(analysis.Content.DbBlock % 256);
+			_PLCCommand[25] = (byte)(s7Address.DbBlock / 256);
+			_PLCCommand[26] = (byte)(s7Address.DbBlock % 256);
 			// 写入数据的类型 -> Types of writing data
-			_PLCCommand[27] = analysis.Content.DataCode;
+			_PLCCommand[27] = s7Address.DataCode;
 			// 偏移位置 -> Offset position
-			_PLCCommand[28] = (byte)(analysis.Content.AddressStart / 256 / 256 % 256); ;
-			_PLCCommand[29] = (byte)(analysis.Content.AddressStart / 256 % 256);
-			_PLCCommand[30] = (byte)(analysis.Content.AddressStart % 256);
+			_PLCCommand[28] = (byte)(s7Address.AddressStart / 256 / 256 % 256); ;
+			_PLCCommand[29] = (byte)(s7Address.AddressStart / 256 % 256);
+			_PLCCommand[30] = (byte)(s7Address.AddressStart % 256);
 			// 按字写入 -> Write by Word
 			_PLCCommand[31] = 0x00;
 			_PLCCommand[32] = 0x04;
@@ -1652,21 +1611,9 @@ namespace HslCommunication.Profinet.Siemens
 							ii += count + 4;
 							kk++;
 						}
-						else if (content[ii] == 0x05 &&
-							content[ii + 1] == 0x00)
-						{
-							return new OperateResult<byte[]>( content[ii], StringResources.Language.SiemensReadLengthOverPlcAssign );
-						}
-						else if (content[ii] == 0x06 &&
-							content[ii + 1] == 0x00)
-						{
-							return new OperateResult<byte[]>( content[ii], StringResources.Language.SiemensError0006 );
-						}
-						else if (content[ii] == 0x0A &&
-							content[ii + 1] == 0x00)
-						{
-							return new OperateResult<byte[]>( content[ii], StringResources.Language.SiemensError000A );
-						}
+						else if (content[ii] == 0x05 && content[ii + 1] == 0x00) return new OperateResult<byte[]>( content[ii], StringResources.Language.SiemensReadLengthOverPlcAssign );
+						else if (content[ii] == 0x06 && content[ii + 1] == 0x00) return new OperateResult<byte[]>( content[ii], StringResources.Language.SiemensError0006 );
+						else if (content[ii] == 0x0A && content[ii + 1] == 0x00) return new OperateResult<byte[]>( content[ii], StringResources.Language.SiemensError000A );
 					}
 				}
 				return OperateResult.CreateSuccessResult( buffer );
@@ -1677,36 +1624,24 @@ namespace HslCommunication.Profinet.Siemens
 			}
 		}
 
-		private static OperateResult<byte[]> AnalysisReadBit(byte[] content )
-		{
-			int receiveCount = 1;
-			if (content.Length >= 21 && content[20] == 1)
-			{
-				byte[] buffer = new byte[receiveCount];
-				if (22 < content.Length)
-				{
-					if (content[21] == 0xFF &&
-						content[22] == 0x03)
-					{
-						buffer[0] = content[25];
-					}
-				}
-
-				return OperateResult.CreateSuccessResult( buffer );
-			}
-			else
-			{
-				return new OperateResult<byte[]>( StringResources.Language.SiemensDataLengthCheckFailed );
-			}
-		}
-
 		private static OperateResult AnalysisWrite(byte[] content )
 		{
-			byte code = content[content.Length - 1];
-			if (code != 0xFF)
-				return new OperateResult( code, StringResources.Language.SiemensWriteError + code + " Msg:" + SoftBasic.ByteToHexString( content, ' ' ) );
+			// 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+			// 03 00 00 1A 02 F0 80 32 03 00 00 00 01 00 02 00 05 00 00 04 01 FF 03 00 01 01     // 以下两个是可能的回复
+			// 03 00 00 16 02 F0 80 32 03 00 00 00 01 00 02 00 01 00 00 05 01 FF
+
+			if (content.Length >= 22)
+			{
+				byte code = content[21];
+				if (code != 0xFF)
+					return new OperateResult( code, StringResources.Language.SiemensWriteError + code + " Msg:" + SoftBasic.ByteToHexString( content, ' ' ) );
+				else
+					return OperateResult.CreateSuccessResult( );
+			}
 			else
-				return OperateResult.CreateSuccessResult( );
+			{
+				return new OperateResult( StringResources.Language.UnknownError + " Msg:" + SoftBasic.ByteToHexString( content, ' ' ) );
+			}
 		}
 		
 		#endregion
@@ -1714,18 +1649,24 @@ namespace HslCommunication.Profinet.Siemens
 	}
 }
 
+//Sharp7的通信协议
+//[2021-11-08 15:17:03.366] [Client->Remote] 03 00 00 16 11 E0 00 00 00 01 00 C0 01 0A C1 02 01 00 C2 02 01 00
+//[2021-11-08 15:17:03.377] [Remote->Client] 03 00 00 16 11 D0 00 01 00 0E 00 C0 01 0A C1 02 01 00 C2 02 01 00
+//[2021-11-08 15:17:03.391] [Client->Remote] 03 00 00 19 02 F0 80 32 01 00 00 04 00 00 08 00 00 F0 00 00 01 00 01 01 E0
+//[2021-11-08 15:17:03.407] [Remote->Client] 03 00 00 1B 02 F0 80 32 03 00 00 04 00 00 08 00 00 00 00 F0 00 00 01 00 01 00 F0
+
 // 连接软PLC时的报文对比
 // [调试] 2020-12-29 08:39:40.234 Thread [003] SiemensS7Server[102] : 客户端 [ 127.0.0.1:64454 ] 上线
 // [调试] 2020-12-29 08:39:40.236 Thread [003] First: 
 // 03 00 00 16 11 E0 00 00 00 01 00 C0 01 0A C1 02 01 02 C2 02 01 00  // HSL报文
 // 03 00 00 16 11 E0 00 00 00 02 00 C1 02 01 00 C2 02 01 02 C0 01 0A  // 实际抓包报文
 // 03 00 00 16 11 E0 00 00 00 01 00 C1 02 10 00 C2 02 03 00 C0 01 0A  // 200smart
-   
+
 // [调试] 2020-12-29 08:39:40.236 Thread [003] Second: 
 // 03 00 00 19 02 F0 80 32 01 00 00 04 00 00 08 00 00 F0 00 00 01 00 01 01 E0  // HSL报文
 // 03 00 00 19 02 F0 80 32 01 00 00 02 00 00 08 00 00 F0 00 00 01 00 01 01 E0  // 实际抓包报文
 // 03 00 00 19 02 F0 80 32 01 00 00 CC C1 00 08 00 00 F0 00 00 01 00 01 03 C0  // 200smart
-   
+
 // [调试] 2020-12-29 10:06:59.373 Thread [012] SiemensS7Server[102] : Tcp 接收：
 // 03 00 00 1F 02 F0 80 32 01 00 00 00 01 00 0E 00 00 04 01 12 0A 10 02 00 01 00 00 83 00 00 00  // 读取M0
 // 03 00 00 1A 02 F0 80 32 03 00 00 00 01 00 02 00 1F 00 00 04 01 FF 04 00 01 00                 // 返回报文

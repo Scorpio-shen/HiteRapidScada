@@ -8,10 +8,10 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// 用于欧姆龙通信的Fins协议的消息解析规则
 	/// </summary>
-	public class FinsMessage : INetMessage
+	public class FinsMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
-		public int ProtocolHeadBytesLength => 8;
+		public int ProtocolHeadBytesLength => 16;
 
 		/// <inheritdoc cref="INetMessage.GetContentLengthByHeadBytes"/>
 		public int GetContentLengthByHeadBytes( )
@@ -21,11 +21,15 @@ namespace HslCommunication.Core.IMessage
 			buffer[1] = HeadBytes[6];
 			buffer[2] = HeadBytes[5];
 			buffer[3] = HeadBytes[4];
-			return BitConverter.ToInt32( buffer, 0 );
+
+			int length = BitConverter.ToInt32( buffer, 0 );
+			if (length > 10000) length = 10000;
+			if (length < 0) length = 0;
+			return length - 8;
 		}
 
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token )
+		public override bool CheckHeadBytesLegal( byte[] token )
 		{
 			if (HeadBytes == null) return false;
 
@@ -35,16 +39,20 @@ namespace HslCommunication.Core.IMessage
 				return false;
 		}
 
-		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => 0;
+		/// <inheritdoc cref="INetMessage.PependedUselesByteLength(byte[])"/>
+		public override int PependedUselesByteLength( byte[] headByte )
+		{
+			if (headByte == null) return 0;
+			for (int i = 0; i < headByte.Length - 3; i++)
+			{
+				if (headByte[i + 0] == 0x46 &&
+					headByte[i + 1] == 0x49 &&
+					headByte[i + 2] == 0x4E &&
+					headByte[i + 3] == 0x53)
+					return i;
+			}
+			return base.PependedUselesByteLength( headByte );
+		}
 
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 	}
 }

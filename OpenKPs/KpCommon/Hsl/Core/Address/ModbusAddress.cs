@@ -21,9 +21,10 @@ namespace HslCommunication.Core.Address
 		/// </summary>
 		public ModbusAddress( )
 		{
-			Station = -1;
-			Function = -1;
-			Address = 0;
+			Station       = -1;
+			Function      = -1;
+			WriteFunction = -1;
+			Address       = 0;
 		}
 
 		/// <summary>
@@ -33,9 +34,10 @@ namespace HslCommunication.Core.Address
 		/// <param name="address">传入的地址信息，支持富地址，例如s=2;x=3;100</param>
 		public ModbusAddress( string address )
 		{
-			Station = -1;
-			Function = -1;
-			Address = 0;
+			Station       = -1;
+			Function      = -1;
+			WriteFunction = -1;
+			Address       = 0;
 			Parse( address );
 		}
 
@@ -47,9 +49,10 @@ namespace HslCommunication.Core.Address
 		/// <param name="function">默认的功能码信息</param>
 		public ModbusAddress( string address, byte function )
 		{
-			Station = -1;
-			Function = function;
-			Address = 0;
+			Station       = -1;
+			WriteFunction = -1;
+			Function      = function;
+			Address       = 0;
 			Parse( address );
 		}
 
@@ -60,12 +63,13 @@ namespace HslCommunication.Core.Address
 		/// <param name="address">传入的地址信息，支持富地址，例如s=2;x=3;100</param>
 		/// <param name="station">站号信息</param>
 		/// <param name="function">默认的功能码信息</param>
-		public ModbusAddress( string address, byte station ,byte function )
+		public ModbusAddress( string address, byte station, byte function )
 		{
-			Station = -1;
-			Function = function;
-			Station = station;
-			Address = 0;
+			Station       = -1;
+			WriteFunction = -1;
+			Function      = function;
+			Station       = station;
+			Address       = 0;
 			Parse( address );
 		}
 
@@ -84,6 +88,11 @@ namespace HslCommunication.Core.Address
 		/// Get or set the function code carried by the current address
 		/// </summary>
 		public int Function { get; set; }
+
+		/// <summary>
+		/// 获取或设置当前地址在写入的情况下使用的功能码，用来扩展一些非常特殊的自定义服务器<br />
+		/// </summary>
+		public int WriteFunction { get; set; }
 
 		#endregion
 
@@ -111,6 +120,10 @@ namespace HslCommunication.Core.Address
 					else if (list[i][0] == 'x' || list[i][0] == 'X')
 					{
 						this.Function = byte.Parse( list[i].Substring(2) );
+					}
+					else if (list[i].StartsWith("w=") || list[i].StartsWith( "W=" ))
+					{
+						this.WriteFunction = byte.Parse( list[i].Substring( 2 ) );
 					}
 					else
 					{

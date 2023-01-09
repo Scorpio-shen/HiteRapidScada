@@ -377,7 +377,6 @@ namespace HslCommunication.Enthernet
 				return OperateResult.CreateFailedResult<Bitmap>( result );
 			}
 			bitmap = new Bitmap( stream );
-			stream.Dispose( );
 			return OperateResult.CreateSuccessResult( bitmap );
 		}
 

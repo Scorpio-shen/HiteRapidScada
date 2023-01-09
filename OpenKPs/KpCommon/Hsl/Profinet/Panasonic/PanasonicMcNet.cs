@@ -139,7 +139,7 @@ namespace HslCommunication.Profinet.Panasonic
 		public override OperateResult<McAddressData> McAnalysisAddress( string address, ushort length ) => McAddressData.ParsePanasonicFrom( address, length );
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
 		{
 			ushort errorCode = BitConverter.ToUInt16( response, 9 );
 			if (errorCode != 0) return new OperateResult<byte[]>( errorCode, PanasonicHelper.GetMcErrorDescription( errorCode ) );

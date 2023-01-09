@@ -1,4 +1,5 @@
-﻿using System;
+﻿using HslCommunication.Core;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -36,6 +37,45 @@ namespace HslCommunication.Profinet.Siemens
 		public static DateTime FromByteArray( byte[] bytes )
 		{
 			return FromByteArrayImpl( bytes );
+		}
+
+		/// <summary>
+		/// 从西门子的原始字节数据中，提取出DTL格式的时间信息
+		/// </summary>
+		/// <param name="byteTransform">西门子的字节变换对象</param>
+		/// <param name="buffer">原始字节数据</param>
+		/// <param name="index">字节偏移索引</param>
+		/// <returns>时间信息</returns>
+		public static DateTime GetDTLTime( IByteTransform byteTransform, byte[] buffer, int index )
+		{
+			int year = byteTransform.TransInt16( buffer, index );
+			int month = buffer[index + 2];
+			int day = buffer[index + 3];
+			int hour = buffer[index + 5];
+			int minute = buffer[index + 6];
+			int second = buffer[index + 7];
+			int microsecond = byteTransform.TransInt32( buffer, index + 8 ) / 1000 / 1000;
+			return new DateTime( year, month, day, hour, minute, second, microsecond );
+		}
+
+		/// <summary>
+		/// 将时间数据转换为西门子的DTL格式的时间数据
+		/// </summary>
+		/// <param name="byteTransform">西门子的字节变换对象</param>
+		/// <param name="dateTime">指定的时间信息</param>
+		/// <returns>原始字节数据信息</returns>
+		public static byte[] GetBytesFromDTLTime( IByteTransform byteTransform, DateTime dateTime )
+		{
+			byte[] buffer = new byte[12];
+			byteTransform.TransByte( (short)dateTime.Year ).CopyTo( buffer, 0 );
+			buffer[2] = (byte)dateTime.Month;
+			buffer[3] = (byte)dateTime.Day;
+			buffer[4] = 0x05;
+			buffer[5] = (byte)dateTime.Hour;
+			buffer[6] = (byte)dateTime.Minute;
+			buffer[7] = (byte)dateTime.Second;
+			byteTransform.TransByte( dateTime.Millisecond * 1000 * 1000 ).CopyTo( buffer, 8 );
+			return buffer;
 		}
 
 		/// <summary>

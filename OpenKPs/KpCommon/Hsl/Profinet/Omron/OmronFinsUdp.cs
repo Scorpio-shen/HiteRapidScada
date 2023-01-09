@@ -20,6 +20,9 @@ namespace HslCommunication.Profinet.Omron
 	/// <remarks>
 	/// <inheritdoc cref="OmronFinsNet" path="remarks"/>
 	/// </remarks>
+	/// <example>
+	/// <inheritdoc cref="OmronFinsNet" path="example"/>
+	/// </example>
 	public class OmronFinsUdp : NetworkUdpDeviceBase
 	{
 		#region Constructor
@@ -42,20 +45,6 @@ namespace HslCommunication.Profinet.Omron
 
 		#endregion
 
-		#region IpAddress Override
-
-		/// <inheritdoc/>
-		public override string IpAddress {
-			get => base.IpAddress;
-			set
-			{
-				base.IpAddress = value;
-				DA1 = Convert.ToByte( base.IpAddress.Substring( base.IpAddress.LastIndexOf( "." ) + 1 ) );
-			}
-		}
-
-		#endregion
-
 		#region Public Member
 
 		/// <inheritdoc cref="OmronFinsNet.ICF"/>
@@ -71,7 +60,7 @@ namespace HslCommunication.Profinet.Omron
 		public byte DNA { get; set; } = 0x00;
 
 		/// <inheritdoc cref="OmronFinsNet.DA1"/>
-		public byte DA1 { get; set; } = 0x13;
+		public byte DA1 { get; set; } = 0x00;
 
 		/// <inheritdoc cref="OmronFinsNet.DA2"/>
 		public byte DA2 { get; set; } = 0x00;
@@ -119,10 +108,10 @@ namespace HslCommunication.Profinet.Omron
 		#region Message Pack Extra
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command ) => PackCommand( command );
+		public override byte[] PackCommandWithHeader( byte[] command ) => PackCommand( command );
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => OmronFinsNetHelper.UdpResponseValidAnalysis( response );
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => OmronFinsNetHelper.UdpResponseValidAnalysis( response );
 
 		#endregion
 
@@ -149,6 +138,10 @@ namespace HslCommunication.Profinet.Omron
 		{
 			return base.Write( address, value, Encoding.UTF8 );
 		}
+
+		/// <inheritdoc cref="OmronFinsNetHelper.Read(IReadWriteDevice, string[])"/>
+		public OperateResult<byte[]> Read( string[] address ) => OmronFinsNetHelper.Read( this, address );
+
 		#endregion
 
 		#region Read Write bool

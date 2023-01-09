@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using HslCommunication.Core.IMessage;
+using System.Security.Cryptography;
 
 namespace HslCommunication.Core.Net
 {
@@ -47,15 +48,15 @@ namespace HslCommunication.Core.Net
 #endif
 		{
 			// 注册包 ---- 二进制传输
-			// 0x48 0x73 0x6E   0x00   0x19  0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x30 0x31 0x00 0x00 0x00 0x00 0x00 0x00 0xC0 0xA8 0x00 0x01 0x17 0x10 0x00 0x00
+			// 0x48 0x53 0x4C   0x00   0x19  0x31 0x32 0x33 0x34 0x35 0x36 0x37 0x38 0x39 0x30 0x31 0x00 0x00 0x00 0x00 0x00 0x00 0xC0 0xA8 0x00 0x01 0x17 0x10 0x00 0x00
 			// +------------+   +--+   +--+  +----------------------------------------------------+ +---------------------------+ +-----------------+ +-------+ +-------+
-			// +  HSL Head  +   备用  length               DTU码 12345678901 (唯一标识)                 登录密码(不受信的排除)         Ip:192.168.0.1   端口10000    类型
+			// +  HSL Head  +   length(大端)               DTU码 12345678901 (唯一标识)                 登录密码(不受信的排除)         Ip:192.168.0.1   端口10000    类型
 			// +------------+   +--+   +--+  +----------------------------------------------------+ +---------------------------+ +-----------------+ +-------+ +-------+
 
 			// 返回
-			// 0x48 0x73 0x6E 0x00 0x01    0x00
+			// 0x48 0x53 0x4C 0x00 0x01    0x00
 			// +------------+ +--+ +--+    +--+
-			//   固定消息头    备用 长度   结果代码
+			//   固定消息头    长度(大端)  结果代码
 			// +------------+ +--+ +--+    +--+
 
 			// 结果代码 
@@ -72,6 +73,7 @@ namespace HslCommunication.Core.Net
 			if (!check.IsSuccess) return;
 			// 过滤不授信的连接
 			if (check.Content?.Length < 22) { socket?.Close( ); return; }
+			if (check.Content[0] != 0x48 ) { socket?.Close( ); return; } // || check.Content[1] != 0x53 || check.Content[2] != 0x4C
 
 			// 获取DTU的唯一ID信息，如果不够11位的，移除空白字符
 			string dtu = Encoding.ASCII.GetString( check.Content, 5, 11 ).Trim( '\0', ' ' );
@@ -284,23 +286,13 @@ namespace HslCommunication.Core.Net
 			{
 				if (disposing)
 				{
-					// TODO: 释放托管状态(托管对象)
 					this.trustLock?.Dispose( );
 					this.OnClientConnected = null;
 				}
 
-				// TODO: 释放未托管的资源(未托管的对象)并重写终结器
-				// TODO: 将大型字段设置为 null
 				disposedValue = true;
 			}
 		}
-
-		// // TODO: 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
-		// ~NetworkAlienClient()
-		// {
-		//     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-		//     Dispose(disposing: false);
-		// }
 
 		/// <inheritdoc cref="IDisposable.Dispose"/>
 		public void Dispose( )
@@ -314,11 +306,11 @@ namespace HslCommunication.Core.Net
 
 		#region Private Member
 
-		private byte[] password;                    // 密码设置
-		private List<string> trustOnline;           // 禁止登录的客户端信息
-		private SimpleHybirdLock trustLock;         // 禁止登录的锁
-		private bool isResponseAck = true;          // 是否返回数据结果
-		private bool isCheckPwd = true;             // 是否统一检查密码，如果每个会话需要自己检查密码，就需要设置为false
+		private byte[] password;                     // 密码设置
+		private List<string> trustOnline;            // 禁止登录的客户端信息
+		private SimpleHybirdLock trustLock;          // 禁止登录的锁
+		private bool isResponseAck = true;           // 是否返回数据结果
+		private bool isCheckPwd = true;              // 是否统一检查密码，如果每个会话需要自己检查密码，就需要设置为false
 		private bool disposedValue;
 
 		#endregion

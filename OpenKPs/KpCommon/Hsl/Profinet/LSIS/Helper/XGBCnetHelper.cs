@@ -22,7 +22,7 @@ namespace HslCommunication.Profinet.LSIS.Helper
 		/// </summary>
 		/// <param name="err">错误号</param>
 		/// <returns>真实的错误描述信息</returns>
-		public static string GetErrorText(int err )
+		public static string GetErrorText( int err )
 		{
 			switch (err)
 			{
@@ -48,7 +48,7 @@ namespace HslCommunication.Profinet.LSIS.Helper
 		{
 			try
 			{
-				if (response[0] == 0x06)
+				if (response[0] == AsciiControl.ACK)
 				{
 					// ACK
 					if (response[3] == 0x57 || response[3] == 0x77)             // write
@@ -68,7 +68,7 @@ namespace HslCommunication.Profinet.LSIS.Helper
 						}
 						return OperateResult.CreateSuccessResult( array.ToArray( ) );
 					}
-					else if(cmd == "SB")
+					else if (cmd == "SB")
 					{
 						int count = Convert.ToInt32( Encoding.ASCII.GetString( response, 8, 2 ), 16 );
 						byte[] buffer = Encoding.ASCII.GetString( response, 10, count * 2 ).ToHexBytes( );
@@ -79,7 +79,7 @@ namespace HslCommunication.Profinet.LSIS.Helper
 						return new OperateResult<byte[]>( 1, "Command Wrong:" + cmd + Environment.NewLine + "Source: " + response.ToHexString( ) );
 					}
 				}
-				else if (response[0] == 0x15)
+				else if (response[0] == AsciiControl.NAK)
 				{
 					// NAK
 					int err = Convert.ToInt32( Encoding.ASCII.GetString( response, 6, 4 ), 16 );
@@ -90,146 +90,70 @@ namespace HslCommunication.Profinet.LSIS.Helper
 					return new OperateResult<byte[]>( response[0], "Source: " + SoftBasic.GetAsciiStringRender( response ) );
 				}
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				return new OperateResult<byte[]>( 1, "Wrong:" + ex.Message + Environment.NewLine + "Source: " + response.ToHexString( ) );
 			}
 		}
 
-		/// <summary>
-		/// AnalysisAddress IX0.0.0 QX0.0.0  MW1.0  MB1.0
-		/// </summary>
-		/// <param name="address">PLC的地址信息</param>
-		/// <param name="QI">是否输入输出的情况</param>
-		/// <returns>实际的偏移地址</returns>
-		public static int CalculateAddressStarted( string address, bool QI = false )
-		{
-			if (address.IndexOf( '.' ) < 0)
-			{
-				return Convert.ToInt32( address );
-			}
-			else
-			{
-				string[] temp = address.Split( '.' );
-				if (!QI)
-					return Convert.ToInt32( temp[0] );
-				else
-					return Convert.ToInt32( temp[2] );
-			}
-		}
+		private const string CnetTypes = "PMLKFTCDSQINUZR";
 
 		/// <summary>
-		/// NumberStyles HexNumber
+		/// 从输入的地址里解析出真实的可以直接放到协议的地址信息，如果是X的地址，自动转换带小数点的表示方式到位地址，如果是其他类型地址，则一律统一转化为字节为单位的地址<br />
+		/// The real address information that can be directly put into the protocol is parsed from the input address. If it is the address of X, 
+		/// it will automatically convert the representation with a decimal point to the address. If it is an address of other types, it will be uniformly converted into a unit of bytes. address
 		/// </summary>
-		/// <param name="value"></param>
-		/// <returns></returns>
-		static bool IsHex( string value )
-		{
-			if (string.IsNullOrEmpty( value ))
-				return false;
-
-			var state = false;
-			for (var i = 0; i < value.Length; i++)
-			{
-				switch (value[i])
-				{
-					case 'A':
-					case 'B':
-					case 'C':
-					case 'D':
-					case 'E':
-					case 'F':
-					case 'a':
-					case 'b':
-					case 'c':
-					case 'd':
-					case 'e':
-					case 'f':
-						state = true;
-						break;
-				}
-			}
-
-			return state;
-		}
-		/// <summary>
-		/// AnalysisAddress
-		/// </summary>
-		/// <param name="address">start address</param>
+		/// <param name="address">输入的起始偏移地址</param>
+		/// <param name="transBit">是否转换为bool地址</param>
 		/// <returns>analysis result</returns>
-		public static OperateResult<string> AnalysisAddress( string address )
+		public static OperateResult<string> AnalysisAddress( string address, bool transBit = false )
 		{
-			// P,M,L,K,F,T
-			// P,M,L,K,F,T,C,D,S
+			// Bit: P,M,L,K,F,T
+			// Continus P,M,L,K,F,T,C,D,S
 			StringBuilder sb = new StringBuilder( );
 			try
 			{
+				if (!CnetTypes.Contains( address[0] )) return new OperateResult<string>( StringResources.Language.NotSupportedDataType );
 				sb.Append( "%" );
-				char[] types = new char[] { 'P', 'M', 'L', 'K', 'F', 'T', 'C', 'D', 'S', 'Q', 'I', 'N', 'U', 'Z', 'R' };
-				bool exsist = false;
-				for (int i = 0; i < types.Length; i++)
+				sb.Append( address[0] );
+
+				if (address[1] == 'X')
 				{
-					if (types[i] == address[0])
+					sb.Append( "X" );
+					if (transBit & address.IndexOf( '.' ) > 0)
 					{
-						sb.Append( types[i] );
-
-						switch (address[1])
-						{
-							case 'X':
-								sb.Append( "X" );
-								if (address[0] == 'I' || address[0] == 'Q')
-								{
-									sb.Append( CalculateAddressStarted( address.Substring( 2 ), true ) );
-								}
-								else
-								{
-									if (IsHex( address.Substring( 2 ) )) { sb.Append( address.Substring( 2 ) ); }
-									else sb.Append( CalculateAddressStarted( address.Substring( 2 ) ) );
-								}
-								break;
-							default:
-								sb.Append( "B" );
-								int startIndex = 0;
-								if (address[1] == 'B')
-								{
-									startIndex = CalculateAddressStarted( address.Substring( 2 ) );
-									sb.Append( startIndex );
-								}
-								else if (address[1] == 'W')
-								{
-									startIndex = CalculateAddressStarted( address.Substring( 2 ) );
-									sb.Append( startIndex *= 2 );
-								}
-								else if (address[1] == 'D')
-								{
-									startIndex = CalculateAddressStarted( address.Substring( 2 ) );
-									sb.Append( startIndex *= 4 );
-								}
-								else if (address[1] == 'L')
-								{
-									startIndex = CalculateAddressStarted( address.Substring( 2 ) );
-									sb.Append( startIndex *= 8 );
-								}
-								else
-								{
-									if (address[0] == 'I' || address[0] == 'Q')
-									{
-										sb.Append( CalculateAddressStarted( address.Substring( 1 ), true ) );
-									}
-									else
-									{
-										if (IsHex( address.Substring( 1 ) )) { sb.Append( address.Substring( 1 ) ); }
-										else sb.Append( CalculateAddressStarted( address.Substring( 1 ) ) );
-									}
-
-								}
-								break;
-						}
-						exsist = true;
-						break;
+						int bitIndex = HslHelper.GetBitIndexInformation( ref address );
+						sb.Append( address.Substring( 2 ) );
+						sb.Append( bitIndex.ToString( "X1" ) );
+					}
+					else
+					{
+						sb.Append( address.Substring( 2 ) );
 					}
 				}
-				if (!exsist) throw new Exception( StringResources.Language.NotSupportedDataType );
+				else
+				{
+					sb.Append( transBit ? "X" : "B" );
+					int index = 0;
+					int bitIndex = 0;
+					if (transBit & address.IndexOf( '.' ) > 0) bitIndex = HslHelper.GetBitIndexInformation( ref address );
+
+					if      (address[1] == 'B') index = Convert.ToInt32( address.Substring( 2 ) );
+					else if (address[1] == 'W') index = Convert.ToInt32( address.Substring( 2 ) ) * 2;
+					else if (address[1] == 'D') index = Convert.ToInt32( address.Substring( 2 ) ) * 4;
+					else if (address[1] == 'L') index = Convert.ToInt32( address.Substring( 2 ) ) * 8;
+					else index = Convert.ToInt32( address.Substring( 1 ) );
+
+					if (transBit)
+					{
+						sb.Append( index / 2 );
+						sb.Append( bitIndex.ToString( "X1" ) );
+					}
+					else
+					{
+						sb.Append( index );
+					}
+				}
 			}
 			catch (Exception ex)
 			{
@@ -237,6 +161,20 @@ namespace HslCommunication.Profinet.LSIS.Helper
 			}
 
 			return OperateResult.CreateSuccessResult( sb.ToString( ) );
+		}
+
+		/// <summary>
+		/// 往现有的命令数据中增加BCC的内容
+		/// </summary>
+		/// <param name="command">现有的命令</param>
+		private static void AddBccTail( List<byte> command )
+		{
+			int sum = 0;
+			for (int i = 0; i < command.Count; i++)
+			{
+				sum += command[i];
+			}
+			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)sum ) );
 		}
 
 		/// <summary>
@@ -252,32 +190,22 @@ namespace HslCommunication.Profinet.LSIS.Helper
 			if (!analysisResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysisResult );
 
 			List<byte> command = new List<byte>( );
-			command.Add( 0x05 );    // ENQ
+			command.Add( AsciiControl.ENQ );    // ENQ
 			command.AddRange( SoftBasic.BuildAsciiBytesFrom( station ) );
-			command.Add( 0x72 );    // command r
-			command.Add( 0x53 );    // command type: SB
+			command.Add( 0x72 );                // command r
+			command.Add( 0x53 );                // command type: SB
 			command.Add( 0x42 );
 			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)analysisResult.Content.Length ) );
 			command.AddRange( Encoding.ASCII.GetBytes( analysisResult.Content ) );
 			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)length ) );
-			command.Add( 0x04 );    // EOT
-
-			int sum = 0;
-			for (int i = 0; i < command.Count; i++)
-			{
-				sum += command[i];
-			}
-			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)sum ) );
+			command.Add( AsciiControl.EOT );    // EOT
+			AddBccTail( command );              // BCC
 
 			return OperateResult.CreateSuccessResult( command.ToArray( ) );
 		}
 
 		/// <inheritdoc cref="BuildReadIndividualCommand(byte, string[])"/>
-		public static OperateResult<byte[]> BuildReadIndividualCommand( byte station, string address )
-		{
-			return BuildReadIndividualCommand( station, new string[] { address } );
-		}
-
+		public static OperateResult<byte[]> BuildReadIndividualCommand( byte station, string address ) => BuildReadIndividualCommand( station, new string[] { address } );
 
 		/// <summary>
 		/// Multi reading address Type of Read Individual
@@ -288,10 +216,10 @@ namespace HslCommunication.Profinet.LSIS.Helper
 		public static OperateResult<byte[]> BuildReadIndividualCommand( byte station, string[] addresses )
 		{
 			List<byte> command = new List<byte>( );
-			command.Add( 0x05 );    // ENQ
+			command.Add( AsciiControl.ENQ );    // ENQ
 			command.AddRange( SoftBasic.BuildAsciiBytesFrom( station ) );
-			command.Add( 0x72 );    // command r
-			command.Add( 0x53 );    // command type: SS
+			command.Add( 0x72 );                // command r
+			command.Add( 0x53 );                // command type: SS
 			command.Add( 0x53 );
 			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)addresses.Length ) );    // Number of blocks
 
@@ -317,13 +245,8 @@ namespace HslCommunication.Profinet.LSIS.Helper
 				}
 			}
 
-			command.Add( 0x04 );    // EOT
-			int sum = 0;
-			for (int i = 0; i < command.Count; i++)
-			{
-				sum += command[i];
-			}
-			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)sum ) );
+			command.Add( AsciiControl.EOT );    // EOT
+			AddBccTail( command );              // BCC
 
 			return OperateResult.CreateSuccessResult( command.ToArray( ) );
 		}
@@ -363,22 +286,17 @@ namespace HslCommunication.Profinet.LSIS.Helper
 			var analysisResult = AnalysisAddress( address );
 			if (!analysisResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysisResult );
 			List<byte> command = new List<byte>( );
-			command.Add( 0x05 );    // ENQ
+			command.Add( AsciiControl.ENQ );    // ENQ
 			command.AddRange( SoftBasic.BuildAsciiBytesFrom( station ) );
-			command.Add( 0x77 );    // command w
-			command.Add( 0x53 );    // command type: S
-			command.Add( 0x42 );       // command type: B
+			command.Add( 0x77 );                // command w
+			command.Add( 0x53 );                // command type: S
+			command.Add( 0x42 );                // command type: B
 			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)analysisResult.Content.Length ) );
 			command.AddRange( Encoding.ASCII.GetBytes( analysisResult.Content ) );
 			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)value.Length ) );
 			command.AddRange( SoftBasic.BytesToAsciiBytes( value ) );
-			command.Add( 0x04 );    // EOT
-			int sum = 0;
-			for (int i = 0; i < command.Count; i++)
-			{
-				sum += command[i];
-			}
-			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)sum ) );
+			command.Add( AsciiControl.EOT );    // EOT
+			AddBccTail( command );              // BCC
 
 			return OperateResult.CreateSuccessResult( command.ToArray( ) );
 		}
@@ -395,23 +313,18 @@ namespace HslCommunication.Profinet.LSIS.Helper
 			if (!analysisResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysisResult );
 
 			List<byte> command = new List<byte>( );
-			command.Add( 0x05 );    // ENQ
+			command.Add( AsciiControl.ENQ );    // ENQ
 			command.AddRange( SoftBasic.BuildAsciiBytesFrom( station ) );
-			command.Add( 0x77 );    // command w
-			command.Add( 0x53 );    // command type: S
-			command.Add( 0x53 );    // command type: S
-			command.Add( 0x30 );    // Number of blocks
+			command.Add( 0x77 );                // command w
+			command.Add( 0x53 );                // command type: S
+			command.Add( 0x53 );                // command type: S
+			command.Add( 0x30 );                // Number of blocks
 			command.Add( 0x31 );
 			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)analysisResult.Content.Length ) );
 			command.AddRange( Encoding.ASCII.GetBytes( analysisResult.Content ) );
 			command.AddRange( SoftBasic.BytesToAsciiBytes( value ) );
-			command.Add( 0x04 );    // EOT
-			int sum = 0;
-			for (int i = 0; i < command.Count; i++)
-			{
-				sum += command[i];
-			}
-			command.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)sum ) );
+			command.Add( AsciiControl.EOT );    // EOT
+			AddBccTail( command );              // BCC
 
 			return OperateResult.CreateSuccessResult( command.ToArray( ) );
 		}
@@ -466,6 +379,7 @@ namespace HslCommunication.Profinet.LSIS.Helper
 		/// 从PLC设备读取多个地址的数据信息，返回连续的字节数组，需要按照实际情况进行按顺序解析。<br />
 		/// Read the data information of multiple addresses from the PLC device and return a continuous byte array, which needs to be parsed in order according to the actual situation.
 		/// </summary>
+		/// <remarks>按照每16个地址长度进行自动的切割，支持任意的多的长度地址</remarks>
 		/// <param name="plc">PLC通信对象</param>
 		/// <param name="station">站号信息</param>
 		/// <param name="address">PLC的地址信息，例如 M100, MB100, MW100, MD100</param>
@@ -523,6 +437,7 @@ namespace HslCommunication.Profinet.LSIS.Helper
 		public static OperateResult<bool> ReadBool( IReadWriteDevice plc, int station, string address )
 		{
 			byte stat = (byte)HslHelper.ExtractParameter( ref address, "s", station );
+			int bitIndex = HslHelper.GetBitIndexInformation( ref address );
 
 			OperateResult<byte[]> command = BuildReadIndividualCommand( stat, address );
 			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool>( command );
@@ -530,7 +445,31 @@ namespace HslCommunication.Profinet.LSIS.Helper
 			OperateResult<byte[]> read = plc.ReadFromCoreServer( command.Content );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool>( read );
 
-			return OperateResult.CreateSuccessResult( SoftBasic.ByteToBoolArray( read.Content, 1 )[0] );
+			return OperateResult.CreateSuccessResult( read.Content.ToBoolArray( )[bitIndex] );
+		}
+
+		/// <summary>
+		/// 从PLC的指定地址读取原始的位数据信息，地址示例：MB100.0, MW100.0<br />
+		/// Read the original bool data information from the designated address of the PLC. 
+		/// Examples of addresses: MB100.0, MW100.0
+		/// </summary>
+		/// <remarks>
+		/// 地址类型支持 P,M,L,K,F,T,C,D,R,I,Q,W, 支持携带站号的形式，例如 s=2;MB100.0
+		/// </remarks>
+		/// <param name="plc">PLC通信对象</param>
+		/// <param name="station">站号信息</param>
+		/// <param name="address">PLC的地址信息，例如 MB100.0, MW100.0</param>
+		/// <param name="length">读取的长度信息</param>
+		/// <returns>返回是否读取成功的结果对象</returns>
+		public static OperateResult<bool[]> ReadBool( IReadWriteDevice plc, int station, string address, ushort length )
+		{
+			int bitIndex = HslHelper.GetBitIndexInformation( ref address );
+
+			int byteLength = HslHelper.CalculateOccupyLength( bitIndex, length );
+			OperateResult<byte[]> read = Read( plc, station, address, (ushort)byteLength );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
+
+			return OperateResult.CreateSuccessResult( read.Content.ToBoolArray( ).SelectMiddle( bitIndex, length ) );
 		}
 
 		/// <summary>
@@ -548,8 +487,10 @@ namespace HslCommunication.Profinet.LSIS.Helper
 		public static OperateResult Write( IReadWriteDevice plc, int station, string address, bool value )
 		{
 			byte stat = (byte)HslHelper.ExtractParameter( ref address, "s", station );
+			OperateResult<string> analysis = AnalysisAddress( address, true );
+			if (!analysis.IsSuccess) return analysis;
 
-			OperateResult<byte[]> command = BuildWriteOneCommand( stat, address, new byte[] { (byte)(value ? 0x01 : 0x00) } );
+			OperateResult<byte[]> command = BuildWriteOneCommand( stat, analysis.Content.Substring( 1 ), new byte[] { (byte)(value ? 0x01 : 0x00) } );
 			if (!command.IsSuccess) return command;
 
 			return plc.ReadFromCoreServer( command.Content );
@@ -601,6 +542,7 @@ namespace HslCommunication.Profinet.LSIS.Helper
 		public async static Task<OperateResult<bool>> ReadBoolAsync( IReadWriteDevice plc, int station, string address )
 		{
 			byte stat = (byte)HslHelper.ExtractParameter( ref address, "s", station );
+			int bitIndex = HslHelper.GetBitIndexInformation( ref address );
 
 			OperateResult<byte[]> command = BuildReadIndividualCommand( stat, address );
 			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool>( command );
@@ -608,15 +550,29 @@ namespace HslCommunication.Profinet.LSIS.Helper
 			OperateResult<byte[]> read = await plc.ReadFromCoreServerAsync( command.Content );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool>( read );
 
-			return OperateResult.CreateSuccessResult( SoftBasic.ByteToBoolArray( read.Content, 1 )[0] );
+			return OperateResult.CreateSuccessResult( read.Content.ToBoolArray( )[bitIndex] );
+		}
+
+		/// <inheritdoc cref="ReadBool(IReadWriteDevice, int, string, ushort)"/>
+		public async static Task<OperateResult<bool[]>> ReadBoolAsync( IReadWriteDevice plc, int station, string address, ushort length )
+		{
+			int bitIndex = HslHelper.GetBitIndexInformation( ref address );
+
+			int byteLength = HslHelper.CalculateOccupyLength( bitIndex, length );
+			OperateResult<byte[]> read = await ReadAsync( plc, station, address, (ushort)byteLength );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
+
+			return OperateResult.CreateSuccessResult( read.Content.ToBoolArray( ).SelectMiddle( bitIndex, length ) );
 		}
 
 		/// <inheritdoc cref="Write(IReadWriteDevice, int, string, bool)"/>
 		public async static Task<OperateResult> WriteAsync( IReadWriteDevice plc, int station, string address, bool value )
 		{
 			byte stat = (byte)HslHelper.ExtractParameter( ref address, "s", station );
+			OperateResult<string> analysis = AnalysisAddress( address, true );
+			if (!analysis.IsSuccess) return analysis;
 
-			OperateResult<byte[]> command = BuildWriteOneCommand( stat, address, new byte[] { (byte)(value ? 0x01 : 0x00) } );
+			OperateResult<byte[]> command = BuildWriteOneCommand( stat, analysis.Content.Substring( 1 ), new byte[] { (byte)(value ? 0x01 : 0x00) } );
 			if (!command.IsSuccess) return command;
 
 			return await plc.ReadFromCoreServerAsync( command.Content );

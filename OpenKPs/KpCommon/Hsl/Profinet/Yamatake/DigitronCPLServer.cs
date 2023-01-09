@@ -7,6 +7,7 @@ using System.IO.Ports;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using HslCommunication.Core.IMessage;
 #if !NET20 && !NET35
 using System.Threading.Tasks;
 #endif
@@ -14,8 +15,8 @@ using System.Threading.Tasks;
 namespace HslCommunication.Profinet.Yamatake
 {
 	/// <summary>
-	/// 山武的数字指示调节器的虚拟设备，支持和HSL本身进行数据通信测试<br />
-	/// Yamatake’s digital indicating regulator is a virtual device that supports data communication testing with HSL itself
+	/// <b>[商业授权]</b> 山武的数字指示调节器的虚拟设备，支持和HSL本身进行数据通信测试<br />
+	/// <b>[Authorization]</b> Yamatake’s digital indicating regulator is a virtual device that supports data communication testing with HSL itself
 	/// </summary>
 	public class DigitronCPLServer : NetworkDataServerBase
 	{
@@ -25,10 +26,10 @@ namespace HslCommunication.Profinet.Yamatake
 		/// </summary>
 		public DigitronCPLServer( )
 		{
-			serialPort    = new SerialPort( );
-			softBuffer    = new SoftBuffer( DataPoolLength * 2 );
-			ByteTransform = new RegularByteTransform( );
-			Station       = 1;
+			softBuffer         = new SoftBuffer( DataPoolLength * 2 );
+			ByteTransform      = new RegularByteTransform( );
+			Station            = 1;
+			LogMsgFormatBinary = false;
 		}
 
 		/// <summary>
@@ -74,66 +75,12 @@ namespace HslCommunication.Profinet.Yamatake
 		#region NetServer Override
 
 		/// <inheritdoc/>
-		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
+		protected override INetMessage GetNewNetMessage( ) => new SpecifiedCharacterMessage( AsciiControl.LF );
+
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-			try
-			{
-				socket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), appSession );
-				AddClient( appSession );
-			}
-			catch
-			{
-				socket.Close( );
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-			}
-		}
-
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
-		{
-			if (ar.AsyncState is AppSession session)
-			{
-				try
-				{
-					int receiveCount = session.WorkSocket.EndReceive( ar );
-#if NET20 || NET35
-					OperateResult<byte[]> read1 = ReceiveCommandLineFromSocket( session.WorkSocket, 0x0A, 5000 );
-#else
-					OperateResult<byte[]> read1 = await ReceiveCommandLineFromSocketAsync( session.WorkSocket, 0x0A, 5000 );
-#endif
-					if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{SoftBasic.GetAsciiStringRender( read1.Content )}" );
-
-					byte[] back = ReadFromCore( read1.Content );
-					if (back != null)
-					{
-						session.WorkSocket.Send( back );
-						LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{SoftBasic.GetAsciiStringRender( back )}" );
-					}
-					else
-					{
-						RemoveClient( session );
-						return;
-					}
-
-					session.HeartTime = DateTime.Now;
-					RaiseDataReceived( session, read1.Content );
-					session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), session );
-				}
-				catch
-				{
-					RemoveClient( session );
-				}
-			}
+			return OperateResult.CreateSuccessResult( ReadFromCore( receive ) );
 		}
 
 		private byte[] ReadFromCore( byte[] command )
@@ -194,102 +141,15 @@ namespace HslCommunication.Profinet.Yamatake
 			}
 		}
 
-
 		#endregion
-
 
 		#region Serial Support
 
-		private SerialPort serialPort;            // 核心的串口对象
-
-		/// <summary>
-		/// 启动CPL串口的从机服务，使用默认的参数进行初始化串口，9600波特率，8位数据位，无奇偶校验，1位停止位<br />
-		/// Start the slave service of hostlink, initialize the serial port with default parameters, 9600 baud rate, 8 data bits, no parity, 1 stop bit
-		/// </summary>
-		/// <param name="com">串口信息</param>
-		public void StartSerial( string com ) => StartSerial( com, 9600 );
-
-		/// <summary>
-		/// 启动CPL串口的从机服务，使用默认的参数进行初始化串口，7位数据位，偶校验，1位停止位<br />
-		/// Start the slave service of hostlink, initialize the serial port with default parameters, 8 data bits, no parity, 1 stop bit
-		/// </summary>
-		/// <param name="com">串口信息</param>
-		/// <param name="baudRate">波特率</param>
-		public void StartSerial( string com, int baudRate )
+		/// <inheritdoc/>
+		protected override bool CheckSerialReceiveDataComplete( byte[] buffer, int receivedLength )
 		{
-			StartSerial( sp =>
-			{
-				sp.PortName = com;
-				sp.BaudRate = baudRate;
-				sp.DataBits = 7;
-				sp.Parity = Parity.Even;
-				sp.StopBits = StopBits.One;
-			} );
-		}
-
-		/// <summary>
-		/// 启动CPL串口的从机服务，使用自定义的初始化方法初始化串口的参数<br />
-		/// Start the slave service of hostlink and initialize the parameters of the serial port using a custom initialization method
-		/// </summary>
-		/// <param name="inni">初始化信息的委托</param>
-		public void StartSerial( Action<SerialPort> inni )
-		{
-			if (!serialPort.IsOpen)
-			{
-				inni?.Invoke( serialPort );
-
-				serialPort.ReadBufferSize = 1024;
-				serialPort.ReceivedBytesThreshold = 1;
-				serialPort.Open( );
-				serialPort.DataReceived += SerialPort_DataReceived;
-			}
-		}
-
-		/// <summary>
-		/// 关闭CPL的串口对象<br />
-		/// Close the serial port object of hostlink
-		/// </summary>
-		public void CloseSerial( )
-		{
-			if (serialPort.IsOpen)
-			{
-				serialPort.Close( );
-			}
-		}
-
-		/// <summary>
-		/// 接收到串口数据的时候触发
-		/// </summary>
-		/// <param name="sender">串口对象</param>
-		/// <param name="e">消息</param>
-		private void SerialPort_DataReceived( object sender, SerialDataReceivedEventArgs e )
-		{
-			int rCount = 0;
-			byte[] buffer = new byte[1024];
-			while (true)
-			{
-				System.Threading.Thread.Sleep( 20 );            // 此处做个微小的延时，等待数据接收完成
-				int count = serialPort.Read( buffer, rCount, serialPort.BytesToRead );
-				rCount += count;
-				if (buffer[rCount - 1] == 0x0A) break;
-				if (count == 0) break;
-			}
-
-			if (rCount == 0) return;
-			byte[] receive = buffer.SelectBegin( rCount );
-
-			if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { return; };
-
-			LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] {StringResources.Language.Receive}：{SoftBasic.GetAsciiStringRender( receive )}" );
-
-			byte[] back = ReadFromCore( receive );
-			if (back != null)
-			{
-				serialPort.Write( back, 0, back.Length );
-				LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] {StringResources.Language.Send}：{SoftBasic.GetAsciiStringRender( back )}" );
-			}
-
-			RaiseDataReceived( sender, receive );
+			if (receivedLength > 5) return buffer[receivedLength - 2] == 0x0D && buffer[receivedLength - 1] == 0x0A;
+			return base.CheckSerialReceiveDataComplete( buffer, receivedLength );
 		}
 
 		#endregion

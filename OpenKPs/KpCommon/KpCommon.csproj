@@ -58,6 +58,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Web" />
     <Reference Include="System.Windows.Forms" />
@@ -84,6 +85,12 @@
     <Compile Include="Hsl\Algorithms\PID\PIDHelper.cs" />
     <Compile Include="Hsl\Algorithms\PID\PidMode.cs" />
     <Compile Include="Hsl\Authorization.cs" />
+    <Compile Include="Hsl\BasicFramework\FormAuthorize.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Hsl\BasicFramework\FormAuthorize.designer.cs">
+      <DependentUpon>FormAuthorize.cs</DependentUpon>
+    </Compile>
     <Compile Include="Hsl\BasicFramework\FormPopup.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -95,6 +102,12 @@
     </Compile>
     <Compile Include="Hsl\BasicFramework\FormPortraitSelect.Designer.cs">
       <DependentUpon>FormPortraitSelect.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Hsl\BasicFramework\FormSupport.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Hsl\BasicFramework\FormSupport.Designer.cs">
+      <DependentUpon>FormSupport.cs</DependentUpon>
     </Compile>
     <Compile Include="Hsl\BasicFramework\SharpList.cs" />
     <Compile Include="Hsl\BasicFramework\SoftAnimation.cs" />
@@ -186,17 +199,25 @@
     <Compile Include="Hsl\Controls\UserVerticalProgress.Designer.cs">
       <DependentUpon>UserVerticalProgress.cs</DependentUpon>
     </Compile>
+    <Compile Include="Hsl\Core\Address\AllenBradleySLCAddress.cs" />
     <Compile Include="Hsl\Core\Address\CnetAddressData.cs" />
     <Compile Include="Hsl\Core\Address\DeviceAddressBase.cs" />
     <Compile Include="Hsl\Core\Address\DeviceAddressDataBase.cs" />
+    <Compile Include="Hsl\Core\Address\FanucPMCAddress.cs" />
     <Compile Include="Hsl\Core\Address\FatekProgramAddress.cs" />
+    <Compile Include="Hsl\Core\Address\FujiCommandSettingTypeAddress.cs" />
     <Compile Include="Hsl\Core\Address\FujiSPBAddress.cs" />
     <Compile Include="Hsl\Core\Address\FujiSPHAddress.cs" />
     <Compile Include="Hsl\Core\Address\GeSRTPAddress.cs" />
+    <Compile Include="Hsl\Core\Address\KeyenceNanoAddress.cs" />
     <Compile Include="Hsl\Core\Address\McAddressData.cs" />
+    <Compile Include="Hsl\Core\Address\MelsecFxLinksAddress.cs" />
+    <Compile Include="Hsl\Core\Address\MemobusAddress.cs" />
     <Compile Include="Hsl\Core\Address\ModbusAddress.cs" />
     <Compile Include="Hsl\Core\Address\OmronFinsAddress.cs" />
     <Compile Include="Hsl\Core\Address\S7AddressData.cs" />
+    <Compile Include="Hsl\Core\Address\VigorAddress.cs" />
+    <Compile Include="Hsl\Core\Address\XinJEAddress.cs" />
     <Compile Include="Hsl\Core\Address\YokogawaLinkAddress.cs" />
     <Compile Include="Hsl\Core\File\FileBaseInfo.cs" />
     <Compile Include="Hsl\Core\File\FileMarkId.cs" />
@@ -210,17 +231,21 @@
     <Compile Include="Hsl\Core\IMessage\AlienMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\AllenBradleyMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\AllenBradleySLCMessage.cs" />
+    <Compile Include="Hsl\Core\IMessage\CJT188Message.cs" />
     <Compile Include="Hsl\Core\IMessage\DcsNanJingAutoMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\DLT645Message.cs" />
+    <Compile Include="Hsl\Core\IMessage\DLT698Message.cs" />
     <Compile Include="Hsl\Core\IMessage\EFORTMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\EFORTMessagePrevious.cs" />
     <Compile Include="Hsl\Core\IMessage\FanucRobotMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\FetchWriteMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\FinsMessage.cs" />
+    <Compile Include="Hsl\Core\IMessage\FujiCommandSettingTypeMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\FujiSPBMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\FujiSPHMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\GeSRTPMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\HslMessage.cs" />
+    <Compile Include="Hsl\Core\IMessage\IEC104Message.cs" />
     <Compile Include="Hsl\Core\IMessage\INetMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\KukaVarProxyMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\LsisFastEnetMessage.cs" />
@@ -234,7 +259,9 @@
     <Compile Include="Hsl\Core\IMessage\OpenProtocolMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\S7Message.cs" />
     <Compile Include="Hsl\Core\IMessage\SAMMessage.cs" />
+    <Compile Include="Hsl\Core\IMessage\SiemensPPIMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\SpecifiedCharacterMessage.cs" />
+    <Compile Include="Hsl\Core\IMessage\TurckReaderMessage.cs" />
     <Compile Include="Hsl\Core\IMessage\YokogawaLinkBinaryMessage.cs" />
     <Compile Include="Hsl\Core\Net\ClassNetHandle.cs" />
     <Compile Include="Hsl\Core\Net\CommunicationProtocol.cs" />
@@ -245,6 +272,7 @@
     <Compile Include="Hsl\Core\Net\NetworkBase\NetworkAlienClient.cs" />
     <Compile Include="Hsl\Core\Net\NetworkBase\NetworkAuthenticationServerBase.cs" />
     <Compile Include="Hsl\Core\Net\NetworkBase\NetworkBase.cs" />
+    <Compile Include="Hsl\Core\Net\NetworkBase\NetworkConnectedCip.cs" />
     <Compile Include="Hsl\Core\Net\NetworkBase\NetworkDataServerBase.cs" />
     <Compile Include="Hsl\Core\Net\NetworkBase\NetworkDeviceBase.cs" />
     <Compile Include="Hsl\Core\Net\NetworkBase\NetworkDoubleBase.cs" />
@@ -262,13 +290,23 @@
     <Compile Include="Hsl\Core\Net\StateOne\AppSession.cs" />
     <Compile Include="Hsl\Core\Net\StateOne\AsyncStateSend.cs" />
     <Compile Include="Hsl\Core\Net\StateOne\FileStateObject.cs" />
+    <Compile Include="Hsl\Core\Net\StateOne\SessionBase.cs" />
     <Compile Include="Hsl\Core\Net\StateOne\StateObject.cs" />
     <Compile Include="Hsl\Core\Net\StateOne\StateOneBase.cs" />
+    <Compile Include="Hsl\Core\Pipe\PipeBase.cs" />
+    <Compile Include="Hsl\Core\Pipe\PipeSerial.cs" />
+    <Compile Include="Hsl\Core\Pipe\PipeSocket.cs" />
     <Compile Include="Hsl\Core\Reflection\HslAddressAttribute.cs" />
+    <Compile Include="Hsl\Core\Reflection\HslAddressProperty.cs" />
     <Compile Include="Hsl\Core\Reflection\HslMqttApiAttribute.cs" />
     <Compile Include="Hsl\Core\Reflection\HslMqttPermissionAttribute.cs" />
     <Compile Include="Hsl\Core\Reflection\HslRedisAttribute.cs" />
     <Compile Include="Hsl\Core\Reflection\HslReflectionHelper.cs" />
+    <Compile Include="Hsl\Core\Reflection\HslStructAttribute.cs" />
+    <Compile Include="Hsl\Core\Security\AesCryptography.cs" />
+    <Compile Include="Hsl\Core\Security\DesCryptography.cs" />
+    <Compile Include="Hsl\Core\Security\ICryptography.cs" />
+    <Compile Include="Hsl\Core\Security\RSAHelper.cs" />
     <Compile Include="Hsl\Core\Security\Security.cs" />
     <Compile Include="Hsl\Core\Thread\ThreadLock.cs" />
     <Compile Include="Hsl\Core\Transfer\ByteTransformBase.cs" />
@@ -278,7 +316,9 @@
     <Compile Include="Hsl\Core\Transfer\RegularByteTransform.cs" />
     <Compile Include="Hsl\Core\Transfer\ReverseBytesTransform.cs" />
     <Compile Include="Hsl\Core\Transfer\ReverseWordTransform.cs" />
+    <Compile Include="Hsl\Core\Types\AsciiControl.cs" />
     <Compile Include="Hsl\Core\Types\CertificateDegree.cs" />
+    <Compile Include="Hsl\Core\Types\HslCancelToken.cs" />
     <Compile Include="Hsl\Core\Types\HslExtension.cs" />
     <Compile Include="Hsl\Core\Types\HslHelper.cs" />
     <Compile Include="Hsl\Core\Types\HslPieItem.cs" />
@@ -301,6 +341,7 @@
     <Compile Include="Hsl\Enthernet\FileNet\IntegrationFileClient.cs" />
     <Compile Include="Hsl\Enthernet\FileNet\UltimateFileServer.cs" />
     <Compile Include="Hsl\Enthernet\HttpServer\HttpServer.cs" />
+    <Compile Include="Hsl\Enthernet\HttpServer\HttpUploadFile.cs" />
     <Compile Include="Hsl\Enthernet\Plain\NetPlainSocket.cs" />
     <Compile Include="Hsl\Enthernet\PushNet\AppPushSession.cs" />
     <Compile Include="Hsl\Enthernet\PushNet\NetPushClient.cs" />
@@ -313,16 +354,41 @@
     <Compile Include="Hsl\Enthernet\Redis\RedisSubscribe.cs" />
     <Compile Include="Hsl\Enthernet\SimplifyNet\NetSimplifyClient.cs" />
     <Compile Include="Hsl\Enthernet\SimplifyNet\NetSimplifyServer.cs" />
+    <Compile Include="Hsl\Enthernet\SoftUpdateNet\FileInfoExtension.cs" />
     <Compile Include="Hsl\Enthernet\SoftUpdateNet\NetSoftUpdateServer.cs" />
+    <Compile Include="Hsl\Enthernet\Tcp\ForwardSession.cs" />
+    <Compile Include="Hsl\Enthernet\Tcp\TcpForward.cs" />
     <Compile Include="Hsl\Enthernet\UdpNet\NetUdpClient.cs" />
     <Compile Include="Hsl\Enthernet\UdpNet\NetUdpServer.cs" />
+    <Compile Include="Hsl\Instrument\CJT\CJT188.cs" />
+    <Compile Include="Hsl\Instrument\CJT\CJT188OverTcp.cs" />
+    <Compile Include="Hsl\Instrument\CJT\CjtFlowRate.cs" />
+    <Compile Include="Hsl\Instrument\CJT\Helper\CJT188Helper.cs" />
+    <Compile Include="Hsl\Instrument\CJT\Helper\CJTControl.cs" />
+    <Compile Include="Hsl\Instrument\CJT\Helper\ICjt188.cs" />
     <Compile Include="Hsl\Instrument\Delixi\DTSU6606Serial.cs" />
     <Compile Include="Hsl\Instrument\Delixi\ElectricalParameters.cs" />
     <Compile Include="Hsl\Instrument\DLT\DLT645.cs" />
     <Compile Include="Hsl\Instrument\DLT\DLT645OverTcp.cs" />
+    <Compile Include="Hsl\Instrument\DLT\DLT645With1997.cs" />
+    <Compile Include="Hsl\Instrument\DLT\DLT645With1997OverTcp.cs" />
+    <Compile Include="Hsl\Instrument\DLT\DLT698.cs" />
+    <Compile Include="Hsl\Instrument\DLT\DLT698OverTcp.cs" />
+    <Compile Include="Hsl\Instrument\DLT\DLT698TcpNet.cs" />
     <Compile Include="Hsl\Instrument\DLT\DLTControl.cs" />
     <Compile Include="Hsl\Instrument\DLT\DLTTransform.cs" />
+    <Compile Include="Hsl\Instrument\DLT\Helper\DLT645Helper.cs" />
+    <Compile Include="Hsl\Instrument\DLT\Helper\DLT645Type.cs" />
+    <Compile Include="Hsl\Instrument\DLT\Helper\DLT698FcsHelper.cs" />
+    <Compile Include="Hsl\Instrument\DLT\Helper\IDlt645.cs" />
+    <Compile Include="Hsl\Instrument\IEC\Helper\IECHelper.cs" />
+    <Compile Include="Hsl\Instrument\IEC\IEC104.cs" />
+    <Compile Include="Hsl\Instrument\IEC\IEC104MessageEventArgs.cs" />
+    <Compile Include="Hsl\Instrument\IEC\IecValueObject.cs" />
     <Compile Include="Hsl\Instrument\Light\ShineInLightSourceController.cs" />
+    <Compile Include="Hsl\Instrument\RKC\Helper\TemperatureControllerHelper.cs" />
+    <Compile Include="Hsl\Instrument\RKC\TemperatureController.cs" />
+    <Compile Include="Hsl\Instrument\RKC\TemperatureControllerOverTcp.cs" />
     <Compile Include="Hsl\Instrument\Temperature\DAM3601.cs" />
     <Compile Include="Hsl\Language\DefaultLanguage.cs" />
     <Compile Include="Hsl\Language\English.cs" />
@@ -374,6 +440,7 @@
     <Compile Include="Hsl\MQTT\MqttPublishMessage.cs" />
     <Compile Include="Hsl\MQTT\MqttQualityOfServiceLevel.cs" />
     <Compile Include="Hsl\MQTT\MqttRpcApiInfo.cs" />
+    <Compile Include="Hsl\MQTT\MqttRpcDevice.cs" />
     <Compile Include="Hsl\MQTT\MqttServer.cs" />
     <Compile Include="Hsl\MQTT\MqttSession.cs" />
     <Compile Include="Hsl\MQTT\MqttSubscribeMessage.cs" />
@@ -382,28 +449,44 @@
     <Compile Include="Hsl\NamespaceDoc.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AbStructHandle.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AbTagItem.cs" />
+    <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyConnectedCipNet.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyDF1Serial.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyHelper.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyItemValue.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyMicroCip.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyNet.cs" />
+    <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyPcccNet.cs" />
+    <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyPcccServer.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyServer.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleySLCNet.cs" />
+    <Compile Include="Hsl\Profinet\AllenBradley\IReadWriteCip.cs" />
+    <Compile Include="Hsl\Profinet\AllenBradley\MessageRouter.cs" />
     <Compile Include="Hsl\Profinet\Beckhoff\AdsDeviceInfo.cs" />
     <Compile Include="Hsl\Profinet\Beckhoff\AmsTcpHeaderFlags.cs" />
     <Compile Include="Hsl\Profinet\Beckhoff\BeckhoffAdsNet.cs" />
     <Compile Include="Hsl\Profinet\Beckhoff\BeckhoffAdsServer.cs" />
     <Compile Include="Hsl\Profinet\Beckhoff\BeckhoffCommandId.cs" />
-    <Compile Include="Hsl\Profinet\Delta\DeltaDvpSerial.cs" />
-    <Compile Include="Hsl\Profinet\Delta\DeltaDvpSerialAscii.cs" />
-    <Compile Include="Hsl\Profinet\Delta\DeltaDvpTcpNet.cs" />
-    <Compile Include="Hsl\Profinet\Delta\DeltaHelper.cs" />
+    <Compile Include="Hsl\Profinet\Beckhoff\Helper\AdsHelper.cs" />
+    <Compile Include="Hsl\Profinet\Beckhoff\Helper\AdsTagItem.cs" />
+    <Compile Include="Hsl\Profinet\Delta\DeltaSerial.cs" />
+    <Compile Include="Hsl\Profinet\Delta\DeltaSerialAscii.cs" />
+    <Compile Include="Hsl\Profinet\Delta\DeltaSerialAsciiOverTcp.cs" />
+    <Compile Include="Hsl\Profinet\Delta\DeltaSerialOverTcp.cs" />
+    <Compile Include="Hsl\Profinet\Delta\DeltaSeries.cs" />
+    <Compile Include="Hsl\Profinet\Delta\DeltaTcpNet.cs" />
+    <Compile Include="Hsl\Profinet\Delta\Helper\DeltaASHelper.cs" />
+    <Compile Include="Hsl\Profinet\Delta\Helper\DeltaDvpHelper.cs" />
+    <Compile Include="Hsl\Profinet\Delta\Helper\DeltaHelper.cs" />
+    <Compile Include="Hsl\Profinet\Delta\IDelta.cs" />
     <Compile Include="Hsl\Profinet\FATEK\FatekProgram.cs" />
-    <Compile Include="Hsl\Profinet\FATEK\FatekProgramHelper.cs" />
     <Compile Include="Hsl\Profinet\FATEK\FatekProgramOverTcp.cs" />
+    <Compile Include="Hsl\Profinet\FATEK\FatekProgramServer.cs" />
+    <Compile Include="Hsl\Profinet\FATEK\Helper\FatekProgramHelper.cs" />
     <Compile Include="Hsl\Profinet\Freedom\FreedomSerial.cs" />
     <Compile Include="Hsl\Profinet\Freedom\FreedomTcpNet.cs" />
     <Compile Include="Hsl\Profinet\Freedom\FreedomUdpNet.cs" />
+    <Compile Include="Hsl\Profinet\Fuji\FujiCommandSettingType.cs" />
+    <Compile Include="Hsl\Profinet\Fuji\FujiCommandSettingTypeServer.cs" />
     <Compile Include="Hsl\Profinet\Fuji\FujiSPB.cs" />
     <Compile Include="Hsl\Profinet\Fuji\FujiSPBHelper.cs" />
     <Compile Include="Hsl\Profinet\Fuji\FujiSPBOverTcp.cs" />
@@ -443,28 +526,32 @@
     <Compile Include="Hsl\Profinet\LSIS\Helper\XGBCnetHelper.cs" />
     <Compile Include="Hsl\Profinet\LSIS\LSCpuInfo.cs" />
     <Compile Include="Hsl\Profinet\LSIS\LSisServer.cs" />
-    <Compile Include="Hsl\Profinet\LSIS\LS_Bus.cs" />
     <Compile Include="Hsl\Profinet\LSIS\XGBCnet.cs" />
     <Compile Include="Hsl\Profinet\LSIS\XGBCnetOverTcp.cs" />
     <Compile Include="Hsl\Profinet\LSIS\XGBFastEnet.cs" />
     <Compile Include="Hsl\Profinet\LSIS\XGKCnet.cs" />
     <Compile Include="Hsl\Profinet\LSIS\XGKFastEnet.cs" />
     <Compile Include="Hsl\Profinet\Melsec\Helper\IReadWriteA3C.cs" />
+    <Compile Include="Hsl\Profinet\Melsec\Helper\IReadWriteFxLinks.cs" />
     <Compile Include="Hsl\Profinet\Melsec\Helper\IReadWriteMc.cs" />
     <Compile Include="Hsl\Profinet\Melsec\Helper\McAsciiHelper.cs" />
     <Compile Include="Hsl\Profinet\Melsec\Helper\McBinaryHelper.cs" />
     <Compile Include="Hsl\Profinet\Melsec\Helper\McHelper.cs" />
     <Compile Include="Hsl\Profinet\Melsec\Helper\McType.cs" />
     <Compile Include="Hsl\Profinet\Melsec\Helper\MelsecA3CNetHelper.cs" />
+    <Compile Include="Hsl\Profinet\Melsec\Helper\MelsecFxLinksHelper.cs" />
+    <Compile Include="Hsl\Profinet\Melsec\Helper\MelsecFxSerialHelper.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecA1EAsciiNet.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecA1EDataType.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecA1ENet.cs" />
+    <Compile Include="Hsl\Profinet\Melsec\MelsecA1EServer.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecA3CNet.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecA3CNetOverTcp.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecA3CServer.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecCipNet.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecFxLinks.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecFxLinksOverTcp.cs" />
+    <Compile Include="Hsl\Profinet\Melsec\MelsecFxLinksServer.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecFxSerial.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecFxSerialOverTcp.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecHelper.cs" />
@@ -477,7 +564,9 @@
     <Compile Include="Hsl\Profinet\Melsec\MelsecMcUdp.cs" />
     <Compile Include="Hsl\Profinet\Melsec\MelsecMcUdpServer.cs" />
     <Compile Include="Hsl\Profinet\Melsec\NamespaceDoc.cs" />
-    <Compile Include="Hsl\Profinet\Omron\InterFace\IHostLink.cs" />
+    <Compile Include="Hsl\Profinet\Omron\Helper\IHostLink.cs" />
+    <Compile Include="Hsl\Profinet\Omron\Helper\OmronHostLinkCModeHelper.cs" />
+    <Compile Include="Hsl\Profinet\Omron\Helper\OmronHostLinkHelper.cs" />
     <Compile Include="Hsl\Profinet\Omron\OmronCipNet.cs" />
     <Compile Include="Hsl\Profinet\Omron\OmronConnectedCipNet.cs" />
     <Compile Include="Hsl\Profinet\Omron\OmronCpuUnitData.cs" />
@@ -491,15 +580,26 @@
     <Compile Include="Hsl\Profinet\Omron\OmronHostLink.cs" />
     <Compile Include="Hsl\Profinet\Omron\OmronHostLinkCMode.cs" />
     <Compile Include="Hsl\Profinet\Omron\OmronHostLinkCModeOverTcp.cs" />
+    <Compile Include="Hsl\Profinet\Omron\OmronHostLinkCModeServer.cs" />
     <Compile Include="Hsl\Profinet\Omron\OmronHostLinkOverTcp.cs" />
     <Compile Include="Hsl\Profinet\Omron\OmronHostLinkServer.cs" />
+    <Compile Include="Hsl\Profinet\OpenProtocol\AlarmMessages.cs" />
+    <Compile Include="Hsl\Profinet\OpenProtocol\JobMessage.cs" />
+    <Compile Include="Hsl\Profinet\OpenProtocol\OpenEventArgs.cs" />
     <Compile Include="Hsl\Profinet\OpenProtocol\OpenProtocolNet.cs" />
+    <Compile Include="Hsl\Profinet\OpenProtocol\ParameterSetMessages.cs" />
+    <Compile Include="Hsl\Profinet\OpenProtocol\TighteningResultMessages.cs" />
+    <Compile Include="Hsl\Profinet\OpenProtocol\TimeMessages.cs" />
+    <Compile Include="Hsl\Profinet\OpenProtocol\ToolMessages.cs" />
+    <Compile Include="Hsl\Profinet\Panasonic\Helper\MewtocolHelper.cs" />
     <Compile Include="Hsl\Profinet\Panasonic\PanasonicHelper.cs" />
     <Compile Include="Hsl\Profinet\Panasonic\PanasonicMcNet.cs" />
     <Compile Include="Hsl\Profinet\Panasonic\PanasonicMewtocol.cs" />
     <Compile Include="Hsl\Profinet\Panasonic\PanasonicMewtocolOverTcp.cs" />
     <Compile Include="Hsl\Profinet\Panasonic\PanasonicMewtocolServer.cs" />
     <Compile Include="Hsl\Profinet\Sick\SickIcrTcpServer.cs" />
+    <Compile Include="Hsl\Profinet\Siemens\Helper\SiemensPPIHelper.cs" />
+    <Compile Include="Hsl\Profinet\Siemens\Helper\SiemensS7Helper.cs" />
     <Compile Include="Hsl\Profinet\Siemens\SiemensDateTime.cs" />
     <Compile Include="Hsl\Profinet\Siemens\SiemensFetchWriteNet.cs" />
     <Compile Include="Hsl\Profinet\Siemens\SiemensFetchWriteServer.cs" />
@@ -507,31 +607,49 @@
     <Compile Include="Hsl\Profinet\Siemens\SiemensPLCS.cs" />
     <Compile Include="Hsl\Profinet\Siemens\SiemensPPI.cs" />
     <Compile Include="Hsl\Profinet\Siemens\SiemensPPIOverTcp.cs" />
+    <Compile Include="Hsl\Profinet\Siemens\SiemensPPIServer.cs" />
     <Compile Include="Hsl\Profinet\Siemens\SiemensS7Net.cs" />
     <Compile Include="Hsl\Profinet\Siemens\SiemensS7Server.cs" />
     <Compile Include="Hsl\Profinet\Siemens\SiemensWebApi.cs" />
     <Compile Include="Hsl\Profinet\Toledo\ToledoSerial.cs" />
     <Compile Include="Hsl\Profinet\Toledo\ToledoStandardData.cs" />
     <Compile Include="Hsl\Profinet\Toledo\ToledoTcpServer.cs" />
+    <Compile Include="Hsl\Profinet\Turck\ReaderNet.cs" />
+    <Compile Include="Hsl\Profinet\Turck\ReaderServer.cs" />
+    <Compile Include="Hsl\Profinet\Vigor\Helper\VigorHelper.cs" />
+    <Compile Include="Hsl\Profinet\Vigor\Helper\VigorVsHelper.cs" />
+    <Compile Include="Hsl\Profinet\Vigor\VigorSerial.cs" />
+    <Compile Include="Hsl\Profinet\Vigor\VigorSerialOverTcp.cs" />
+    <Compile Include="Hsl\Profinet\Vigor\VigorServer.cs" />
     <Compile Include="Hsl\Profinet\XINJE\XinJEHelper.cs" />
+    <Compile Include="Hsl\Profinet\XINJE\XinJEInternalNet.cs" />
     <Compile Include="Hsl\Profinet\XINJE\XinJESerial.cs" />
     <Compile Include="Hsl\Profinet\XINJE\XinJESerialOverTcp.cs" />
     <Compile Include="Hsl\Profinet\XINJE\XinJESeries.cs" />
+    <Compile Include="Hsl\Profinet\XINJE\XinJEServer.cs" />
     <Compile Include="Hsl\Profinet\XINJE\XinJETcpNet.cs" />
     <Compile Include="Hsl\Profinet\Yamatake\DigitronCPL.cs" />
     <Compile Include="Hsl\Profinet\Yamatake\DigitronCPLOverTcp.cs" />
     <Compile Include="Hsl\Profinet\Yamatake\DigitronCPLServer.cs" />
     <Compile Include="Hsl\Profinet\Yamatake\Helper\DigitronCPLHelper.cs" />
+    <Compile Include="Hsl\Profinet\YASKAWA\Helper\IMemobus.cs" />
+    <Compile Include="Hsl\Profinet\YASKAWA\Helper\MemobusHelper.cs" />
     <Compile Include="Hsl\Profinet\YASKAWA\MemobusTcpNet.cs" />
+    <Compile Include="Hsl\Profinet\YASKAWA\MemobusTcpServer.cs" />
+    <Compile Include="Hsl\Profinet\YASKAWA\MemobusUdpNet.cs" />
     <Compile Include="Hsl\Profinet\Yokogawa\YokogawaLinkHelper.cs" />
     <Compile Include="Hsl\Profinet\Yokogawa\YokogawaLinkServer.cs" />
     <Compile Include="Hsl\Profinet\Yokogawa\YokogawaLinkTcp.cs" />
     <Compile Include="Hsl\Profinet\Yokogawa\YokogawaSystemInfo.cs" />
+    <Compile Include="Hsl\Properties\AssemblyInfo.cs" />
+    <Compile Include="Hsl\Properties\Resources.Designer.cs" />
     <Compile Include="Hsl\Robot\ABB\ABBWebApiClient.cs" />
     <Compile Include="Hsl\Robot\ABB\ABBWebApiServer.cs" />
     <Compile Include="Hsl\Robot\EFORT\EfortData.cs" />
     <Compile Include="Hsl\Robot\EFORT\ER7BC10.cs" />
     <Compile Include="Hsl\Robot\EFORT\ER7BC10Previous.cs" />
+    <Compile Include="Hsl\Robot\Estun\EstunData.cs" />
+    <Compile Include="Hsl\Robot\Estun\EstunTcpNet.cs" />
     <Compile Include="Hsl\Robot\FANUC\FanucAlarm.cs" />
     <Compile Include="Hsl\Robot\FANUC\FanucData.cs" />
     <Compile Include="Hsl\Robot\FANUC\FanucHelper.cs" />
@@ -544,7 +662,27 @@
     <Compile Include="Hsl\Robot\KUKA\KukaAvarProxyNet.cs" />
     <Compile Include="Hsl\Robot\KUKA\KukaTcpNet.cs" />
     <Compile Include="Hsl\Robot\YAMAHA\YamahaRCX.cs" />
+    <Compile Include="Hsl\Robot\YASKAWA\Helper\YRCHelper.cs" />
+    <Compile Include="Hsl\Robot\YASKAWA\Helper\YRCHighEthernetHelper.cs" />
     <Compile Include="Hsl\Robot\YASKAWA\YRC1000TcpNet.cs" />
+    <Compile Include="Hsl\Robot\YASKAWA\YRCAlarmItem.cs" />
+    <Compile Include="Hsl\Robot\YASKAWA\YRCHighEthernet.cs" />
+    <Compile Include="Hsl\Robot\YASKAWA\YRCRobotData.cs" />
+    <Compile Include="Hsl\Robot\YASKAWA\YRCType.cs" />
+    <Compile Include="Hsl\Secs\Gem.cs" />
+    <Compile Include="Hsl\Secs\Helper\Secs1.cs" />
+    <Compile Include="Hsl\Secs\Helper\Secs2.cs" />
+    <Compile Include="Hsl\Secs\Message\SecsHsmsMessage.cs" />
+    <Compile Include="Hsl\Secs\SecsGemSerial.cs" />
+    <Compile Include="Hsl\Secs\SecsHsms.cs" />
+    <Compile Include="Hsl\Secs\SecsHsmsServer.cs" />
+    <Compile Include="Hsl\Secs\Types\ISecs.cs" />
+    <Compile Include="Hsl\Secs\Types\OnlineData.cs" />
+    <Compile Include="Hsl\Secs\Types\SecsItemType.cs" />
+    <Compile Include="Hsl\Secs\Types\SecsMessage.cs" />
+    <Compile Include="Hsl\Secs\Types\SecsValue.cs" />
+    <Compile Include="Hsl\Secs\Types\TypeHelper.cs" />
+    <Compile Include="Hsl\Secs\Types\VariableName.cs" />
     <Compile Include="Hsl\Serial\CheckType.cs" />
     <Compile Include="Hsl\Serial\CRCSupport.cs" />
     <Compile Include="Hsl\Serial\SerialBase.cs" />
@@ -579,15 +717,22 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Hsl\packages.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
+    <EmbeddedResource Include="Hsl\BasicFramework\FormAuthorize.resx">
+      <DependentUpon>FormAuthorize.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Hsl\BasicFramework\FormPopup.resx">
       <DependentUpon>FormPopup.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Hsl\BasicFramework\FormPortraitSelect.resx">
       <DependentUpon>FormPortraitSelect.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Hsl\BasicFramework\FormSupport.resx">
+      <DependentUpon>FormSupport.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Hsl\Controls\UserBottle.resx">
       <DependentUpon>UserBottle.cs</DependentUpon>
@@ -628,6 +773,7 @@
     <EmbeddedResource Include="Hsl\LogNet\View\LogNetAnalysisControl.resx">
       <DependentUpon>LogNetAnalysisControl.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Hsl\Properties\Resources.resx" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Hsl\imgaes\abstr1.png" />

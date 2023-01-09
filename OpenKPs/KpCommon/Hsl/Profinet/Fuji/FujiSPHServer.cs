@@ -139,53 +139,13 @@ namespace HslCommunication.Profinet.Fuji
 		#region NetServer Override
 
 		/// <inheritdoc/>
-		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
+		protected override INetMessage GetNewNetMessage( ) => new FujiSPHMessage( );
+
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			// 开始接收数据信息
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-
-			if (socket.BeginReceiveResult( SocketAsyncCallBack, appSession ).IsSuccess)
-				AddClient( appSession );
-			else
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-
-		}
-
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
-		{
-			if (ar.AsyncState is AppSession session)
-			{
-				if (!session.WorkSocket.EndReceiveResult( ar ).IsSuccess) { RemoveClient( session ); return; }
-#if NET20 || NET35
-				OperateResult<byte[]> read1 = ReceiveByMessage( session.WorkSocket, 2000, new FujiSPHMessage( ) );
-#else
-				OperateResult<byte[]> read1 = await ReceiveByMessageAsync( session.WorkSocket, 2000, new FujiSPHMessage( ) );
-#endif
-				if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-				if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-				if (read1.Content[0] != 0xFB || read1.Content[1] != 0x80) { RemoveClient( session ); return; }
-
-				LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{read1.Content.ToHexString( ' ' )}" );
-
-				byte[] back = ReadFromSPBCore( read1.Content );
-
-				if (back == null) { RemoveClient( session ); return; }
-				if (!Send( session.WorkSocket, back ).IsSuccess) { RemoveClient( session ); return; }
-
-				LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{back.ToHexString( ' ' )}" );
-
-				session.HeartTime = DateTime.Now;
-				RaiseDataReceived( session, read1.Content );
-				if (!session.WorkSocket.BeginReceiveResult( SocketAsyncCallBack, session ).IsSuccess) RemoveClient( session );
-			}
+			if (receive[0] != 0xFB || receive[1] != 0x80) return new OperateResult<byte[]>( "Command must start with 0xfb 0x80" );
+			return OperateResult.CreateSuccessResult( ReadFromSPBCore( receive ) );
 		}
 
 		#endregion

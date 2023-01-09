@@ -24,10 +24,10 @@ namespace HslCommunication.Core.Net
 		/// 实例化一个默认的对象<br />
 		/// Instantiate a default object
 		/// </summary>
-		public NetworkServerBase()
+		public NetworkServerBase( )
 		{
-			IsStarted = false;
-			Port = 0;
+			IsStarted          = false;
+			Port               = 0;                                                        // 初始化端口号为0
 		}
 
 		#endregion
@@ -46,6 +46,25 @@ namespace HslCommunication.Core.Net
 		/// </summary>
 		/// <remarks>需要在服务器启动之前设置为有效</remarks>
 		public int Port { get; set; }
+
+		/// <summary>
+		/// 获取或设置服务器是否支持IPv6的地址协议信息<br />
+		/// Get or set whether the server supports IPv6 address protocol information
+		/// </summary>
+		/// <remarks>
+		/// 默认为 <c>False</c>，也就是不启动
+		/// </remarks>
+		public bool EnableIPv6 { get; set; }
+
+		/// <summary>
+		/// 获取或设置客户端的Socket的心跳时间信息，这个是Socket底层自动实现的心跳包，不基于协议层实现。默认小于0，不开启心跳检测，如果需要开启，设置 60_000 比较合适，单位毫秒<br />
+		/// Get or set the heartbeat time information of the Socket of the client. This is the heartbeat packet automatically implemented by the bottom layer of the Socket, not based on the protocol layer. 
+		/// The default value is less than 0, and heartbeat detection is not enabled. If you need to enable it, it is more appropriate to set 60_000, in milliseconds.
+		/// </summary>
+		/// <remarks>
+		/// 经测试，在linux上，基于.net core3.1的程序运行时，设置了这个值是无效的。
+		/// </remarks>
+		public int SocketKeepAliveTime { get; set; } = -1;
 
 		#endregion
 
@@ -66,6 +85,7 @@ namespace HslCommunication.Core.Net
 				{
 					// 在原始套接字上调用EndAccept方法，返回新的套接字
 					client = server_socket.EndAccept( iar );
+					if (SocketKeepAliveTime > 0) client.SetKeepAlive( SocketKeepAliveTime, SocketKeepAliveTime );
 					ThreadPool.QueueUserWorkItem( new WaitCallback( ThreadPoolLogin ), client );
 				}
 				catch (ObjectDisposedException)
@@ -162,9 +182,16 @@ namespace HslCommunication.Core.Net
 			if (!IsStarted)
 			{
 				StartInitialization( );
-
-				CoreSocket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp );
-				CoreSocket.Bind( new IPEndPoint( IPAddress.Any, port ) );
+				if (!EnableIPv6)
+				{
+					CoreSocket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp );
+					CoreSocket.Bind( new IPEndPoint( IPAddress.Any, port ) );
+				}
+				else
+				{
+					CoreSocket = new Socket( AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp );
+					CoreSocket.Bind( new IPEndPoint( IPAddress.IPv6Any, port ) );
+				}
 				CoreSocket.Listen( 500 );
 				CoreSocket.BeginAccept( new AsyncCallback( AsyncAcceptCallback ), CoreSocket );
 				IsStarted = true;
@@ -204,6 +231,28 @@ namespace HslCommunication.Core.Net
 
 		#region Create Alien Connection
 
+		private byte[] CreateHslAlienMessage( string dtuId, string password )
+		{
+			if (dtuId.Length > 11) dtuId = dtuId.Substring( 11 );
+			byte[] sendBytes = new byte[28];
+			sendBytes[0] = 0x48;
+			sendBytes[1] = 0x73;
+			sendBytes[2] = 0x6E;
+			sendBytes[3] = 0x00;
+			sendBytes[4] = 0x17;
+
+			if (dtuId.Length > 11) dtuId = dtuId.Substring( 0, 11 );
+			Encoding.ASCII.GetBytes( dtuId ).CopyTo( sendBytes, 5 );
+
+			if (!string.IsNullOrEmpty( password ))
+			{
+				if (password.Length > 6) password = password.Substring( 6 );
+				Encoding.ASCII.GetBytes( password ).CopyTo( sendBytes, 16 );
+			}
+
+			return sendBytes;
+		}
+
 		/**************************************************************************************************
 		 * 
 		 *    此处实现了连接Hsl异形客户端的协议，特殊的协议实现定制请联系作者
@@ -218,18 +267,12 @@ namespace HslCommunication.Core.Net
 		/// <param name="ipAddress">Ip地址</param>
 		/// <param name="port">端口号</param>
 		/// <param name="dtuId">设备唯一ID号，最长11</param>
+		/// <param name="password">密码信息</param>
 		/// <returns>是否成功连接</returns>
-		public OperateResult ConnectHslAlientClient( string ipAddress, int port ,string dtuId)
+		public OperateResult ConnectHslAlientClient( string ipAddress, int port ,string dtuId, string password = "")
 		{
-			if (dtuId.Length > 11) dtuId = dtuId.Substring( 11 );
-			byte[] sendBytes = new byte[28];
-			sendBytes[0] = 0x48;
-			sendBytes[1] = 0x73;
-			sendBytes[2] = 0x6E;
-			sendBytes[3] = 0x00;
-			sendBytes[4] = 0x17;
+			byte[] sendBytes = CreateHslAlienMessage( dtuId, password );
 
-			Encoding.ASCII.GetBytes( dtuId ).CopyTo( sendBytes, 5 );
 			// 创建连接
 			OperateResult<Socket> connect = CreateSocketAndConnect( ipAddress, port, 10000 );
 			if (!connect.IsSuccess) return connect;
@@ -266,18 +309,10 @@ namespace HslCommunication.Core.Net
 		}
 
 #if !NET35 && !NET20
-		/// <inheritdoc cref="ConnectHslAlientClient(string, int, string)"/>
-		public async Task<OperateResult> ConnectHslAlientClientAsync( string ipAddress, int port, string dtuId )
+		/// <inheritdoc cref="ConnectHslAlientClient(string, int, string, string)"/>
+		public async Task<OperateResult> ConnectHslAlientClientAsync( string ipAddress, int port, string dtuId, string password = "" )
 		{
-			if (dtuId.Length > 11) dtuId = dtuId.Substring( 11 );
-			byte[] sendBytes = new byte[28];
-			sendBytes[0] = 0x48;
-			sendBytes[1] = 0x73;
-			sendBytes[2] = 0x6E;
-			sendBytes[3] = 0x00;
-			sendBytes[4] = 0x17;
-
-			Encoding.ASCII.GetBytes( dtuId ).CopyTo( sendBytes, 5 );
+			byte[] sendBytes = CreateHslAlienMessage( dtuId, password );
 
 			// 创建连接
 			OperateResult<Socket> connect = await CreateSocketAndConnectAsync( ipAddress, port, 10000 );

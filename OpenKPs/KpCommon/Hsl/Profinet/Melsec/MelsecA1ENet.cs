@@ -21,6 +21,9 @@ namespace HslCommunication.Profinet.Melsec
 	/// <list type="number">
 	/// <item>FX3U(C) PLC   测试人sandy_liao</item>
 	/// </list>
+	/// <note type="important">本通讯类由CKernal推送，感谢</note>
+	/// </remarks>
+	/// <example>
 	/// 数据地址支持的格式如下：
 	/// <list type="table">
 	///   <listheader>
@@ -169,8 +172,7 @@ namespace HslCommunication.Profinet.Melsec
 	///   </item>
 	/// </list>
 	/// <see cref="ReadBool(string, ushort)"/> 方法一次读取的最多点数是256点。
-	/// <note type="important">本通讯类由CKernal推送，感谢</note>
-	/// </remarks>
+	/// </example>
 	public class MelsecA1ENet : NetworkDeviceBase
 	{
 		#region Constructor
@@ -191,12 +193,10 @@ namespace HslCommunication.Profinet.Melsec
 		/// </summary>
 		/// <param name="ipAddress">PLC的Ip地址</param>
 		/// <param name="port">PLC的端口</param>
-		public MelsecA1ENet( string ipAddress, int port )
+		public MelsecA1ENet( string ipAddress, int port ) : this( )
 		{
-			this.WordLength    = 1;
 			this.IpAddress     = ipAddress;
 			this.Port          = port;
-			this.ByteTransform = new RegularByteTransform( );
 		}
 
 		/// <inheritdoc/>
@@ -224,16 +224,24 @@ namespace HslCommunication.Profinet.Melsec
 			var command = BuildReadCommand(address, length, false, PLCNumber);
 			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>(command);
 
-			// 核心交互
-			var read = ReadFromCoreServer(command.Content);
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>(read);
+			List<byte> array = new List<byte>( );
+			for (int i = 0; i < command.Content.Count; i++)
+			{
+				// 核心交互
+				var read = ReadFromCoreServer( command.Content[i] );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
 
-			// 错误代码验证
-			OperateResult check = CheckResponseLegal( read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
+				// 错误代码验证
+				OperateResult check = CheckResponseLegal( read.Content );
+				if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
 
-			// 数据解析，需要传入是否使用位的参数
-			return ExtractActualData(read.Content, false);
+				// 数据解析，需要传入是否使用位的参数
+				OperateResult<byte[]> extra = ExtractActualData( read.Content, false );
+				if (!extra.IsSuccess) return extra;
+
+				array.AddRange( extra.Content );
+			}
+			return OperateResult.CreateSuccessResult( array.ToArray( ) );
 		}
 
 		/// <inheritdoc/>
@@ -267,16 +275,24 @@ namespace HslCommunication.Profinet.Melsec
 			var command = BuildReadCommand( address, length, false, PLCNumber );
 			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
 
-			// 核心交互
-			var read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+			List<byte> array = new List<byte>( );
+			for (int i = 0; i < command.Content.Count; i++)
+			{
+				// 核心交互
+				var read = await ReadFromCoreServerAsync( command.Content[i] );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
 
-			// 错误代码验证
-			OperateResult check = CheckResponseLegal( read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
+				// 错误代码验证
+				OperateResult check = CheckResponseLegal( read.Content );
+				if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
 
-			// 数据解析，需要传入是否使用位的参数
-			return ExtractActualData( read.Content, false );
+				// 数据解析，需要传入是否使用位的参数
+				OperateResult<byte[]> extra = ExtractActualData( read.Content, false );
+				if (!extra.IsSuccess) return extra;
+
+				array.AddRange( extra.Content );
+			}
+			return OperateResult.CreateSuccessResult( array.ToArray( ) );
 		}
 
 		/// <inheritdoc/>
@@ -320,20 +336,26 @@ namespace HslCommunication.Profinet.Melsec
 			var command = BuildReadCommand( address, length, true, PLCNumber );
 			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
 
-			// 核心交互
-			var read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
+			List<byte> array = new List<byte>( );
+			for (int i = 0; i < command.Content.Count; i++)
+			{
+				// 核心交互
+				var read = ReadFromCoreServer( command.Content[i] );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
 
-			// 错误代码验证
-			OperateResult check = CheckResponseLegal( read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( check );
+				// 错误代码验证
+				OperateResult check = CheckResponseLegal( read.Content );
+				if (!check.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( check );
 
-			// 数据解析，需要传入是否使用位的参数
-			var extract = ExtractActualData( read.Content, true );
-			if (!extract.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( extract );
+				// 数据解析，需要传入是否使用位的参数
+				var extract = ExtractActualData( read.Content, true );
+				if (!extract.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( extract );
 
-			// 转化bool数组
-			return OperateResult.CreateSuccessResult( extract.Content.Select( m => m == 0x01 ).Take( length ).ToArray( ) );
+				// 转化bool数组
+				array.AddRange( extract.Content );
+			}
+
+			return OperateResult.CreateSuccessResult( array.Select( m => m == 0x01 ).Take( length ).ToArray( ) );
 		}
 
 		/// <summary>
@@ -370,20 +392,26 @@ namespace HslCommunication.Profinet.Melsec
 			var command = BuildReadCommand( address, length, true, PLCNumber );
 			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
 
-			// 核心交互
-			var read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
+			List<byte> array = new List<byte>( );
+			for (int i = 0; i < command.Content.Count; i++)
+			{
+				// 核心交互
+				var read = await ReadFromCoreServerAsync( command.Content[i] );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
 
-			// 错误代码验证
-			OperateResult check = CheckResponseLegal( read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( check );
+				// 错误代码验证
+				OperateResult check = CheckResponseLegal( read.Content );
+				if (!check.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( check );
 
-			// 数据解析，需要传入是否使用位的参数
-			var extract = ExtractActualData( read.Content, true );
-			if (!extract.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( extract );
+				// 数据解析，需要传入是否使用位的参数
+				var extract = ExtractActualData( read.Content, true );
+				if (!extract.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( extract );
 
-			// 转化bool数组
-			return OperateResult.CreateSuccessResult( extract.Content.Select( m => m == 0x01 ).Take( length ).ToArray( ) );
+				// 转化bool数组
+				array.AddRange( extract.Content );
+			}
+
+			return OperateResult.CreateSuccessResult( array.Select( m => m == 0x01 ).Take( length ).ToArray( ) );
 		}
 
 		/// <inheritdoc cref="Write(string, bool[])"/>
@@ -420,30 +448,38 @@ namespace HslCommunication.Profinet.Melsec
 		/// <param name="isBit">指示是否按照位成批的读出</param>
 		/// <param name="plcNumber">PLC编号</param>
 		/// <returns>带有成功标志的指令数据</returns>
-		public static OperateResult<byte[]> BuildReadCommand(string address, ushort length, bool isBit, byte plcNumber )
+		public static OperateResult<List<byte[]>> BuildReadCommand(string address, ushort length, bool isBit, byte plcNumber )
 		{
 			var analysis = MelsecHelper.McA1EAnalysisAddress(address);
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>(analysis);
+			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<List<byte[]>>(analysis);
 
 			// 默认信息----注意：高低字节交错
 			// byte subtitle = analysis.Content1.DataType == 0x01 ? (byte)0x00 : (byte)0x01;
 			byte subtitle = isBit ? (byte)0x00 : (byte)0x01;
+			int[] splits = BasicFramework.SoftBasic.SplitIntegerToArray( length, isBit ? 256 : 64 );
+			List<byte[]> array = new List<byte[]>( );
 
-			byte[] _PLCCommand = new byte[12];
-			_PLCCommand[ 0] = subtitle;                                           // 副标题
-			_PLCCommand[ 1] = plcNumber;                                          // PLC号
-			_PLCCommand[ 2] = 0x0A;                                               // CPU监视定时器（L）这里设置为0x00,0x0A，等待CPU返回的时间为10*250ms=2.5秒
-			_PLCCommand[ 3] = 0x00;                                               // CPU监视定时器（H）
-			_PLCCommand[ 4] = BitConverter.GetBytes( analysis.Content2 )[0];      // 起始软元件（开始读取的地址）
-			_PLCCommand[ 5] = BitConverter.GetBytes( analysis.Content2 )[1];
-			_PLCCommand[ 6] = BitConverter.GetBytes( analysis.Content2 )[2];
-			_PLCCommand[ 7] = BitConverter.GetBytes( analysis.Content2 )[3];
-			_PLCCommand[ 8] = analysis.Content1.DataCode[1];                        // 软元件代码（L）
-			_PLCCommand[ 9] = analysis.Content1.DataCode[0];                        // 软元件代码（H）
-			_PLCCommand[10] = (byte)(length % 256);                                 // 软元件点数
-			_PLCCommand[11] = 0x00;
+			for (int i = 0; i < splits.Length; i++)
+			{
+				byte[] _PLCCommand = new byte[12];
+				_PLCCommand[ 0] = subtitle;                                                  // 副标题
+				_PLCCommand[ 1] = plcNumber;                                                 // PLC号
+				_PLCCommand[ 2] = 0x0A;                                                      // CPU监视定时器（L）这里设置为0x00,0x0A，等待CPU返回的时间为10*250ms=2.5秒
+				_PLCCommand[ 3] = 0x00;                                                      // CPU监视定时器（H）
+				_PLCCommand[ 4] = BitConverter.GetBytes( analysis.Content2 )[0];             // 起始软元件（开始读取的地址）
+				_PLCCommand[ 5] = BitConverter.GetBytes( analysis.Content2 )[1];
+				_PLCCommand[ 6] = BitConverter.GetBytes( analysis.Content2 )[2];
+				_PLCCommand[ 7] = BitConverter.GetBytes( analysis.Content2 )[3];
+				_PLCCommand[ 8] = BitConverter.GetBytes( analysis.Content1.DataCode )[0];    // 软元件代码（L）
+				_PLCCommand[ 9] = BitConverter.GetBytes( analysis.Content1.DataCode )[1];    // 软元件代码（H）
+				_PLCCommand[10] = BitConverter.GetBytes( splits[i] )[0];                     // 软元件点数
+				_PLCCommand[11] = BitConverter.GetBytes( splits[i] )[1];
 
-			return OperateResult.CreateSuccessResult(_PLCCommand);
+				array.Add( _PLCCommand );
+				analysis.Content2 += splits[i];
+			}
+
+			return OperateResult.CreateSuccessResult( array );
 		}
 
 		/// <summary>
@@ -459,7 +495,7 @@ namespace HslCommunication.Profinet.Melsec
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
 			byte[] _PLCCommand = new byte[12 + value.Length];
-			_PLCCommand[ 0] = 03;                                                 // 副标题，字单位成批写入
+			_PLCCommand[ 0] = 0x03;                                               // 副标题，字单位成批写入
 			_PLCCommand[ 1] = plcNumber;                                          // PLC号
 			_PLCCommand[ 2] = 0x0A;                                               // CPU监视定时器（L）这里设置为0x00,0x0A，等待CPU返回的时间为10*250ms=2.5秒
 			_PLCCommand[ 3] = 0x00;                                               // CPU监视定时器（H）
@@ -467,8 +503,8 @@ namespace HslCommunication.Profinet.Melsec
 			_PLCCommand[ 5] = BitConverter.GetBytes( analysis.Content2 )[1];
 			_PLCCommand[ 6] = BitConverter.GetBytes( analysis.Content2 )[2];
 			_PLCCommand[ 7] = BitConverter.GetBytes( analysis.Content2 )[3];
-			_PLCCommand[ 8] = analysis.Content1.DataCode[1];                      // 软元件代码（L）
-			_PLCCommand[ 9] = analysis.Content1.DataCode[0];                      // 软元件代码（H）
+			_PLCCommand[ 8] = BitConverter.GetBytes( analysis.Content1.DataCode )[0];    // 软元件代码（L）
+			_PLCCommand[ 9] = BitConverter.GetBytes( analysis.Content1.DataCode )[1];    // 软元件代码（H）
 			_PLCCommand[10] = BitConverter.GetBytes( value.Length / 2 )[0];       // 软元件点数
 			_PLCCommand[11] = BitConverter.GetBytes( value.Length / 2 )[1];
 			Array.Copy( value, 0, _PLCCommand, 12, value.Length );                  // 将具体的要写入的数据附加到写入命令后面
@@ -497,8 +533,8 @@ namespace HslCommunication.Profinet.Melsec
 			_PLCCommand[ 5] = BitConverter.GetBytes( analysis.Content2 )[1];
 			_PLCCommand[ 6] = BitConverter.GetBytes( analysis.Content2 )[2];
 			_PLCCommand[ 7] = BitConverter.GetBytes( analysis.Content2 )[3];
-			_PLCCommand[ 8] = analysis.Content1.DataCode[1];                      // 软元件代码（L）
-			_PLCCommand[ 9] = analysis.Content1.DataCode[0];                      // 软元件代码（H）
+			_PLCCommand[ 8] = BitConverter.GetBytes( analysis.Content1.DataCode )[0];    // 软元件代码（L）
+			_PLCCommand[ 9] = BitConverter.GetBytes( analysis.Content1.DataCode )[1];    // 软元件代码（H）
 			_PLCCommand[10] = BitConverter.GetBytes( value.Length )[0];           // 软元件点数
 			_PLCCommand[11] = BitConverter.GetBytes( value.Length )[1];
 			Array.Copy( buffer, 0, _PLCCommand, 12, buffer.Length );              // 将具体的要写入的数据附加到写入命令后面

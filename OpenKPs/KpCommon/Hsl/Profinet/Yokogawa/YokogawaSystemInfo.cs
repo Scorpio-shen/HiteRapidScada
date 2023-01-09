@@ -43,7 +43,7 @@ namespace HslCommunication.Profinet.Yokogawa
 		/// </summary>
 		/// <param name="content">原始的数据信息</param>
 		/// <returns>是否解析成功的结果对象</returns>
-		public static OperateResult<YokogawaSystemInfo> Prase( byte[] content )
+		public static OperateResult<YokogawaSystemInfo> Parse( byte[] content )
 		{
 			try
 			{
@@ -60,7 +60,7 @@ namespace HslCommunication.Profinet.Yokogawa
 			}
 			catch(Exception ex)
 			{
-				return new OperateResult<YokogawaSystemInfo>( "Prase YokogawaSystemInfo failed: " + ex.Message + Environment.NewLine +
+				return new OperateResult<YokogawaSystemInfo>( "Parse YokogawaSystemInfo failed: " + ex.Message + Environment.NewLine +
 					"Source: " + content.ToHexString( ' ' ) );
 			}
 		}

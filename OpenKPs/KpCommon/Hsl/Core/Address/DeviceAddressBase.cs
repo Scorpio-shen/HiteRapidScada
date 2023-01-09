@@ -29,5 +29,6 @@ namespace HslCommunication.Core.Address
 
 		/// <inheritdoc/>
 		public override string ToString( ) => Address.ToString( );
+
 	}
 }

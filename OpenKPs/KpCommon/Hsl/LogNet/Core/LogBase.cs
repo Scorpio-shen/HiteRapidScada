@@ -54,6 +54,7 @@ namespace HslCommunication.LogNet
 		private int m_SaveStatus = 0;                                                          // 存储状态
 		private List<string> filtrateKeyword;                                                  // 需要过滤的存储对象
 		private SimpleHybirdLock filtrateLock;                                                 // 过滤列表的锁
+		private string lastLogSaveFileName = string.Empty;                                     // 上一次存储的文件的名字
 
 		#endregion
 
@@ -76,6 +77,15 @@ namespace HslCommunication.LogNet
 
 		/// <inheritdoc cref="ILogNet.ConsoleOutput"/>
 		public bool ConsoleOutput { get; set; }
+
+		/// <inheritdoc cref="ILogNet.LogThreadID"/>
+		public bool LogThreadID { get; set; } = true;
+
+		/// <inheritdoc cref="ILogNet.LogStxAsciiCode"/>
+		public bool LogStxAsciiCode { get; set; } = true;
+
+		/// <inheritdoc cref="ILogNet.HourDeviation"/>
+		public int HourDeviation { get; set; } = 0;
 
 		#endregion
 
@@ -232,18 +242,16 @@ namespace HslCommunication.LogNet
 			{
 				// 需要记录数据
 				HslMessageItem item = GetHslMessageItem( degree, keyword, text );
-				AddItemToCache( item );
+				AddItemToCache( new HslMessageItem[] { item } );
 			}
 		}
 
-		private void AddItemToCache( HslMessageItem item )
+		private void AddItemToCache( HslMessageItem[] items )
 		{
 			m_simpleHybirdLock.Enter( );
-
-			m_WaitForSave.Enqueue( item );
-
+			foreach (HslMessageItem item in items)
+				m_WaitForSave.Enqueue( item );
 			m_simpleHybirdLock.Leave( );
-
 			StartSaveFile( );
 		}
 
@@ -251,8 +259,7 @@ namespace HslCommunication.LogNet
 		{
 			if (Interlocked.CompareExchange( ref m_SaveStatus, 1, 0 ) == 0)
 			{
-				//启动存储
-				ThreadPool.QueueUserWorkItem( new WaitCallback( ThreadPoolSaveFile ), null );
+				ThreadPool.QueueUserWorkItem( new WaitCallback( ThreadPoolSaveFile ), null );  // 启动存储
 			}
 		}
 
@@ -278,7 +285,7 @@ namespace HslCommunication.LogNet
 			else if (log.Degree == HslMessageDegree.FATAL) Console.ForegroundColor = ConsoleColor.DarkRed;
 			else Console.ForegroundColor = ConsoleColor.White;
 
-			Console.WriteLine( log.ToString( ) );
+			Console.WriteLine( HslMessageFormate( log, false ) );
 		}
 
 		private void ThreadPoolSaveFile( object obj )
@@ -288,17 +295,22 @@ namespace HslCommunication.LogNet
 			// 进入文件操作的锁
 			m_fileSaveLock.Enter( );
 
+			// 获取要存储的文件名称，并判断是否生成了新的文件
+			string logSaveFileName = GetFileSaveName( );
+			bool createNewLogFile = false;
 
-			// 获取要存储的文件名称
-			string LogSaveFileName = GetFileSaveName( );
-
-			if (!string.IsNullOrEmpty( LogSaveFileName ))
+			if (!string.IsNullOrEmpty( logSaveFileName ))
 			{
+				if (logSaveFileName != this.lastLogSaveFileName)
+				{
+					createNewLogFile = true;
+					this.lastLogSaveFileName = logSaveFileName;
+				}
 				// 保存
 				StreamWriter sw = null;
 				try
 				{
-					sw = new StreamWriter( LogSaveFileName, true, Encoding.UTF8 );
+					sw = new StreamWriter( logSaveFileName, true, Encoding.UTF8 );
 					while (current != null)
 					{
 						if (ConsoleOutput) ConsoleWriteLog( current );
@@ -318,7 +330,7 @@ namespace HslCommunication.LogNet
 						// 如果需要存储的就过滤掉
 						if (isSave)
 						{
-							sw.Write( HslMessageFormate( current ) );
+							sw.Write( HslMessageFormate( current, true ) );
 							sw.Write( Environment.NewLine );
 							sw.Flush( );
 						}
@@ -328,12 +340,13 @@ namespace HslCommunication.LogNet
 				}
 				catch (Exception ex)
 				{
-					AddItemToCache( current );
-					AddItemToCache( new HslMessageItem( )
+					// 如果存储失败，则加入缓存里面去，等待下次再次尝试
+					AddItemToCache( new HslMessageItem[]{ current, new HslMessageItem( )
 					{
 						Degree = HslMessageDegree.FATAL,
-						Text = LogNetManagment.GetSaveStringFromException( "LogNetSelf", ex ),
-					} );
+						Text   = LogNetManagment.GetSaveStringFromException( "LogNetSelf", ex ),
+						Time   = DateTime.Now.AddHours( HourDeviation ),
+					} } );
 				}
 				finally
 				{
@@ -354,7 +367,7 @@ namespace HslCommunication.LogNet
 			// 释放锁
 			m_fileSaveLock.Leave( );
 			Interlocked.Exchange( ref m_SaveStatus, 0 );
-			OnWriteCompleted( );
+			OnWriteCompleted( createNewLogFile );
 
 			// 再次检测锁是否释放完成
 			if (m_WaitForSave.Count > 0)
@@ -363,20 +376,23 @@ namespace HslCommunication.LogNet
 			}
 		}
 
-		private string HslMessageFormate( HslMessageItem hslMessage )
+		private string HslMessageFormate( HslMessageItem hslMessage, bool writeFile )
 		{
 			StringBuilder stringBuilder = new StringBuilder( );
 			if (hslMessage.Degree != HslMessageDegree.None)
 			{
-				stringBuilder.Append( "\u0002" );
+				if (writeFile && LogStxAsciiCode) stringBuilder.Append( "\u0002" );
 				stringBuilder.Append( "[" );
 				stringBuilder.Append( LogNetManagment.GetDegreeDescription( hslMessage.Degree ) );
 				stringBuilder.Append( "] " );
 
 				stringBuilder.Append( hslMessage.Time.ToString( "yyyy-MM-dd HH:mm:ss.fff" ) );
-				stringBuilder.Append( " thread:[" );
-				stringBuilder.Append( hslMessage.ThreadId.ToString( "D3" ) );
-				stringBuilder.Append( "] " );
+				if (LogThreadID)
+				{
+					stringBuilder.Append( " Thread:[" );
+					stringBuilder.Append( hslMessage.ThreadId.ToString( "D3" ) );
+					stringBuilder.Append( "] " );
+				}
 
 				if (!string.IsNullOrEmpty( hslMessage.KeyWord ))
 				{
@@ -407,17 +423,27 @@ namespace HslCommunication.LogNet
 		/// 当写入文件完成的时候触发，这时候已经释放了文件的句柄了。<br />
 		/// Triggered when writing to the file is complete, and the file handle has been released.
 		/// </summary>
-		protected virtual void OnWriteCompleted( ) { }
+		protected virtual void OnWriteCompleted( bool createNewLogFile ) { }
 
 		private HslMessageItem GetHslMessageItem( HslMessageDegree degree, string keyWord, string text )
 		{
-			return new HslMessageItem( )
-			{
-				KeyWord = keyWord,
-				Degree = degree,
-				Text = text,
-				ThreadId = Thread.CurrentThread.ManagedThreadId,
-			};
+			if (HourDeviation == 0)
+				return new HslMessageItem( )
+				{
+					KeyWord  = keyWord,
+					Degree   = degree,
+					Text     = text,
+					ThreadId = Thread.CurrentThread.ManagedThreadId,
+				};
+			else
+				return new HslMessageItem( )
+				{
+					KeyWord    = keyWord,
+					Degree     = degree,
+					Text       = text,
+					ThreadId   = Thread.CurrentThread.ManagedThreadId,
+					Time       = DateTime.Now.AddHours( HourDeviation )
+				};
 		}
 
 		private int CalculateStringOccupyLength( string str )
@@ -462,35 +488,20 @@ namespace HslCommunication.LogNet
 			{
 				if (disposing)
 				{
-					// TODO: 释放托管状态(托管对象)。
-
 					BeforeSaveToFile = null;
 					m_simpleHybirdLock.Dispose( );
 					m_WaitForSave.Clear( );
 					m_fileSaveLock.Dispose( );
-
 				}
-
-				// TODO: 释放未托管的资源(未托管的对象)并在以下内容中替代终结器。
-				// TODO: 将大型字段设置为 null。
 				disposedValue = true;
 			}
 		}
 
-		// TODO: 仅当以上 Dispose(bool disposing) 拥有用于释放未托管资源的代码时才替代终结器。
-		// ~LogNetBase() {
-		//   // 请勿更改此代码。将清理代码放入以上 Dispose(bool disposing) 中。
-		//   Dispose(false);
-		// }
-
-
-		// 添加此代码以正确实现可处置模式。
 		/// <inheritdoc cref="IDisposable.Dispose"/>
 		public void Dispose( )
 		{
 			// 请勿更改此代码。将清理代码放入以上 Dispose(bool disposing) 中。
 			Dispose( true );
-			// TODO: 如果在以上内容中替代了终结器，则取消注释以下行。
 			// GC.SuppressFinalize(this);
 		}
 

@@ -49,7 +49,7 @@ namespace HslCommunication.Profinet.Melsec
 		protected override INetMessage GetNewNetMessage( ) => new MelsecQnA3EBinaryMessage( );
 
 		/// <inheritdoc cref="IReadWriteMc.McType"/>
-		public McType McType => McType.McBinary;
+		public McType McType => McType.McRBinary;
 
 		#endregion
 
@@ -69,13 +69,13 @@ namespace HslCommunication.Profinet.Melsec
 		public virtual OperateResult<McAddressData> McAnalysisAddress( string address, ushort length ) => McAddressData.ParseMelsecRFrom( address, length );
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command )
+		public override byte[] PackCommandWithHeader( byte[] command )
 		{
 			return McBinaryHelper.PackMcCommand( command, this.NetworkNumber, this.NetworkStationNumber );
 		}
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
 		{
 			OperateResult check = McBinaryHelper.CheckResponseContentHelper( response );
 			if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );

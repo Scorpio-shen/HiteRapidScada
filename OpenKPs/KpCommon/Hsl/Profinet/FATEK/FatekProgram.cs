@@ -6,7 +6,8 @@ using System.Linq;
 using System.Text;
 using HslCommunication.BasicFramework;
 using HslCommunication.Reflection;
-
+using HslCommunication.Profinet.FATEK.Helper;
+using System.IO;
 
 namespace HslCommunication.Profinet.FATEK
 {
@@ -28,9 +29,14 @@ namespace HslCommunication.Profinet.FATEK
 		/// <inheritdoc cref="FatekProgramOverTcp( )"/>
 		public FatekProgram( )
 		{
-			ByteTransform = new RegularByteTransform( );
-			WordLength    = 1;
+			this.ByteTransform         = new RegularByteTransform( );
+			this.WordLength            = 1;
+			this.LogMsgFormatBinary    = false;
+			this.ReceiveEmptyDataCount = 5;
 		}
+
+		/// <inheritdoc/>
+		protected override bool CheckReceiveDataComplete( MemoryStream ms ) => FatekProgramHelper.CheckReceiveDataComplete( ms );
 
 		#endregion
 
@@ -62,6 +68,31 @@ namespace HslCommunication.Profinet.FATEK
 		/// <inheritdoc cref="FatekProgramHelper.Write(IReadWriteDevice, byte, string, bool[])"/>
 		[HslMqttApi( "WriteBoolArray", "" )]
 		public override OperateResult Write( string address, bool[] value ) => FatekProgramHelper.Write( this, this.station, address, value );
+
+		#endregion
+
+		#region Public Method
+
+		/// <inheritdoc cref="FatekProgramHelper.Run(IReadWriteDevice, byte)"/>
+		public OperateResult Run( byte station ) => FatekProgramHelper.Run( this, station );
+
+		/// <inheritdoc cref="Run(byte)"/>
+		[HslMqttApi( "Run", "使PLC处于RUN状态" )]
+		public OperateResult Run( ) => Run( this.Station );
+
+		/// <inheritdoc cref="FatekProgramHelper.Stop(IReadWriteDevice, byte)"/>
+		public OperateResult Stop( byte station ) => FatekProgramHelper.Stop( this, station );
+
+		/// <inheritdoc cref="Stop(byte)"/>
+		[HslMqttApi( "Stop", "使PLC处于STOP状态" )]
+		public OperateResult Stop( ) => Stop( this.Station );
+
+		/// <inheritdoc cref="FatekProgramHelper.ReadStatus(IReadWriteDevice, byte)"/>
+		public OperateResult<bool[]> ReadStatus( byte station ) => FatekProgramHelper.ReadStatus( this, station );
+
+		/// <inheritdoc cref="ReadStatus(byte)"/>
+		[HslMqttApi( "ReadStatus", "读取PLC基本的状态信息" )]
+		public OperateResult<bool[]> ReadStatus( ) => ReadStatus( this.Station );
 
 		#endregion
 

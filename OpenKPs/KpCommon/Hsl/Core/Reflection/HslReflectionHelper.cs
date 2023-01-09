@@ -20,6 +20,44 @@ namespace HslCommunication.Reflection
 	public class HslReflectionHelper
 	{
 		/// <summary>
+		/// 从属性中获取对应的设备类型的地址特性信息
+		/// </summary>
+		/// <param name="deviceType">设备类型信息</param>
+		/// <param name="property">属性信息</param>
+		/// <returns>设备类型信息</returns>
+		public static HslDeviceAddressAttribute GetHslDeviceAddressAttribute( Type deviceType, PropertyInfo property )
+		{
+			var attribute = property.GetCustomAttributes( typeof( HslDeviceAddressAttribute ), false );
+			if (attribute == null) return null;
+
+			HslDeviceAddressAttribute hslAttribute = null;
+			for (int i = 0; i < attribute.Length; i++)
+			{
+				HslDeviceAddressAttribute tmp = (HslDeviceAddressAttribute)attribute[i];
+				if (tmp.DeviceType != null && tmp.DeviceType == deviceType)
+				{
+					hslAttribute = tmp;
+					break;
+				}
+			}
+
+			if (hslAttribute == null)
+			{
+				for (int i = 0; i < attribute.Length; i++)
+				{
+					HslDeviceAddressAttribute tmp = (HslDeviceAddressAttribute)attribute[i];
+					if (tmp.DeviceType == null)
+					{
+						hslAttribute = tmp;
+						break;
+					}
+				}
+			}
+
+			return hslAttribute;
+		}
+
+		/// <summary>
 		/// 从设备里读取支持Hsl特性的数据内容，该特性为<see cref="HslDeviceAddressAttribute"/>，详细参考论坛的操作说明。
 		/// </summary>
 		/// <typeparam name="T">自定义的数据类型对象</typeparam>
@@ -34,37 +72,21 @@ namespace HslCommunication.Reflection
 			var properties = type.GetProperties( System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public );
 			foreach (var property in properties)
 			{
-				var attribute = property.GetCustomAttributes( typeof( HslDeviceAddressAttribute ), false );
-				if (attribute == null) continue;
-
-				HslDeviceAddressAttribute hslAttribute = null;
-				for (int i = 0; i < attribute.Length; i++)
-				{
-					HslDeviceAddressAttribute tmp = (HslDeviceAddressAttribute)attribute[i];
-					if (tmp.DeviceType != null && tmp.DeviceType == readWrite.GetType( ))
-					{
-						hslAttribute = tmp;
-						break;
-					}
-				}
-
-				if (hslAttribute == null)
-				{
-					for (int i = 0; i < attribute.Length; i++)
-					{
-						HslDeviceAddressAttribute tmp = (HslDeviceAddressAttribute)attribute[i];
-						if (tmp.DeviceType == null)
-						{
-							hslAttribute = tmp;
-							break;
-						}
-					}
-				}
-
+				HslDeviceAddressAttribute hslAttribute = GetHslDeviceAddressAttribute( readWrite.GetType( ), property );
 				if (hslAttribute == null) continue;
 
 				Type propertyType = property.PropertyType;
-				if (propertyType == typeof( short ))
+				if (propertyType == typeof( byte ))
+				{
+					MethodInfo readByteMethod = readWrite.GetType( ).GetMethod( "ReadByte", new Type[] { typeof( string ) } );
+					if (readByteMethod == null) return new OperateResult<T>( $"{readWrite.GetType( ).Name} not support read byte value. " );
+
+					OperateResult<byte> valueResult = (OperateResult<byte>)readByteMethod.Invoke( readWrite, new object[] { hslAttribute.Address } );
+					if (!valueResult.IsSuccess) return OperateResult.CreateFailedResult<T>( valueResult );
+
+					property.SetValue( obj, valueResult.Content, null );
+				}
+				else if (propertyType == typeof( short ))
 				{
 					OperateResult<short> valueResult = readWrite.ReadInt16( hslAttribute.Address );
 					if (!valueResult.IsSuccess) return OperateResult.CreateFailedResult<T>( valueResult );
@@ -227,38 +249,21 @@ namespace HslCommunication.Reflection
 			var properties = type.GetProperties( System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public );
 			foreach (var property in properties)
 			{
-				var attribute = property.GetCustomAttributes( typeof( HslDeviceAddressAttribute ), false );
-				if (attribute == null) continue;
-
-				HslDeviceAddressAttribute hslAttribute = null;
-				for (int i = 0; i < attribute.Length; i++)
-				{
-					HslDeviceAddressAttribute tmp = (HslDeviceAddressAttribute)attribute[i];
-					if (tmp.DeviceType != null && tmp.DeviceType == readWrite.GetType( ))
-					{
-						hslAttribute = tmp;
-						break;
-					}
-				}
-
-				if (hslAttribute == null)
-				{
-					for (int i = 0; i < attribute.Length; i++)
-					{
-						HslDeviceAddressAttribute tmp = (HslDeviceAddressAttribute)attribute[i];
-						if (tmp.DeviceType == null)
-						{
-							hslAttribute = tmp;
-							break;
-						}
-					}
-				}
-
+				HslDeviceAddressAttribute hslAttribute = GetHslDeviceAddressAttribute( readWrite.GetType( ), property );
 				if (hslAttribute == null) continue;
 
-
 				Type propertyType = property.PropertyType;
-				if (propertyType == typeof( short ))
+				if (propertyType == typeof( byte ))
+				{
+					MethodInfo method = readWrite.GetType( ).GetMethod( "Write", new Type[] { typeof( string ), typeof(byte) } );
+					if (method == null) return new OperateResult<T>( $"{readWrite.GetType( ).Name} not support write byte value. " );
+
+					byte value = (byte)property.GetValue( obj, null );
+
+					OperateResult valueResult = (OperateResult)method.Invoke( readWrite, new object[] { hslAttribute.Address, value } );
+					if (!valueResult.IsSuccess) return OperateResult.CreateFailedResult<T>( valueResult );
+				}
+				else if (propertyType == typeof( short ))
 				{
 					short value = (short)property.GetValue( obj, null );
 
@@ -404,6 +409,90 @@ namespace HslCommunication.Reflection
 		}
 
 		/// <summary>
+		/// 根据类型信息，直接从原始字节解析出类型对象，然后赋值给对应的对象，该对象的属性需要支持特性 <see cref="HslStructAttribute"/> 才支持设置
+		/// </summary>
+		/// <typeparam name="T">类型信息</typeparam>
+		/// <param name="buffer">缓存信息</param>
+		/// <param name="startIndex">起始偏移地址</param>
+		/// <param name="byteTransform">数据变换规则对象</param>
+		/// <returns>新的实例化的类型对象</returns>
+		public static T PraseStructContent<T>( byte[] buffer, int startIndex, IByteTransform byteTransform ) where T : class, new()
+		{
+			var type = typeof( T );
+			var obj = type.Assembly.CreateInstance( type.FullName );
+			PraseStructContent( obj, buffer, startIndex, byteTransform );
+
+			return (T)obj;
+		}
+
+		/// <summary>
+		/// 根据结构体的定义，将原始字节的数据解析出来，然后赋值给对应的对象，该对象的属性需要支持特性 <see cref="HslStructAttribute"/> 才支持设置
+		/// </summary>
+		/// <param name="obj">类型对象信息</param>
+		/// <param name="buffer">读取的缓存数据信息</param>
+		/// <param name="startIndex">起始的偏移地址</param>
+		/// <param name="byteTransform">数据变换规则对象</param>
+		public static void PraseStructContent( object obj, byte[] buffer, int startIndex, IByteTransform byteTransform )
+		{
+			var properties = obj.GetType( ).GetProperties( BindingFlags.Instance | BindingFlags.Public );
+			foreach (var property in properties)
+			{
+				var attribute = property.GetCustomAttributes( typeof( HslStructAttribute ), false );
+				if (attribute == null) continue;
+
+				HslStructAttribute hslAttribute = attribute.Length > 0 ? (HslStructAttribute)attribute[0] : null;
+
+				if (hslAttribute == null) continue;
+
+				Type propertyType = property.PropertyType;
+				if (propertyType == typeof( byte ))          property.SetValue( obj, buffer[startIndex + hslAttribute.Index], null );
+				else if (propertyType == typeof( byte[] ))   property.SetValue( obj, buffer.SelectMiddle( startIndex + hslAttribute.Index, hslAttribute.Length ), null );
+				else if (propertyType == typeof( short ))    property.SetValue( obj, byteTransform.TransInt16(  buffer, startIndex + hslAttribute.Index ), null );
+				else if (propertyType == typeof( short[] ))  property.SetValue( obj, byteTransform.TransInt16(  buffer, startIndex + hslAttribute.Index, hslAttribute.Length ), null );
+				else if (propertyType == typeof( ushort ))   property.SetValue( obj, byteTransform.TransUInt16( buffer, startIndex + hslAttribute.Index ), null );
+				else if (propertyType == typeof( ushort[] )) property.SetValue( obj, byteTransform.TransUInt16( buffer, startIndex + hslAttribute.Index, hslAttribute.Length ), null );
+				else if (propertyType == typeof( int ))      property.SetValue( obj, byteTransform.TransInt32(  buffer, startIndex + hslAttribute.Index ), null );
+				else if (propertyType == typeof( int[] ))    property.SetValue( obj, byteTransform.TransInt32(  buffer, startIndex + hslAttribute.Index, hslAttribute.Length ), null );
+				else if (propertyType == typeof( uint ))     property.SetValue( obj, byteTransform.TransUInt32( buffer, startIndex + hslAttribute.Index ), null );
+				else if (propertyType == typeof( uint[] ))   property.SetValue( obj, byteTransform.TransUInt32( buffer, startIndex + hslAttribute.Index, hslAttribute.Length ), null );
+				else if (propertyType == typeof( long ))     property.SetValue( obj, byteTransform.TransInt64(  buffer, startIndex + hslAttribute.Index ), null );
+				else if (propertyType == typeof( long[] ))   property.SetValue( obj, byteTransform.TransInt64(  buffer, startIndex + hslAttribute.Index, hslAttribute.Length ), null );
+				else if (propertyType == typeof( ulong ))    property.SetValue( obj, byteTransform.TransUInt64( buffer, startIndex + hslAttribute.Index ), null );
+				else if (propertyType == typeof( ulong[] ))  property.SetValue( obj, byteTransform.TransUInt64( buffer, startIndex + hslAttribute.Index, hslAttribute.Length ), null );
+				else if (propertyType == typeof( float ))    property.SetValue( obj, byteTransform.TransSingle( buffer, startIndex + hslAttribute.Index ), null );
+				else if (propertyType == typeof( float[] ))  property.SetValue( obj, byteTransform.TransSingle( buffer, startIndex + hslAttribute.Index, hslAttribute.Length ), null );
+				else if (propertyType == typeof( double ))   property.SetValue( obj, byteTransform.TransDouble( buffer, startIndex + hslAttribute.Index ), null );
+				else if (propertyType == typeof( double[] )) property.SetValue( obj, byteTransform.TransDouble( buffer, startIndex + hslAttribute.Index, hslAttribute.Length ), null );
+				else if (propertyType == typeof( string ))
+				{
+					Encoding encoding = Encoding.UTF8;
+					if      (hslAttribute.Encoding == "ASCII")       encoding = Encoding.ASCII;
+					else if (hslAttribute.Encoding == "UNICODE")     encoding = Encoding.Unicode;
+					else if (hslAttribute.Encoding == "ANSI")        encoding = Encoding.Default;
+					else if (hslAttribute.Encoding == "UTF8")        encoding = Encoding.UTF8;
+					else if (hslAttribute.Encoding == "BIG-UNICODE") encoding = Encoding.BigEndianUnicode;
+					else if (hslAttribute.Encoding == "GB2312")      encoding = Encoding.GetEncoding("DB2312");
+					else encoding = Encoding.GetEncoding( hslAttribute.Encoding );
+					property.SetValue( obj, byteTransform.TransString( buffer, startIndex + hslAttribute.Index, hslAttribute.Length, encoding ), null );
+				}
+				else if (propertyType == typeof( bool ))
+				{
+					property.SetValue( obj, buffer.GetBoolByIndex( startIndex * 8 + hslAttribute.Index ), null );
+				}
+				else if (propertyType == typeof( bool[] ))
+				{
+					bool[] array = new bool[hslAttribute.Length];
+					for (int i = 0; i < array.Length; i++)
+					{
+						array[i] = buffer.GetBoolByIndex( startIndex * 8 + hslAttribute.Index + i );
+					}
+					property.SetValue( obj, array, null );
+				}
+			}
+
+		}
+
+		/// <summary>
 		/// 使用表达式树的方式来给一个属性赋值
 		/// </summary>
 		/// <param name="propertyInfo">属性信息</param>
@@ -466,7 +555,21 @@ namespace HslCommunication.Reflection
 				if (hslAttribute == null) continue;
 
 				Type propertyType = property.PropertyType;
-				if (propertyType == typeof( short ))
+				if (propertyType == typeof( byte ))
+				{
+					MethodInfo readByteMethod = readWrite.GetType( ).GetMethod( "ReadByteAsync", new Type[] { typeof( string ) } );
+					if (readByteMethod == null) return new OperateResult<T>( $"{readWrite.GetType( ).Name} not support read byte value. " );
+
+					Task readByteTask = readByteMethod.Invoke( readWrite, new object[] { hslAttribute.Address } ) as Task;
+					if (readByteTask == null) return new OperateResult<T>( $"{readWrite.GetType( ).Name} not task type result. " );
+
+					await readByteTask;
+					OperateResult<byte> valueResult = readByteTask.GetType( ).GetProperty( "Result" ).GetValue( readByteTask, null ) as OperateResult<byte>;
+					if (!valueResult.IsSuccess) return OperateResult.CreateFailedResult<T>( valueResult );
+
+					property.SetValue( obj, valueResult.Content, null );
+				}
+				else if (propertyType == typeof( short ))
 				{
 					OperateResult<short> valueResult = await readWrite.ReadInt16Async( hslAttribute.Address );
 					if (!valueResult.IsSuccess) return OperateResult.CreateFailedResult<T>( valueResult );
@@ -660,7 +763,21 @@ namespace HslCommunication.Reflection
 
 
 				Type propertyType = property.PropertyType;
-				if (propertyType == typeof( short ))
+				if (propertyType == typeof( byte ))
+				{
+					MethodInfo method = readWrite.GetType( ).GetMethod( "WriteAsync", new Type[] { typeof( string ), typeof( byte ) } );
+					if (method == null) return new OperateResult<T>( $"{readWrite.GetType( ).Name} not support write byte value. " );
+
+					byte value = (byte)property.GetValue( obj, null );
+
+					Task writeTask = method.Invoke( readWrite, new object[] { hslAttribute.Address, value } ) as Task;
+					if (writeTask == null) return new OperateResult( $"{readWrite.GetType( ).Name} not task type result. " );
+
+					await writeTask;
+					OperateResult valueResult = writeTask.GetType( ).GetProperty( "Result" ).GetValue( writeTask, null ) as OperateResult;
+					if (!valueResult.IsSuccess) return OperateResult.CreateFailedResult<T>( valueResult );
+				}
+				else if (propertyType == typeof( short ))
 				{
 					short value = (short)property.GetValue( obj, null );
 
@@ -1253,32 +1370,55 @@ namespace HslCommunication.Reflection
 			object[] paras = new object[parameters.Length];
 			for (int i = 0; i < parameters.Length; i++)
 			{
-				if      (parameters[i].ParameterType == typeof( byte ))            paras[i] = jObject.Value<byte>(     parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( short ))           paras[i] = jObject.Value<short>(    parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( ushort ))          paras[i] = jObject.Value<ushort>(   parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( int ))             paras[i] = jObject.Value<int>(      parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( uint ))            paras[i] = jObject.Value<uint>(     parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( long ))            paras[i] = jObject.Value<long>(     parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( ulong ))           paras[i] = jObject.Value<ulong>(    parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( double ))          paras[i] = jObject.Value<double>(   parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( float ))           paras[i] = jObject.Value<float>(    parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( bool ))            paras[i] = jObject.Value<bool>(     parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( string ))          paras[i] = jObject.Value<string>(   parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( DateTime ))        paras[i] = jObject.Value<DateTime>( parameters[i].Name );
-				else if (parameters[i].ParameterType == typeof( byte[] ))          paras[i] = jObject.Value<string>(   parameters[i].Name ).ToHexBytes( );
-				else if (parameters[i].ParameterType == typeof( short[] ))         paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<short>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( ushort[] ))        paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<ushort>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( int[] ))           paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<int>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( uint[] ))          paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<uint>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( long[] ))          paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<long>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( ulong[] ))         paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<ulong>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( float[] ))         paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<float>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( double[] ))        paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<double>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( bool[] ))          paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<bool>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( string[] ))        paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<string>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( DateTime[] ))      paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<DateTime>( ) ).ToArray( );
-				else if (parameters[i].ParameterType == typeof( ISessionContext )) paras[i] = context;
-				else paras[i] = jObject[parameters[i].Name].ToObject( parameters[i].ParameterType );
+				if      (parameters[i].ParameterType == typeof( byte ))             paras[i] = jObject.Value<byte>(     parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( short ))            paras[i] = jObject.Value<short>(    parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( ushort ))           paras[i] = jObject.Value<ushort>(   parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( int ))              paras[i] = jObject.Value<int>(      parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( uint ))             paras[i] = jObject.Value<uint>(     parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( long ))             paras[i] = jObject.Value<long>(     parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( ulong ))            paras[i] = jObject.Value<ulong>(    parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( double ))           paras[i] = jObject.Value<double>(   parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( float ))            paras[i] = jObject.Value<float>(    parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( bool ))             paras[i] = jObject.Value<bool>(     parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( string ))           paras[i] = jObject.Value<string>(   parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( DateTime ))         paras[i] = jObject.Value<DateTime>( parameters[i].Name );
+				else if (parameters[i].ParameterType == typeof( byte[] ))           paras[i] = jObject.Value<string>(   parameters[i].Name ).ToHexBytes( );
+				else if (parameters[i].ParameterType == typeof( short[] ))          paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<short>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( ushort[] ))         paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<ushort>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( int[] ))            paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<int>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( uint[] ))           paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<uint>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( long[] ))           paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<long>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( ulong[] ))          paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<ulong>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( float[] ))          paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<float>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( double[] ))         paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<double>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( bool[] ))           paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<bool>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( string[] ))         paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<string>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( DateTime[] ))       paras[i] = jObject[parameters[i].Name].ToArray( ).Select( m => m.Value<DateTime>( ) ).ToArray( );
+				else if (parameters[i].ParameterType == typeof( ISessionContext ))  paras[i] = context;
+				else if (parameters[i].ParameterType.IsArray)                       paras[i] = ((JArray)jObject[parameters[i].Name]).ToObject( parameters[i].ParameterType );
+				else if (parameters[i].ParameterType == typeof( JObject ))
+				{
+					// 如果定义了JSON类型的对象，就尝试再json对象及其字符串表述形式下都解析一次。
+					try
+					{
+						paras[i] = (JObject)jObject[parameters[i].Name];
+					}
+					catch
+					{
+						paras[i] = JObject.Parse( jObject.Value<string>( parameters[i].Name ) );
+					}
+				}
+				else
+				{
+					try
+					{
+						paras[i] = jObject[parameters[i].Name].ToObject( parameters[i].ParameterType );
+					}
+					catch
+					{
+						paras[i] = JObject.Parse( jObject.Value<string>( parameters[i].Name ) ).ToObject( parameters[i].ParameterType );
+					}
+				}
 				//else throw new Exception( $"Can't support parameter [{parameters[i].Name}] type : {parameters[i].ParameterType}"  );
 			}
 			return paras;
@@ -1348,6 +1488,7 @@ namespace HslCommunication.Reflection
 		/// and the specific parameter restrictions refer to the data declaration returned by the server.
 		/// </summary>
 		/// <param name="method">当前需要解析的方法名称</param>
+		/// <param name="parameters">当前的参数列表信息</param>
 		/// <returns>当前的参数对象信息</returns>
 		public static JObject GetParametersFromJson( MethodInfo method, ParameterInfo[] parameters )
 		{
@@ -1380,6 +1521,7 @@ namespace HslCommunication.Reflection
 				else if (parameters[i].ParameterType == typeof( string[] ))   jObject.Add( parameters[i].Name, new JArray( new string[] { "1", "2", "3" } ) );
 				else if (parameters[i].ParameterType == typeof( DateTime[] )) jObject.Add( parameters[i].Name, new JArray( new string[] { DateTime.Now.ToString( "yyyy-MM-dd HH:mm:ss" ) } ) );
 				else if (parameters[i].ParameterType == typeof( ISessionContext )) continue;
+				else if (parameters[i].ParameterType.IsArray)                 jObject.Add( parameters[i].Name,  JToken.FromObject( GetObjFromArrayParameterType( parameters[i].ParameterType ) ) );
 				else jObject.Add( parameters[i].Name, JToken.FromObject( Activator.CreateInstance( parameters[i].ParameterType ) ) );
 				//else throw new Exception( $"Can't support parameter [{parameters[i].Name}] type : {parameters[i].ParameterType}" );
 #else
@@ -1408,11 +1550,32 @@ namespace HslCommunication.Reflection
 				else if (parameters[i].ParameterType == typeof( string[] ))   jObject.Add( parameters[i].Name, new JArray( parameters[i].HasDefaultValue ? (string[])parameters[i].DefaultValue : new string[] { "1", "2", "3" } ) );
 				else if (parameters[i].ParameterType == typeof( DateTime[] )) jObject.Add( parameters[i].Name, new JArray( parameters[i].HasDefaultValue ? ((DateTime[])parameters[i].DefaultValue).Select(m=>m.ToString( "yyyy-MM-dd HH:mm:ss" )).ToArray() : new string[] { DateTime.Now.ToString( "yyyy-MM-dd HH:mm:ss" ) } ) );
 				else if (parameters[i].ParameterType == typeof( ISessionContext )) continue;
+				else if (parameters[i].ParameterType.IsArray) jObject.Add( parameters[i].Name, parameters[i].HasDefaultValue ? JToken.FromObject( parameters[i].DefaultValue ) : JToken.FromObject( GetObjFromArrayParameterType( parameters[i].ParameterType ) ) );
 				else jObject.Add( parameters[i].Name, JToken.FromObject( parameters[i].HasDefaultValue ? parameters[i].DefaultValue : Activator.CreateInstance( parameters[i].ParameterType ) ) );
 				// else throw new Exception( $"Can't support parameter [{parameters[i].Name}] type : {parameters[i].ParameterType}" );
 #endif
 			}
 			return jObject;
+		}
+
+		private static object GetObjFromArrayParameterType( Type parameterType )
+		{
+			Type actualType = null;
+			Type[] types = parameterType.GetGenericArguments( );
+			if (types.Length > 0)
+			{
+				actualType = types[0];
+			}
+			else
+			{
+				actualType = parameterType.GetElementType( );
+			}
+			Array array = Array.CreateInstance( actualType, 3 );
+			for (int j = 0; j < 3; j++)
+			{
+				array.SetValue( Activator.CreateInstance( actualType ), j );
+			}
+			return array;
 		}
 
 		/// <summary>
@@ -1586,6 +1749,181 @@ namespace HslCommunication.Reflection
 			else
 			{
 				return OperateResult.CreateSuccessResult( obj == null ? string.Empty : obj.ToJsonString( ) );
+			}
+		}
+		
+		/// <summary>
+		/// 根据提供的类型对象，解析出符合 <see cref="HslDeviceAddressAttribute"/> 特性的地址列表
+		/// </summary>
+		/// <param name="valueType">数据类型</param>
+		/// <param name="deviceType">设备类型</param>
+		/// <param name="obj">类型的对象信息</param>
+		/// <param name="byteTransform">数据变换对象</param>
+		/// <returns>地址列表信息</returns>
+		public static List<HslAddressProperty> GetHslPropertyInfos( Type valueType, Type deviceType, object obj, IByteTransform byteTransform )
+		{
+			List<HslAddressProperty> array = new List<HslAddressProperty>( );
+			var properties = valueType.GetProperties( BindingFlags.Instance | BindingFlags.Public );
+			int index = 0;
+			foreach (var property in properties)
+			{
+				HslDeviceAddressAttribute hslAttribute = HslReflectionHelper.GetHslDeviceAddressAttribute( deviceType, property );
+				if (hslAttribute == null) continue;
+
+				HslAddressProperty adsPropertyInfo        = new HslAddressProperty( );
+				adsPropertyInfo.PropertyInfo           = property;
+				adsPropertyInfo.DeviceAddressAttribute = hslAttribute;
+				adsPropertyInfo.ByteOffset             = index;
+
+				Type propertyType = property.PropertyType;
+				if      (propertyType == typeof( byte ))
+				{ 
+					index++; 
+					if (obj != null) adsPropertyInfo.Buffer = new byte[] { (byte)property.GetValue( obj, null ) }; 
+				}
+				else if (propertyType == typeof( short ))
+				{
+					index+=2; 
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (short)property.GetValue( obj, null ) ); 
+				}
+				else if (propertyType == typeof( short[] ))
+				{ 
+					index += 2 * (hslAttribute.Length > 0 ? hslAttribute.Length : 1); 
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (short[])property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( ushort ))   
+				{ 
+					index += 2; 
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (ushort)property.GetValue( obj, null ) ); 
+				}
+				else if (propertyType == typeof( ushort[] )) 
+				{ 
+					index += 2 * (hslAttribute.Length > 0 ? hslAttribute.Length : 1); 
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (ushort[])property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( int ))
+				{
+					index += 4; 
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (int)property.GetValue( obj, null ) ); 
+				}
+				else if (propertyType == typeof( int[] ))
+				{ 
+					index += 4 * (hslAttribute.Length > 0 ? hslAttribute.Length : 1); 
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (int[])property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( uint ))    
+				{
+					index += 4;
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (uint)property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( uint[] ))   
+				{
+					index += 4 * (hslAttribute.Length > 0 ? hslAttribute.Length : 1);
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (uint[])property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( long ))     
+				{
+					index += 8;
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (long)property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( long[] ))   
+				{
+					index += 8 * (hslAttribute.Length > 0 ? hslAttribute.Length : 1);
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (long[])property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( ulong ))    
+				{ 
+					index += 8;
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (ulong)property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( ulong[] ))  
+				{ 
+					index += 8 * (hslAttribute.Length > 0 ? hslAttribute.Length : 1);
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (ulong[])property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( float ))    
+				{ 
+					index += 4;
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (float)property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( float[] ))  
+				{
+					index += 4 * (hslAttribute.Length > 0 ? hslAttribute.Length : 1);
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (float[])property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( double ))  
+				{ 
+					index += 8;
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (double)property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( double[] ))
+				{
+					index += 8 * (hslAttribute.Length > 0 ? hslAttribute.Length : 1);
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (double[])property.GetValue( obj, null ) );
+				}
+				else if (propertyType == typeof( string ))
+				{ 
+					index += hslAttribute.Length > 0 ? hslAttribute.Length : 1;
+					if (obj != null) adsPropertyInfo.Buffer = byteTransform.TransByte( (string)property.GetValue( obj, null ), Encoding.ASCII );
+				}
+				else if (propertyType == typeof( byte[] ))
+				{
+					index += hslAttribute.Length > 0 ? hslAttribute.Length : 1;
+					if (obj != null) adsPropertyInfo.Buffer = (byte[])property.GetValue( obj, null );
+				}
+				else if (propertyType == typeof( bool ))
+				{
+					index++;
+					if (obj != null) adsPropertyInfo.Buffer = (bool)property.GetValue( obj, null ) ? new byte[1] { 0x01 } : new byte[] { 0x00 };
+				}
+				else if (propertyType == typeof( bool[] ))
+				{ 
+					index += hslAttribute.Length > 0 ? hslAttribute.Length : 1;
+					if (obj != null) adsPropertyInfo.Buffer = ((bool[])property.GetValue( obj, null )).Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( );
+				}
+
+				adsPropertyInfo.ByteLength = index - adsPropertyInfo.ByteOffset;
+				array.Add( adsPropertyInfo );
+			}
+			return array;
+		}
+
+		/// <summary>
+		/// 根据地址列表信息，数据缓存，自动解析基础类型的数据，赋值到自定义的对象上去
+		/// </summary>
+		/// <param name="byteTransform">数据解析对象</param>
+		/// <param name="obj">数据对象信息</param>
+		/// <param name="properties">地址属性列表</param>
+		/// <param name="buffer">缓存数据信息</param>
+		public static void SetPropertyValueFrom( IByteTransform byteTransform, object obj, List<HslAddressProperty> properties, byte[] buffer )
+		{
+			foreach (var propertyInfo in properties)
+			{
+				Type propertyType = propertyInfo.PropertyInfo.PropertyType;
+				object value = null;
+				if      (propertyType == typeof( byte ))     value = buffer[propertyInfo.ByteOffset];
+				else if (propertyType == typeof( short ))    value = byteTransform.TransInt16(  buffer, propertyInfo.ByteOffset );
+				else if (propertyType == typeof( short[] ))  value = byteTransform.TransInt16(  buffer, propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) );
+				else if (propertyType == typeof( ushort ))   value = byteTransform.TransUInt16( buffer, propertyInfo.ByteOffset );
+				else if (propertyType == typeof( ushort[] )) value = byteTransform.TransUInt16( buffer, propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) );
+				else if (propertyType == typeof( int ))      value = byteTransform.TransInt32(  buffer, propertyInfo.ByteOffset );
+				else if (propertyType == typeof( int[] ))    value = byteTransform.TransInt32(  buffer, propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) );
+				else if (propertyType == typeof( uint ))     value = byteTransform.TransUInt32( buffer, propertyInfo.ByteOffset );
+				else if (propertyType == typeof( uint[] ))   value = byteTransform.TransUInt32( buffer, propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) );
+				else if (propertyType == typeof( long ))     value = byteTransform.TransInt64(  buffer, propertyInfo.ByteOffset );
+				else if (propertyType == typeof( long[] ))   value = byteTransform.TransInt64(  buffer, propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) );
+				else if (propertyType == typeof( ulong ))    value = byteTransform.TransUInt64( buffer, propertyInfo.ByteOffset );
+				else if (propertyType == typeof( ulong[] ))  value = byteTransform.TransUInt64( buffer, propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) );
+				else if (propertyType == typeof( float ))    value = byteTransform.TransSingle( buffer, propertyInfo.ByteOffset );
+				else if (propertyType == typeof( float[] ))  value = byteTransform.TransSingle( buffer, propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) );
+				else if (propertyType == typeof( double ))   value = byteTransform.TransDouble( buffer, propertyInfo.ByteOffset );
+				else if (propertyType == typeof( double[] )) value = byteTransform.TransDouble( buffer, propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) );
+				else if (propertyType == typeof( string ))   value = Encoding.ASCII.GetString(  buffer, propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) );
+				else if (propertyType == typeof( byte[] ))   value = buffer.SelectMiddle( propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) );
+				else if (propertyType == typeof( bool ))     value = buffer[propertyInfo.ByteOffset] != 0x00;
+				else if (propertyType == typeof( bool[] ))   value = buffer.SelectMiddle( propertyInfo.ByteOffset, propertyInfo.DeviceAddressAttribute.GetDataLength( ) ).Select( m => m != 0x00).ToArray( );
+
+				if (value != null) propertyInfo.PropertyInfo.SetValue( obj, value, null );
 			}
 		}
 

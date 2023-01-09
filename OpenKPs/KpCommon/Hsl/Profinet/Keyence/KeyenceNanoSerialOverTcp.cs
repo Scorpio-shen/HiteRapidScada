@@ -8,6 +8,7 @@ using HslCommunication.Core.Net;
 using HslCommunication.Core;
 using HslCommunication.Reflection;
 using System.Threading;
+using HslCommunication.Core.IMessage;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -203,8 +204,10 @@ namespace HslCommunication.Profinet.Keyence
 		/// </summary>
 		public KeyenceNanoSerialOverTcp( )
 		{
-			this.WordLength     = 1;
-			this.ByteTransform  = new RegularByteTransform( );
+			this.WordLength                            = 1;
+			this.ByteTransform                         = new RegularByteTransform( );
+			this.ByteTransform.IsStringReverseByteWord = true;
+			this.LogMsgFormatBinary                    = false;
 		}
 
 		/// <summary>
@@ -218,6 +221,9 @@ namespace HslCommunication.Profinet.Keyence
 			this.IpAddress     = ipAddress;
 			this.Port          = port;
 		}
+
+		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => new SpecifiedCharacterMessage( AsciiControl.CR, AsciiControl.LF );
 
 		#endregion
 
@@ -242,27 +248,6 @@ namespace HslCommunication.Profinet.Keyence
 			return OperateResult.CreateSuccessResult( );
 		}
 
-		/// <inheritdoc/>
-		public override OperateResult<byte[]> ReadFromCoreServer( Socket socket, byte[] send, bool hasResponseData = true, bool usePackHeader = true )
-		{
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Send + " : " + (LogMsgFormatBinary ? send.ToHexString( ' ' ) : Encoding.ASCII.GetString( send )) );
-
-			// send
-			OperateResult sendResult = Send( socket, usePackHeader ? PackCommandWithHeader( send ) : send );
-			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
-			if (receiveTimeOut < 0) return OperateResult.CreateSuccessResult( new byte[0] );
-			if (!hasResponseData) return OperateResult.CreateSuccessResult( new byte[0] );
-			if (SleepTime > 0) Thread.Sleep( SleepTime );
-
-			// receive msg
-			OperateResult<byte[]> resultReceive = ReceiveCommandLineFromSocket( socket, 0x0d, 0x0a, receiveTimeOut );
-			if (!resultReceive.IsSuccess) return resultReceive;
-
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + (LogMsgFormatBinary ? resultReceive.Content.ToHexString( ' ' ) : Encoding.ASCII.GetString( resultReceive.Content )) );
-
-			// Success
-			return OperateResult.CreateSuccessResult( resultReceive.Content );
-		}
 #if !NET35 && !NET20
 		/// <inheritdoc/>
 		protected async override Task<OperateResult> InitializationOnConnectAsync( Socket socket )
@@ -281,29 +266,6 @@ namespace HslCommunication.Profinet.Keyence
 			if (!result.IsSuccess) return result;
 
 			return OperateResult.CreateSuccessResult( );
-		}
-
-		/// <inheritdoc/>
-		public async override Task<OperateResult<byte[]>> ReadFromCoreServerAsync( Socket socket, byte[] send, bool hasResponseData = true, bool usePackHeader = true )
-		{
-			byte[] sendValue = usePackHeader ? PackCommandWithHeader( send ) : send;
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Send + " : " + (LogMsgFormatBinary ? sendValue.ToHexString( ' ' ) : Encoding.ASCII.GetString( sendValue )) );
-
-			// send
-			OperateResult sendResult = Send( socket, sendValue );
-			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
-			if (receiveTimeOut < 0) return OperateResult.CreateSuccessResult( new byte[0] );
-			if (!hasResponseData) return OperateResult.CreateSuccessResult( new byte[0] );
-			if (SleepTime > 0) Thread.Sleep( SleepTime );
-
-			// receive msg
-			OperateResult<byte[]> resultReceive = await ReceiveCommandLineFromSocketAsync( socket, 0x0d, 0x0a, receiveTimeOut );
-			if (!resultReceive.IsSuccess) return resultReceive;
-
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + (LogMsgFormatBinary ? resultReceive.Content.ToHexString( ' ' ) : Encoding.ASCII.GetString( resultReceive.Content )) );
-
-			// extra check
-			return UnpackResponseContent( sendValue,  resultReceive.Content );
 		}
 #endif
 		#endregion

@@ -5,6 +5,7 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using HslCommunication.Core;
+using HslCommunication.Core.Security;
 
 namespace HslCommunication.MQTT
 {
@@ -84,6 +85,36 @@ namespace HslCommunication.MQTT
 		public string Protocol { get; private set; }
 
 		/// <summary>
+		/// 遗嘱主题<br />
+		/// will topic
+		/// </summary>
+		/// <remarks>
+		/// 当前的会话如果因为非正常原因下线的时候，服务器立即发布该客户端的遗嘱主题及数据信息
+		/// </remarks>
+		public string WillTopic { get; set; }
+
+		/// <summary>
+		/// 遗嘱的消息内容<br />
+		/// The message content of the will
+		/// </summary>
+		/// <remarks>
+		/// 当前的会话如果因为非正常原因下线的时候，服务器立即发布该客户端的遗嘱主题及数据信息
+		/// </remarks>
+		public byte[] WillMessage { get; set; }
+
+		/// <summary>
+		/// 获取或设置当前的会话是否拥有开发者权限，在开发者权限下，可以遍历接口信息，默认所有的会话都支持开发者权限，如果需要屏蔽，则需要在会话登录时，将本属性值设置为 False<br />
+		/// Get or set whether the current session has developer permission. Under developer permission, 
+		/// you can traverse the interface information. By default, all sessions support developer permission. If you need to block, you need to set this attribute value to false
+		/// </summary>
+		public bool DeveloperPermissions { get; set; } = true;
+
+		/// <summary>
+		/// 获取设置客户端的加密信息
+		/// </summary>
+		internal bool AesCryptography { get; set; }
+
+		/// <summary>
 		/// 当前的会话信息关联的自定义信息<br />
 		/// Custom information associated with the current session information
 		/// </summary>
@@ -101,13 +132,28 @@ namespace HslCommunication.MQTT
 		/// Check whether the specified topic content is subscribed in the current session object
 		/// </summary>
 		/// <param name="topic">主题信息</param>
+		/// <param name="willcard">订阅的主题是否使用了通配符</param>
 		/// <returns>如果订阅了，返回 True, 否则，返回 False</returns>
-		public bool IsClientSubscribe( string topic )
+		public bool IsClientSubscribe( string topic, bool willcard )
 		{
 			bool ret = false;
 			lock (objLock)
 			{
-				ret = Topics.Contains( topic );
+				if (willcard)
+				{
+					for (int i = 0; i < Topics.Count; i++)
+					{
+						if(MqttHelper.CheckMqttTopicWildcards(topic, Topics[i] ))
+						{
+							ret = true;
+							break;
+						}
+					}
+				}
+				else
+				{
+					ret = Topics.Contains( topic );
+				}
 			}
 			return ret;
 		}

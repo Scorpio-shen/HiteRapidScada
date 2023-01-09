@@ -8,19 +8,13 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// SAM身份证通信协议的消息
 	/// </summary>
-	public class SAMMessage : INetMessage
+	public class SAMMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 7;
 
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token )
+		public override bool CheckHeadBytesLegal( byte[] token )
 		{
 			if (HeadBytes == null) return false;
 
@@ -36,10 +30,5 @@ namespace HslCommunication.Core.IMessage
 				return 0;
 		}
 
-		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => 0;
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 	}
 }

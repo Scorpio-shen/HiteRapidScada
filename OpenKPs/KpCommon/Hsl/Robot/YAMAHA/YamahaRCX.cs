@@ -1,5 +1,6 @@
 ﻿using HslCommunication.BasicFramework;
 using HslCommunication.Core;
+using HslCommunication.Core.IMessage;
 using HslCommunication.Core.Net;
 using HslCommunication.Reflection;
 using System;
@@ -34,29 +35,18 @@ namespace HslCommunication.Robot.YAMAHA
 		/// </summary>
 		/// <param name="ipAddress">IP地址</param>
 		/// <param name="port">端口号</param>
-		public YamahaRCX(string ipAddress, int port )
+		public YamahaRCX(string ipAddress, int port ) : this( )
 		{
-			ByteTransform = new RegularByteTransform( );
 			IpAddress = ipAddress;
-			Port = port;
-			ReceiveTimeOut = 30000;
+			Port      = port;
 		}
+
+		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => new SpecifiedCharacterMessage( AsciiControl.CR, AsciiControl.LF );
 
 		#endregion
 
 		#region Override InitializationOnConnect
-		/// <inheritdoc/>
-		public override OperateResult<byte[]> ReadFromCoreServer( Socket socket, byte[] send, bool hasResponseData = true, bool usePackHeader = true )
-		{
-			OperateResult sendResult = Send( socket, send );
-			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
-
-			// 接收超时时间大于0时才允许接收远程的数据
-			if (ReceiveTimeOut < 0) return OperateResult.CreateSuccessResult( new byte[0] );
-
-			// 接收数据信息
-			return ReceiveCommandLineFromSocket( socket, 0x0D, 0x0A, 60000 );
-		}
 
 		/// <summary>
 		/// 发送命令行到socket, 并从机器人读取指定的命令行
@@ -68,7 +58,7 @@ namespace HslCommunication.Robot.YAMAHA
 		{
 			var result = new OperateResult<string[]>( );
 			OperateResult<Socket> resultSocket = null;
-			InteractiveLock.Enter( );
+			this.pipeSocket.PipeLockEnter( );
 
 			try
 			{
@@ -76,9 +66,9 @@ namespace HslCommunication.Robot.YAMAHA
 				resultSocket = GetAvailableSocket( );
 				if (!resultSocket.IsSuccess)
 				{
-					IsSocketError = true;
+					this.pipeSocket.IsSocketError = true;
 					AlienSession?.Offline( );
-					InteractiveLock.Leave( );
+					this.pipeSocket.PipeLockLeave( );
 					result.CopyErrorFromOther( resultSocket );
 					return result;
 				}
@@ -91,7 +81,7 @@ namespace HslCommunication.Robot.YAMAHA
 					if (!read.IsSuccess)
 					{
 						isError = true;
-						IsSocketError = true;
+						this.pipeSocket.IsSocketError = true;
 						AlienSession?.Offline( );
 						result.CopyErrorFromOther( read );
 						break;
@@ -103,18 +93,18 @@ namespace HslCommunication.Robot.YAMAHA
 				}
 				if (!isError)
 				{
-					IsSocketError = false;
+					this.pipeSocket.IsSocketError = false;
 					result.IsSuccess = true;
 					result.Content = buffers.ToArray( );
 					result.Message = StringResources.Language.SuccessText;
 				}
 
 				ExtraAfterReadFromCoreServer( new OperateResult( ) { IsSuccess = !isError } );
-				InteractiveLock.Leave( );
+				this.pipeSocket.PipeLockLeave( );
 			}
 			catch
 			{
-				InteractiveLock.Leave( );
+				this.pipeSocket.PipeLockLeave( );
 				throw;
 			}
 
@@ -122,25 +112,13 @@ namespace HslCommunication.Robot.YAMAHA
 			return result;
 		}
 #if !NET35 && !NET20
-		/// <inheritdoc/>
-		public async override Task<OperateResult<byte[]>> ReadFromCoreServerAsync( Socket socket, byte[] send, bool hasResponseData = true, bool usePackHeader = true )
-		{
-			OperateResult sendResult = await SendAsync( socket, send );
-			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
-
-			// 接收超时时间大于0时才允许接收远程的数据
-			if (ReceiveTimeOut < 0) return OperateResult.CreateSuccessResult( new byte[0] );
-
-			// 接收数据信息
-			return await ReceiveCommandLineFromSocketAsync( socket, 0x0D, 0x0A, 60000 );
-		}
 
 		/// <inheritdoc cref="ReadFromServer(byte[], int)"/>
 		public async Task<OperateResult<string[]>> ReadFromServerAsync( byte[] send, int lines )
 		{
 			var result = new OperateResult<string[]>( );
 			OperateResult<Socket> resultSocket = null;
-			InteractiveLock.Enter( );
+			await Task.Run( new Action( ( ) => this.pipeSocket.PipeLockEnter( ) ) );
 
 			try
 			{
@@ -148,9 +126,9 @@ namespace HslCommunication.Robot.YAMAHA
 				resultSocket = await GetAvailableSocketAsync( );
 				if (!resultSocket.IsSuccess)
 				{
-					IsSocketError = true;
+					this.pipeSocket.IsSocketError = true;
 					AlienSession?.Offline( );
-					InteractiveLock.Leave( );
+					this.pipeSocket.PipeLockLeave( );
 					result.CopyErrorFromOther( resultSocket );
 					return result;
 				}
@@ -163,7 +141,7 @@ namespace HslCommunication.Robot.YAMAHA
 					if (!read.IsSuccess)
 					{
 						isError = true;
-						IsSocketError = true;
+						this.pipeSocket.IsSocketError = true;
 						AlienSession?.Offline( );
 						result.CopyErrorFromOther( read );
 						break;
@@ -175,18 +153,18 @@ namespace HslCommunication.Robot.YAMAHA
 				}
 				if (!isError)
 				{
-					IsSocketError = false;
+					this.pipeSocket.IsSocketError = false;
 					result.IsSuccess = true;
 					result.Content = buffers.ToArray( );
 					result.Message = StringResources.Language.SuccessText;
 				}
 
 				ExtraAfterReadFromCoreServer( new OperateResult( ) { IsSuccess = !isError } );
-				InteractiveLock.Leave( );
+				this.pipeSocket.PipeLockLeave( );
 			}
 			catch
 			{
-				InteractiveLock.Leave( );
+				this.pipeSocket.PipeLockLeave( );
 				throw;
 			}
 

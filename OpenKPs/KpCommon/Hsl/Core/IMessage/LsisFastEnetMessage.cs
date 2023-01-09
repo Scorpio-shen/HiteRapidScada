@@ -8,19 +8,13 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// LSIS的PLC的FastEnet的消息定义
 	/// </summary>
-	public class LsisFastEnetMessage : INetMessage
+	public class LsisFastEnetMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 20;
 
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token )
+		public override bool CheckHeadBytesLegal( byte[] token )
 		{
 			if (HeadBytes == null) return false;
 
@@ -37,9 +31,7 @@ namespace HslCommunication.Core.IMessage
 		}
 
 		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => BitConverter.ToUInt16( HeadBytes, 14 );
+		public override int GetHeadBytesIdentity( ) => BitConverter.ToUInt16( HeadBytes, 14 );
 
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 	}
 }

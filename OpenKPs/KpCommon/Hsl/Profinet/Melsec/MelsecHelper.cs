@@ -229,6 +229,19 @@ namespace HslCommunication.Profinet.Melsec
 		/// <returns>压缩过后的数据字节</returns>
 		internal static byte[] TransBoolArrayToByteData( byte[] value ) => TransBoolArrayToByteData( value.Select( m => m != 0x00 ).ToArray( ) );
 
+		internal static bool[] TransByteArrayToBoolData( byte[] value, int offset, int length )
+		{
+			bool[] result = new bool[length > (value.Length - offset) * 2 ? (value.Length - offset) * 2 : length];
+			for (int i = 0; i < result.Length; i++)
+			{
+				if( i % 2 == 0)
+					result[i] = (value[offset + i / 2] & 0x10) == 0x10;
+				else
+					result[i] = (value[offset + i / 2] & 0x01) == 0x01;
+			}
+			return result;
+		}
+
 		/// <summary>
 		/// 将bool的组压缩成三菱格式的字节数组来表示开关量的
 		/// </summary>
@@ -281,11 +294,13 @@ namespace HslCommunication.Profinet.Melsec
 		/// 计算Fx协议指令的和校验信息
 		/// </summary>
 		/// <param name="data">字节数据</param>
+		/// <param name="start">起始的索引信息</param>
+		/// <param name="tail">结束的长度信息</param>
 		/// <returns>校验之后的数据</returns>
-		internal static byte[] FxCalculateCRC( byte[] data )
+		internal static byte[] FxCalculateCRC( byte[] data, int start = 1, int tail = 2 )
 		{
 			int sum = 0;
-			for (int i = 1; i < data.Length - 2; i++)
+			for (int i = start; i < data.Length - tail; i++)
 			{
 				sum += data[i];
 			}

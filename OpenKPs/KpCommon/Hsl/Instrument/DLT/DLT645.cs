@@ -6,6 +6,9 @@ using HslCommunication.Serial;
 using HslCommunication.Core;
 using System.Text.RegularExpressions;
 using HslCommunication.BasicFramework;
+using System.IO;
+using HslCommunication.Reflection;
+using HslCommunication.Instrument.DLT.Helper;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -351,23 +354,59 @@ namespace HslCommunication.Instrument.DLT
 	/// </list>
 	/// 直接串口初始化，打开串口，就可以对数据进行读取了，地址如上图所示。
 	/// </example>
-	public class DLT645 : SerialDeviceBase
+	public class DLT645 : SerialDeviceBase, IDlt645
 	{
 		#region Constructor
 
 		/// <summary>
-		/// 指定地址域，密码，操作者代码来实例化一个对象<br />
-		/// Get or set the current address domain information, which is a 12-character BCD code, for example: 149100007290
+		/// 指定地址域，密码，操作者代码来实例化一个对象，密码及操作者代码在写入操作的时候进行验证<br />
+		/// Specify the address field, password, and operator code to instantiate an object, and the password and operator code are validated during write operations, 
+		/// which address field is a 12-character BCD code, for example: 149100007290
 		/// </summary>
-		/// <param name="station">设备的站号信息</param>
+		/// <param name="station">设备的地址信息，是一个12字符的BCD码</param>
 		/// <param name="password">密码，写入的时候进行验证的信息</param>
 		/// <param name="opCode">操作者代码</param>
 		public DLT645( string station, string password = "", string opCode = "" )
 		{
-			this.ByteTransform = new RegularByteTransform( );
-			this.station       = station;
-			this.password      = string.IsNullOrEmpty( password ) ? "00000000" : password;
-			this.opCode        = string.IsNullOrEmpty( opCode ) ? "00000000" : opCode;
+			this.ByteTransform         = new RegularByteTransform( );
+			this.station               = station;
+			this.password              = string.IsNullOrEmpty( password ) ? "00000000" : password;
+			this.opCode                = string.IsNullOrEmpty( opCode ) ? "00000000" : opCode;
+			this.ReceiveEmptyDataCount = 5;
+		}
+
+		/// <inheritdoc/>
+		protected override bool CheckReceiveDataComplete( MemoryStream ms )
+		{
+			byte[] buffer = ms.ToArray( );
+			if (buffer.Length < 10) return false;
+
+			// 判断接收的数据是否完整，即使数据0x68前面包含了无用的字节信息
+			int begin = Helper.DLT645Helper.FindHeadCode68H( buffer );
+			if (begin < 0) return false;
+
+			if (buffer[begin + 9] + 12 + begin == buffer.Length && buffer[buffer.Length - 1] == 0x16) return true;
+			return base.CheckReceiveDataComplete( ms );
+		}
+
+		/// <inheritdoc/>
+		public override OperateResult<byte[]> ReadFromCoreServer( byte[] send )
+		{
+			OperateResult<byte[]> read = base.ReadFromCoreServer( send );
+			if (!read.IsSuccess) return read;
+
+			// 自动移除0x68前面的无用的字符信息
+			int begin = Helper.DLT645Helper.FindHeadCode68H( read.Content );
+			if (begin > 0) return OperateResult.CreateSuccessResult( read.Content.RemoveBegin( begin ) );
+			return read;
+		}
+
+		/// <inheritdoc/>
+		public override byte[] PackCommandWithHeader( byte[] command )
+		{
+			if (EnableCodeFE)
+				return SoftBasic.SpliceArray( new byte[] { 0xfe, 0xfe, 0xfe, 0xfe }, command );
+			return base.PackCommandWithHeader( command );
 		}
 
 		#endregion
@@ -379,252 +418,59 @@ namespace HslCommunication.Instrument.DLT
 		/// The command to activate the device, only send data to the device, do not wait for the device data to return
 		/// </summary>
 		/// <returns>是否发送成功</returns>
-		public OperateResult ActiveDeveice( ) => ReadFromCoreServer( new byte[] { 0xFE, 0xFE, 0xFE, 0xFE }, false );
+		public OperateResult ActiveDeveice( ) => ReadFromCoreServer( new byte[] { 0xFE, 0xFE, 0xFE, 0xFE }, hasResponseData: false, usePackAndUnpack: false );
 
-		private OperateResult<byte[]> ReadWithAddress( string address, byte[] dataArea )
-		{
-			OperateResult<byte[]> command = BuildEntireCommand( address, DLTControl.ReadData, dataArea );
-			if (!command.IsSuccess) return command;
-
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			OperateResult check = CheckResponse( read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
-
-			if (read.Content.Length < 16) return OperateResult.CreateSuccessResult( new byte[0] );
-			return OperateResult.CreateSuccessResult( read.Content.SelectMiddle( 14, read.Content.Length - 16 ) );
-		}
-
-		/// <summary>
-		/// 根据指定的数据标识来读取相关的原始数据信息，地址标识根据手册来，从高位到地位，例如 00-00-00-00，分割符可以任意特殊字符或是没有分隔符。<br />
-		/// Read the relevant original data information according to the specified data identifier. The address identifier is based on the manual, 
-		/// from high to position, such as 00-00-00-00. The separator can be any special character or no separator.
-		/// </summary>
-		/// <remarks>
-		/// 地址可以携带地址域信息，例如 "s=2;00-00-00-00" 或是 "s=100000;00-00-02-00"，关于数据域信息，需要查找手册，例如:00-01-00-00 表示： (当前)正向有功总电能
-		/// </remarks>
-		/// <param name="address">数据标识，具体需要查找手册来对应</param>
-		/// <param name="length">数据长度信息</param>
-		/// <returns>结果信息</returns>
-		public override OperateResult<byte[]> Read( string address, ushort length )
-		{
-			OperateResult<string, byte[]> analysis = AnalysisBytesAddress( address, this.station, length );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-
-			return ReadWithAddress( analysis.Content1, analysis.Content2 );
-		}
+		/// <inheritdoc cref="Helper.DLT645Helper.Read(IDlt645, string, ushort)"/>
+		[HslMqttApi( "ReadByteArray", "" )]
+		public override OperateResult<byte[]> Read( string address, ushort length ) => Helper.DLT645Helper.Read( this, address, length );
 
 		/// <inheritdoc/>
-		public override OperateResult<double[]> ReadDouble( string address, ushort length )
-		{
-			OperateResult<string, byte[]> analysis = AnalysisBytesAddress( address, this.station, length );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<double[]>( analysis );
-
-			OperateResult<byte[]> read = ReadWithAddress( analysis.Content1, analysis.Content2 );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<double[]>( read );
-
-			return DLTTransform.TransDoubleFromDLt( read.Content, length, GetFormatWithDataArea( analysis.Content2 ) );
-		}
+		[HslMqttApi( "ReadDoubleArray", "" )]
+		public override OperateResult<double[]> ReadDouble( string address, ushort length ) => Helper.DLT645Helper.ReadDouble( this, address, length );
 
 		/// <inheritdoc/>
-		public override OperateResult<string> ReadString( string address, ushort length, Encoding encoding )
-		{
-			OperateResult<byte[]> read = Read( address, 1 );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
+		public override OperateResult<string> ReadString( string address, ushort length, Encoding encoding ) => ByteTransformHelper.GetResultFromArray( ReadStringArray( address ) );
 
-			return DLTTransform.TransStringFromDLt( read.Content, length );
-		}
+		/// <inheritdoc cref="Helper.DLT645Helper.ReadStringArray(IDlt645, string)"/>
+		public OperateResult<string[]> ReadStringArray( string address ) => Helper.DLT645Helper.ReadStringArray( this, address );
 
 #if !NET35 && !NET20
 		/// <inheritdoc cref="ReadDouble(string, ushort)"/>
-		public async override Task<OperateResult<double[]>> ReadDoubleAsync( string address, ushort length )
-		{
-			return await Task.Run( ( ) => ReadDouble( address, length ) );
-		}
+		public async override Task<OperateResult<double[]>> ReadDoubleAsync( string address, ushort length ) => await Task.Run( ( ) => ReadDouble( address, length ) );
 
 		/// <inheritdoc/>
-		public async override Task<OperateResult<string>> ReadStringAsync( string address, ushort length, Encoding encoding )
-		{
-			OperateResult<byte[]> read = await ReadAsync( address, 1 );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-			return DLTTransform.TransStringFromDLt( read.Content, length );
-		}
+		public async override Task<OperateResult<string>> ReadStringAsync( string address, ushort length, Encoding encoding ) => await Task.Run( ( ) => ReadString( address, length, encoding ) );
 #endif
-		/// <summary>
-		/// 根据指定的数据标识来写入相关的原始数据信息，地址标识根据手册来，从高位到地位，例如 00-00-00-00，分割符可以任意特殊字符或是没有分隔符。<br />
-		/// Read the relevant original data information according to the specified data identifier. The address identifier is based on the manual, 
-		/// from high to position, such as 00-00-00-00. The separator can be any special character or no separator.
-		/// </summary>
-		/// <remarks>
-		/// 地址可以携带地址域信息，例如 "s=2;00-00-00-00" 或是 "s=100000;00-00-02-00"，关于数据域信息，需要查找手册，例如:00-01-00-00 表示： (当前)正向有功总电能<br />
-		/// 注意：本命令必须与编程键配合使用
-		/// </remarks>
-		/// <param name="address">地址信息</param>
-		/// <param name="value">写入的数据值</param>
-		/// <returns>是否写入成功</returns>
-		public override OperateResult Write( string address, byte[] value )
-		{
-			OperateResult<string, byte[]> analysis = AnalysisBytesAddress( address, this.station );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+		/// <inheritdoc cref="Helper.DLT645Helper.Write(IDlt645, string, string, string, byte[])"/>
+		public override OperateResult Write( string address, byte[] value ) => Helper.DLT645Helper.Write( this, this.password, this.opCode, address, value );
 
-			byte[] content = SoftBasic.SpliceArray<byte>( analysis.Content2, password.ToHexBytes( ), opCode.ToHexBytes( ), value );
+		/// <inheritdoc cref="Helper.DLT645Helper.ReadAddress(IDlt645)"/>
+		public OperateResult<string> ReadAddress( ) => Helper.DLT645Helper.ReadAddress( this );
 
-			OperateResult<byte[]> command = BuildEntireCommand( analysis.Content1, DLTControl.WriteAddress, content );
-			if (!command.IsSuccess) return command;
+		/// <inheritdoc cref="DLT645Helper.WriteAddress(IDlt645, string)"/>
+		public OperateResult WriteAddress( string address ) => Helper.DLT645Helper.WriteAddress( this, address );
 
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
+		/// <inheritdoc cref="Helper.DLT645Helper.BroadcastTime(IDlt645, DateTime)"/>
+		public OperateResult BroadcastTime( DateTime dateTime ) => Helper.DLT645Helper.BroadcastTime( this, dateTime );
 
-			return CheckResponse( read.Content );
-		}
+		/// <inheritdoc cref="Helper.DLT645Helper.FreezeCommand(IDlt645, string)"/>
+		public OperateResult FreezeCommand( string dataArea ) => Helper.DLT645Helper.FreezeCommand( this, dataArea );
 
-		/// <summary>
-		/// 读取设备的通信地址，仅支持点对点通讯的情况，返回地址域数据，例如：149100007290<br />
-		/// Read the communication address of the device, only support point-to-point communication, and return the address field data, for example: 149100007290
-		/// </summary>
-		/// <returns>设备的通信地址</returns>
-		public OperateResult<string> ReadAddress( )
-		{
-			OperateResult<byte[]> command = BuildEntireCommand( "AAAAAAAAAAAA", DLTControl.ReadAddress, null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<string>( command );
-
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-			OperateResult check = CheckResponse( read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<string>( check );
-
-			this.station = read.Content.SelectMiddle( 1, 6 ).Reverse( ).ToArray( ).ToHexString( );
-			return OperateResult.CreateSuccessResult( read.Content.SelectMiddle( 1, 6 ).Reverse( ).ToArray( ).ToHexString( ) );
-		}
-
-		/// <summary>
-		/// 写入设备的地址域信息，仅支持点对点通讯的情况，需要指定地址域信息，例如：149100007290<br />
-		/// Write the address domain information of the device, only support point-to-point communication, 
-		/// you need to specify the address domain information, for example: 149100007290
-		/// </summary>
-		/// <param name="address">等待写入的地址域</param>
-		/// <returns>是否写入成功</returns>
-		public OperateResult WriteAddress( string address )
-		{
-			OperateResult<byte[]> add = GetAddressByteFromString( address );
-			if (!add.IsSuccess) return add;
-
-			OperateResult<byte[]> command = BuildEntireCommand( "AAAAAAAAAAAA", DLTControl.WriteAddress, add.Content );
-			if (!command.IsSuccess) return command;
-
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			OperateResult check = CheckResponse( read.Content );
-			if (!check.IsSuccess) return check;
-
-			if (SoftBasic.IsTwoBytesEquel( read.Content.SelectMiddle( 1, 6 ), GetAddressByteFromString( address ).Content ))
-				return OperateResult.CreateSuccessResult( );
-			else
-				return new OperateResult( StringResources.Language.DLTErrorWriteReadCheckFailed );
-		}
-
-		/// <summary>
-		/// 广播指定的时间，强制从站与主站时间同步，传入<see cref="DateTime"/>时间对象，没有数据返回。<br />
-		/// Broadcast the specified time, force the slave station to synchronize with the master station time, 
-		/// pass in the <see cref="DateTime"/> time object, and no data will be returned.
-		/// </summary>
-		/// <param name="dateTime">时间对象</param>
-		/// <returns>是否成功</returns>
-		public OperateResult BroadcastTime( DateTime dateTime )
-		{
-			string hex = $"{dateTime.Second:D2}{dateTime.Minute:D2}{dateTime.Hour:D2}{dateTime.Day:D2}{dateTime.Month:D2}{dateTime.Year % 100:D2}";
-
-			OperateResult<byte[]> command = BuildEntireCommand( "999999999999", DLTControl.Broadcast, hex.ToHexBytes( ) );
-			if (!command.IsSuccess) return command;
-
-			return ReadFromCoreServer( command.Content, false );
-		}
-
-		/// <summary>
-		/// 对设备发送冻结命令，默认点对点操作，地址域为 99999999999999 时为广播，数据域格式说明：MMDDhhmm(月日时分)，
-		/// 99DDhhmm表示月为周期定时冻结，9999hhmm表示日为周期定时冻结，999999mm表示以小时为周期定时冻结，99999999表示瞬时冻结<br />
-		/// Send a freeze command to the device, the default point-to-point operation, when the address field is 9999999999999, 
-		/// it is broadcast, and the data field format description: MMDDhhmm (month, day, hour and minute), 
-		/// 99DDhhmm means the month is the periodic fixed freeze, 9999hhmm means the day is the periodic periodic freeze, 
-		/// and 999999mm means the hour It is periodic timed freezing, 99999999 means instantaneous freezing
-		/// </summary>
-		/// <param name="dataArea">数据域信息</param>
-		/// <returns>是否成功冻结</returns>
-		public OperateResult FreezeCommand( string dataArea )
-		{
-			OperateResult<string, byte[]> analysis = AnalysisBytesAddress( dataArea, this.station );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-
-			OperateResult<byte[]> command = BuildEntireCommand( analysis.Content1, DLTControl.FreezeCommand, analysis.Content2 );
-			if (!command.IsSuccess) return command;
-
-			if (analysis.Content1 == "999999999999")
-			{
-				// 广播操作
-				return ReadFromCoreServer( command.Content, false );
-			}
-			else
-			{
-				// 点对点操作
-				OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-				if (!read.IsSuccess) return read;
-
-				return CheckResponse( read.Content );
-			}
-		}
-
-		/// <summary>
-		/// 更改通信速率，波特率可选 600,1200,2400,4800,9600,19200，其他值无效，可以携带地址域信息，s=1;9600 <br />
-		/// Change the communication rate, the baud rate can be 600, 1200, 2400, 4800, 9600, 19200, 
-		/// other values are invalid, you can carry address domain information, s=1;9600
-		/// </summary>
-		/// <param name="baudRate">波特率的信息</param>
-		/// <returns>是否更改成功</returns>
-		public OperateResult ChangeBaudRate( string baudRate )
-		{
-			OperateResult<string, int> analysis = AnalysisIntegerAddress( baudRate, this.station );
-			if (!analysis.IsSuccess) return analysis;
-
-			byte code = 0x00;
-			switch (analysis.Content2)
-			{
-				case 600:   code = 0x02; break;
-				case 1200:  code = 0x04; break;
-				case 2400:  code = 0x08; break;
-				case 4800:  code = 0x10; break;
-				case 9600:  code = 0x20; break;
-				case 19200: code = 0x40; break;
-				default: return new OperateResult( StringResources.Language.NotSupportedFunction );
-			}
-
-			OperateResult<byte[]> command = BuildEntireCommand( analysis.Content1, DLTControl.ChangeBaudRate, new byte[] { code } );
-			if (!command.IsSuccess) return command;
-
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			OperateResult check = CheckResponse( read.Content );
-			if (!check.IsSuccess) return check;
-
-			if (read.Content[10] == code)
-				return OperateResult.CreateSuccessResult( );
-			else
-				return new OperateResult( StringResources.Language.DLTErrorWriteReadCheckFailed );
-		}
+		/// <inheritdoc cref="Helper.DLT645Helper.ChangeBaudRate(IDlt645, string)"/>
+		public OperateResult ChangeBaudRate( string baudRate ) => Helper.DLT645Helper.ChangeBaudRate( this, baudRate );
 
 		#endregion
 
 		#region Public Property
 
-		/// <summary>
-		/// 获取或设置当前的地址域信息，是一个12个字符的BCD码，例如：149100007290<br />
-		/// Get or set the current address domain information, which is a 12-character BCD code, for example: 149100007290
-		/// </summary>
+		/// <inheritdoc cref="IDlt645.Station"/>
 		public string Station { get => this.station; set => this.station = value; }
+
+		/// <inheritdoc cref="IDlt645.EnableCodeFE"/>
+		public bool EnableCodeFE { get; set; }
+
+		/// <inheritdoc cref="IDlt645.DLTType"/>
+		public DLT645Type DLTType { get; } = DLT645Type.DLT2007;
 
 		#endregion
 
@@ -643,203 +489,5 @@ namespace HslCommunication.Instrument.DLT
 
 		#endregion
 
-		#region Static Helper
-
-		/// <summary>
-		/// 将地址解析成BCD码的地址，并且扩充到12位，不够的补0操作
-		/// </summary>
-		/// <param name="address">地址域信息</param>
-		/// <returns>实际的结果</returns>
-		public static OperateResult<byte[]> GetAddressByteFromString( string address )
-		{
-			if (address == null || address.Length == 0) return new OperateResult<byte[]>( StringResources.Language.DLTAddressCannotNull );
-			if (address.Length > 12) return new OperateResult<byte[]>( StringResources.Language.DLTAddressCannotMoreThan12 );
-			if (!Regex.IsMatch( address, "^[0-9A-A]+$" )) return new OperateResult<byte[]>( StringResources.Language.DLTAddressMatchFailed );
-			if (address.Length < 12) address = address.PadLeft( 12, '0' );
-			return OperateResult.CreateSuccessResult( address.ToHexBytes( ).Reverse().ToArray());
-		}
-
-		/// <summary>
-		/// 将指定的地址信息，控制码信息，数据域信息打包成完整的报文命令
-		/// </summary>
-		/// <param name="address">地址域信息，地址域由6个字节构成，每字节2位BCD码，地址长度可达12位十进制数。地址域支持锁位寻址，即从若干低位起，剩余高位补AAH作为通配符进行读表操作</param>
-		/// <param name="control">控制码信息</param>
-		/// <param name="dataArea">数据域的内容</param>
-		/// <returns>返回是否报文创建成功</returns>
-		public static OperateResult<byte[]> BuildEntireCommand(string address, byte control, byte[] dataArea )
-		{
-			if (dataArea == null) dataArea = new byte[0];
-			OperateResult<byte[]> add = GetAddressByteFromString( address );
-			if (!add.IsSuccess) return add;
-
-			byte[] buffer = new byte[12 + dataArea.Length];
-			buffer[0] = 0x68;                                  // 帧起始符
-			add.Content.CopyTo( buffer, 1 );                   // BCD码的地址信息
-			buffer[7] = 0x68;                                  // 帧起始符
-			buffer[8] = control;                               // 控制码
-			buffer[9] = (byte)dataArea.Length;                 // 数据域长度，读的时候小于等于200，写的时候，小于等于50
-			if (dataArea.Length > 0)
-			{
-				dataArea.CopyTo( buffer, 10 );
-				for (int i = 0; i < dataArea.Length; i++)
-				{
-					// 数据域，发送之前增加0x33
-					buffer[i + 10] += 0x33;
-				}
-			}
-
-			// 求校验码
-			int count = 0;
-			for (int i = 0; i < buffer.Length - 2; i++)
-			{
-				count += buffer[i];
-			}
-			buffer[buffer.Length - 2] = (byte)count;           // 校验码
-			buffer[buffer.Length - 1] = 0x16;                  // 结束符
-			return OperateResult.CreateSuccessResult( buffer );
-		}
-
-		/// <summary>
-		/// 从用户输入的地址信息中解析出真实的地址及数据标识
-		/// </summary>
-		/// <param name="address">用户输入的地址信息</param>
-		/// <param name="defaultStation">默认的地址域</param>
-		/// <param name="length">数据长度信息</param>
-		/// <returns>解析结果信息</returns>
-		public static OperateResult<string, byte[]> AnalysisBytesAddress( string address, string defaultStation, ushort length = 1 )
-		{
-			string region = defaultStation;
-			byte[] dataId = length == 1 ? new byte[4] : new byte[5];
-			if (length != 1) dataId[4] = (byte)length;
-			if (address.IndexOf( ';' ) > 0)
-			{
-				string[] splits = address.Split( new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries );
-				for (int i = 0; i < splits.Length; i++)
-				{
-					if (splits[i].StartsWith( "s=" ))
-					{
-						region = splits[i].Substring( 2 );
-					}
-					else
-					{
-						splits[i].ToHexBytes( ).Reverse( ).ToArray( ).CopyTo( dataId, 0 );
-					}
-				}
-			}
-			else
-			{
-				address.ToHexBytes( ).Reverse( ).ToArray( ).CopyTo( dataId, 0 );
-			}
-			return OperateResult.CreateSuccessResult( region, dataId );
-		}
-
-		/// <summary>
-		/// 根据不同的数据地址，返回实际的数据格式，然后解析出正确的数据
-		/// </summary>
-		/// <param name="dataArea">数据标识地址，实际的byte数组，地位在前，高位在后</param>
-		/// <returns>实际的数据格式信息</returns>
-		public static string GetFormatWithDataArea( byte[] dataArea )
-		{
-			if (dataArea[3] == 0x00) return "XXXXXX.XX";
-			if (dataArea[3] == 0x01) return "XX.XXXX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x01) return "XXX.X";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x02) return "XXX.XXX";
-			if (dataArea[3] == 0x02 && dataArea[2] < 6) return "XX.XXXX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x06) return "X.XXX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x07) return "XXX.X";
-			if (dataArea[3] == 0x02 && dataArea[2] < 0x80) return "XX.XX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x80 && dataArea[0] == 0x01) return "XXX.XXX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x80 && dataArea[0] == 0x02) return "XX.XX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x80 && dataArea[0] == 0x03) return "XX.XXXX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x80 && dataArea[0] == 0x04) return "XX.XXXX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x80 && dataArea[0] == 0x05) return "XX.XXXX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x80 && dataArea[0] == 0x06) return "XX.XXXX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x80 && dataArea[0] == 0x07) return "XX.XX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x80 && dataArea[0] == 0x08) return "XX.XX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x80 && dataArea[0] == 0x09) return "XX.XX";
-			if (dataArea[3] == 0x02 && dataArea[2] == 0x80 && dataArea[0] == 0x0A) return "XXXXXXXX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x04 && dataArea[0] <= 0x02) return "XXXXXXXXXXXX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x04 && dataArea[0] == 0x09) return "XXXXXX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x04 && dataArea[0] == 0x0A) return "XXXXXX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x05 ) return "XXXX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x06) return "XX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x07) return "XX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x08) return "XX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x09) return "XX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x0D) return "X.XXX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x0E && dataArea[0] < 0x03) return "XX.XXXX";
-			if (dataArea[3] == 0x04 && dataArea[2] == 0x00 && dataArea[1] == 0x0E ) return "XXX.X";
-			return "XXXXXX.XX";
-		}
-
-		/// <summary>
-		/// 从用户输入的地址信息中解析出真实的地址及数据标识
-		/// </summary>
-		/// <param name="address">用户输入的地址信息</param>
-		/// <param name="defaultStation">默认的地址域</param>
-		/// <returns>解析结果信息</returns>
-		public static OperateResult<string, int> AnalysisIntegerAddress( string address, string defaultStation )
-		{
-			try
-			{
-				string region = defaultStation;
-				int value = 0;
-				if (address.IndexOf( ';' ) > 0)
-				{
-					string[] splits = address.Split( new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries );
-					for (int i = 0; i < splits.Length; i++)
-					{
-						if (splits[i].StartsWith( "s=" ))
-						{
-							region = splits[i].Substring( 2 );
-						}
-						else
-						{
-							value = Convert.ToInt32( splits[i] );
-						}
-					}
-				}
-				else
-				{
-					value = Convert.ToInt32( address );
-				}
-				return OperateResult.CreateSuccessResult( region, value );
-			}
-			catch(Exception ex)
-			{
-				return new OperateResult<string, int>( ex.Message );
-			}
-		}
-
-		/// <summary>
-		/// 检查当前的反馈数据信息是否正确
-		/// </summary>
-		/// <param name="response">从仪表反馈的数据信息</param>
-		/// <returns>是否校验成功</returns>
-		public static OperateResult CheckResponse(byte[] response )
-		{
-			if (response.Length < 9) return new OperateResult( StringResources.Language.ReceiveDataLengthTooShort );
-			if ((response[8] & 0x40) == 0x40)
-			{
-				// 异常的响应
-				byte error = response[10];
-				if (error.GetBoolByIndex( 0 )) return new OperateResult( StringResources.Language.DLTErrorInfoBit0 );
-				if (error.GetBoolByIndex( 1 )) return new OperateResult( StringResources.Language.DLTErrorInfoBit1 );
-				if (error.GetBoolByIndex( 2 )) return new OperateResult( StringResources.Language.DLTErrorInfoBit2 );
-				if (error.GetBoolByIndex( 3 )) return new OperateResult( StringResources.Language.DLTErrorInfoBit3 );
-				if (error.GetBoolByIndex( 4 )) return new OperateResult( StringResources.Language.DLTErrorInfoBit4 );
-				if (error.GetBoolByIndex( 5 )) return new OperateResult( StringResources.Language.DLTErrorInfoBit5 );
-				if (error.GetBoolByIndex( 6 )) return new OperateResult( StringResources.Language.DLTErrorInfoBit6 );
-				if (error.GetBoolByIndex( 7 )) return new OperateResult( StringResources.Language.DLTErrorInfoBit7 );
-				return OperateResult.CreateSuccessResult( );
-			}
-			else
-			{
-				// 正常的响应
-				return OperateResult.CreateSuccessResult( );
-			}
-		}
-
-		#endregion
 	}
 }

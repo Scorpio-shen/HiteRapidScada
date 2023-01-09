@@ -24,7 +24,7 @@ namespace HslCommunication.Profinet.LSIS
 		/// <summary>
 		/// Instantiate a Default object
 		/// </summary>
-		public XGBCnet()
+		public XGBCnet( )
 		{
 			ByteTransform = new RegularByteTransform( );
 			WordLength    = 2;
@@ -35,10 +35,7 @@ namespace HslCommunication.Profinet.LSIS
 		#region Message Pack Unpack
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
-		{
-			return Helper.XGBCnetHelper.UnpackResponseContent( send, response );
-		}
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => Helper.XGBCnetHelper.UnpackResponseContent( send, response );
 
 		#endregion
 
@@ -64,11 +61,12 @@ namespace HslCommunication.Profinet.LSIS
 		#region Read Write Bool
 
 		/// <inheritdoc cref="Helper.XGBCnetHelper.ReadBool(IReadWriteDevice, int, string)"/>
+		[HslMqttApi( "ReadBool", "" )]
+		public override OperateResult<bool> ReadBool( string address ) => Helper.XGBCnetHelper.ReadBool( this, this.Station, address );
+
+		/// <inheritdoc cref="Helper.XGBCnetHelper.ReadBool(IReadWriteDevice, int, string, ushort)"/>
 		[HslMqttApi( "ReadBoolArray", "" )]
-		public override OperateResult<bool> ReadBool( string address )
-		{
-			return Helper.XGBCnetHelper.ReadBool( this, this.Station, address );
-		}
+		public override OperateResult<bool[]> ReadBool( string address, ushort length ) => Helper.XGBCnetHelper.ReadBool( this, this.Station, address, length );
 
 		/// <inheritdoc cref="XGBCnetOverTcp.ReadCoil(string)"/>
 		public OperateResult<bool> ReadCoil( string address ) => ReadBool( address );
@@ -81,20 +79,17 @@ namespace HslCommunication.Profinet.LSIS
 
 		/// <inheritdoc cref="Helper.XGBCnetHelper.Write(IReadWriteDevice, int, string, bool)"/>
 		[HslMqttApi( "WriteBool", "" )]
-		public override OperateResult Write( string address, bool value )
-		{
-			return Helper.XGBCnetHelper.Write( this, this.Station, address, value );
-		}
+		public override OperateResult Write( string address, bool value ) => Helper.XGBCnetHelper.Write( this, this.Station, address, value );
 
 		#endregion
 
 		#region Async Read Write Bool
 #if !NET35 && !NET20
 		/// <inheritdoc cref="ReadBool(string)"/>
-		public async override Task<OperateResult<bool>> ReadBoolAsync( string address )
-		{
-			return await Helper.XGBCnetHelper.ReadBoolAsync( this, this.Station, address );
-		}
+		public async override Task<OperateResult<bool>> ReadBoolAsync( string address ) => await Helper.XGBCnetHelper.ReadBoolAsync( this, this.Station, address );
+
+		/// <inheritdoc cref="ReadBool(string, ushort)"/>
+		public override async Task<OperateResult<bool[]>> ReadBoolAsync( string address, ushort length ) => await Helper.XGBCnetHelper.ReadBoolAsync( this, this.Station, address, length );
 
 		/// <inheritdoc cref="ReadCoil(string)"/>
 		public async Task<OperateResult<bool>> ReadCoilAsync( string address ) => await ReadBoolAsync( address );
@@ -106,10 +101,7 @@ namespace HslCommunication.Profinet.LSIS
 		public async Task<OperateResult> WriteCoilAsync( string address, bool value ) => await WriteAsync( address, value );
 
 		/// <inheritdoc cref="Write(string, bool)"/>
-		public async override Task<OperateResult> WriteAsync( string address, bool value )
-		{
-			return await Helper.XGBCnetHelper.WriteAsync( this, this.Station, address, value );
-		}
+		public async override Task<OperateResult> WriteAsync( string address, bool value ) => await Helper.XGBCnetHelper.WriteAsync( this, this.Station, address, value );
 #endif
 		#endregion
 
@@ -117,45 +109,27 @@ namespace HslCommunication.Profinet.LSIS
 
 		/// <inheritdoc cref="Helper.XGBCnetHelper.Read(IReadWriteDevice, int, string, ushort)"/>
 		[HslMqttApi( "ReadByteArray", "" )]
-		public override OperateResult<byte[]> Read( string address, ushort length )
-		{
-			return Helper.XGBCnetHelper.Read( this, this.Station, address, length );
-		}
+		public override OperateResult<byte[]> Read( string address, ushort length ) => Helper.XGBCnetHelper.Read( this, this.Station, address, length );
 
 		/// <inheritdoc cref="Helper.XGBCnetHelper.Read(IReadWriteDevice, int, string[])"/>
-		public OperateResult<byte[]> Read(string[] address )
-		{
-			return Helper.XGBCnetHelper.Read( this, this.Station, address );
-		}
+		public OperateResult<byte[]> Read(string[] address ) => Helper.XGBCnetHelper.Read( this, this.Station, address );
 
 		/// <inheritdoc cref="Helper.XGBCnetHelper.Write(IReadWriteDevice, int, string, byte[])"/>
 		[HslMqttApi( "WriteByteArray", "" )]
-		public override OperateResult Write( string address, byte[] value )
-		{
-			return Helper.XGBCnetHelper.Write( this, this.Station, address, value );
-		}
+		public override OperateResult Write( string address, byte[] value ) => Helper.XGBCnetHelper.Write( this, this.Station, address, value );
 
 		#endregion
 
 		#region Async Read Write Support
 #if !NET35 && !NET20
 		/// <inheritdoc cref="Read(string, ushort)"/>
-		public override async Task<OperateResult<byte[]>> ReadAsync( string address, ushort length )
-		{
-			return await Helper.XGBCnetHelper.ReadAsync( this, this.Station, address, length );
-		}
+		public override async Task<OperateResult<byte[]>> ReadAsync( string address, ushort length ) => await Helper.XGBCnetHelper.ReadAsync( this, this.Station, address, length );
 
 		/// <inheritdoc cref="Read(string[])"/>
-		public async Task<OperateResult<byte[]>> ReadAsync( string[] address )
-		{
-			return await Helper.XGBCnetHelper.ReadAsync( this, this.Station, address );
-		}
+		public async Task<OperateResult<byte[]>> ReadAsync( string[] address ) => await Helper.XGBCnetHelper.ReadAsync( this, this.Station, address );
 
 		/// <inheritdoc cref="Write(string, byte[])"/>
-		public override async Task<OperateResult> WriteAsync( string address, byte[] value )
-		{
-			return await Helper.XGBCnetHelper.WriteAsync( this, this.Station, address, value );
-		}
+		public override async Task<OperateResult> WriteAsync( string address, byte[] value ) => await Helper.XGBCnetHelper.WriteAsync( this, this.Station, address, value );
 #endif
 		#endregion
 

@@ -1,0 +1,399 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A2DE5801-0BFE-4AD2-9378-547EAD2AA6CE}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>KpAllenBrandly</RootNamespace>
+    <AssemblyName>KpAllenBrandly</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Extend\DataTypeEnumExtend.cs" />
+    <Compile Include="KpAllenBrandlyLogic.cs" />
+    <Compile Include="KpAllenBrandlyView.cs" />
+    <Compile Include="Model\ABRequestModel.cs" />
+    <Compile Include="Model\ConnectionOptions.cs" />
+    <Compile Include="Model\DeviceTemplate.cs" />
+    <Compile Include="Model\EnumType\ConnectionTypeEnum.cs" />
+    <Compile Include="Model\EnumType\DataTypeEnum.cs" />
+    <Compile Include="Model\EnumType\MemoryTypeEnum.cs" />
+    <Compile Include="Model\EnumType\ProtocolTypeEnum.cs" />
+    <Compile Include="Model\EnumType\TagGroupDefaultValues.cs" />
+    <Compile Include="Model\EnumType\TempleteKeyString.cs" />
+    <Compile Include="Model\Tag.cs" />
+    <Compile Include="Model\TagGroup.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Resource1.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resource1.resx</DependentUpon>
+    </Compile>
+    <Compile Include="ViewModel\FrmDevAddRangeViewModel.cs" />
+    <Compile Include="View\CtrlPLCConfig.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="View\CtrlPLCConfig.Designer.cs">
+      <DependentUpon>CtrlPLCConfig.cs</DependentUpon>
+    </Compile>
+    <Compile Include="View\CtrlRead.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="View\CtrlRead.Designer.cs">
+      <DependentUpon>CtrlRead.cs</DependentUpon>
+    </Compile>
+    <Compile Include="View\CtrlTreeView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="View\CtrlTreeView.Designer.cs">
+      <DependentUpon>CtrlTreeView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="View\FrmDevAddRange.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="View\FrmDevAddRange.Designer.cs">
+      <DependentUpon>FrmDevAddRange.cs</DependentUpon>
+    </Compile>
+    <Compile Include="View\FrmDevProps.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="View\FrmDevProps.Designer.cs">
+      <DependentUpon>FrmDevProps.cs</DependentUpon>
+    </Compile>
+    <Compile Include="View\FrmDevTemplate.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="View\FrmDevTemplate.Designer.cs">
+      <DependentUpon>FrmDevTemplate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="View\FrmParaSet.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="View\FrmParaSet.Designer.cs">
+      <DependentUpon>FrmParaSet.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\OpenKPs\KpCommon\KpCommon.csproj">
+      <Project>{2ba0bc26-8c82-4466-a0d1-92f0889c8a94}</Project>
+      <Name>KpCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ScadaComm\ScadaComm\ScadaCommCommon\ScadaCommCommon.csproj">
+      <Project>{7baeae0e-4694-41d7-bc29-f205aef69741}</Project>
+      <Name>ScadaCommCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ScadaData\ScadaData\ScadaData.csproj">
+      <Project>{c5dc293f-13ca-435f-a7db-4ba91639c292}</Project>
+      <Name>ScadaData</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resource1.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resource1.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="View\CtrlPLCConfig.resx">
+      <DependentUpon>CtrlPLCConfig.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="View\CtrlRead.resx">
+      <DependentUpon>CtrlRead.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="View\CtrlTreeView.resx">
+      <DependentUpon>CtrlTreeView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="View\FrmDevAddRange.resx">
+      <DependentUpon>FrmDevAddRange.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="View\FrmDevProps.resx">
+      <DependentUpon>FrmDevProps.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="View\FrmDevTemplate.resx">
+      <DependentUpon>FrmDevTemplate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="View\FrmParaSet.resx">
+      <DependentUpon>FrmParaSet.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\abstr1.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\abstr1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\abstr11.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\abstr111.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\abstr12.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Activity_16xLG.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Activity_16xLG1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\AddressViewer.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\AddressViewer1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\alipay.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\alipay1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\asset_progressBar_24x24_on.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\asset_progressBar_24x24_on1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\AudioRecording.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\AudioRecording1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\brackets_Square_16xMD.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\brackets_Square_16xMD1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Class_489.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Class_4891.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ClassIcon.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ClassIcon1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Cloud_16xLG.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Cloud_16xLG1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Copy_6524.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Copy_65241.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Delegate_8339.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Delegate_83391.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\docview_xaml_on_16x16.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\docview_xaml_on_16x161.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Enum_582.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Enum_5821.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Event_594.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Event_594_exp.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Event_594_exp1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Event_5941.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\glasses_16xLG.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\glasses_16xLG1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\grid_Data_16xLG.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\grid_Data_16xLG1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\lightningBolt_16xLG.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\lightningBolt_16xLG1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ListView_687.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ListView_6871.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Method_636.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Method_6361.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\mm_facetoface_collect_qrcode_1525331158525.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\mm_facetoface_collect_qrcode_15253311585251.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Module_648.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Module_6481.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\PropertyIcon.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\PropertyIcon1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\qrcode_for_gh_319218678954_258.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\qrcode_for_gh_319218678954_2581.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Soundfile_461.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Soundfile_4611.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Structure_507.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Structure_5071.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\TabControl_707.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\TabControl_7071.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Table_748.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Table_7481.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Tag_7213.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Tag_72131.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Textfile_818_16x.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Textfile_818_16x1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\TreeView_713.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\TreeView_7131.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\usbcontroller.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\usbcontroller1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\UseCaseDiagramFile_usecasediagram_13447_16x.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\UseCaseDiagramFile_usecasediagram_13447_16x1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\VirtualMachine.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\VirtualMachine1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\WebForm%28ASPX%29_815_16x.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\WebForm%28ASPX%29_815_16x1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\WebFormTemplate_11274_16x_color.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\WebFormTemplate_11274_16x_color1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\WindowsForm_817_16x.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\WindowsForm_817_16x1.png" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

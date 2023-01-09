@@ -34,10 +34,10 @@ namespace HslCommunication.Robot.FANUC
 		public FanucRobotServer( )
 		{
 			// 六个数据池初始化
-			dBuffer = new SoftBuffer( DataPoolLength );
-			iBuffer = new SoftBuffer( DataPoolLength );
-			qBuffer = new SoftBuffer( DataPoolLength );
-			mBuffer = new SoftBuffer( DataPoolLength );
+			dBuffer  = new SoftBuffer( DataPoolLength );
+			iBuffer  = new SoftBuffer( DataPoolLength );
+			qBuffer  = new SoftBuffer( DataPoolLength );
+			mBuffer  = new SoftBuffer( DataPoolLength );
 			aqBuffer = new SoftBuffer( DataPoolLength );
 			aiBuffer = new SoftBuffer( DataPoolLength );
 
@@ -824,7 +824,7 @@ e9 42 d8 29 2c 42 85 9f 02 c2 00 00 00 00 00 00
 		[HslMqttApi( "ReadByteArray", "Batch read byte array information, need to specify the address and length, return the original byte array")]
 		public override OperateResult<byte[]> Read( string address, ushort length )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, false );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
 			if (analysis.Content2 == 0) return new OperateResult<byte[]>( "Address start can't be zero" );
@@ -837,14 +837,14 @@ e9 42 d8 29 2c 42 85 9f 02 c2 00 00 00 00 00 00
 			else if (analysis.Content1 == FanucHelper.SELECTOR_AQ)
 				return OperateResult.CreateSuccessResult( aqBuffer.GetBytes( analysis.Content2 * 2, length * 2 ) );
 			else
-				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedWord );
 		}
 
 		/// <inheritdoc/>
 		[HslMqttApi( "WriteByteArray", "Write the original byte array data to the specified address, and return whether the write was successful")]
 		public override OperateResult Write( string address, byte[] value )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, false );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
 			if (analysis.Content2 == 0) return new OperateResult( "Address start can't be zero" );
@@ -857,7 +857,7 @@ e9 42 d8 29 2c 42 85 9f 02 c2 00 00 00 00 00 00
 			else if (analysis.Content1 == FanucHelper.SELECTOR_AQ)
 				aqBuffer.SetBytes( value, analysis.Content2 * 2 );
 			else
-				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedWord );
 
 			return OperateResult.CreateSuccessResult( );
 		}
@@ -870,7 +870,7 @@ e9 42 d8 29 2c 42 85 9f 02 c2 00 00 00 00 00 00
 		[HslMqttApi( "ReadBoolArray", "Batch read bool array information, need to specify the address and length, return bool array")]
 		public override OperateResult<bool[]> ReadBool( string address, ushort length )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, true );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
 
 			if (analysis.Content2 == 0) return new OperateResult<bool[]>( "Address start can't be zero" );
@@ -883,14 +883,14 @@ e9 42 d8 29 2c 42 85 9f 02 c2 00 00 00 00 00 00
 			else if (analysis.Content1 == FanucHelper.SELECTOR_M)
 				return OperateResult.CreateSuccessResult( mBuffer.GetBytes( analysis.Content2, length ).Select( m => m != 0 ).ToArray( ) );
 			else
-				return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType );
+				return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedBool );
 		}
 
 		/// <inheritdoc/>
 		[HslMqttApi( "WriteBoolArray", "Batch write bool array data, return whether the write was successful")]
 		public override OperateResult Write( string address, bool[] value )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, true );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
 
 			if (analysis.Content2 == 0) return new OperateResult( "Address start can't be zero" );
@@ -903,7 +903,7 @@ e9 42 d8 29 2c 42 85 9f 02 c2 00 00 00 00 00 00
 			else if (analysis.Content1 == FanucHelper.SELECTOR_M)
 				mBuffer.SetBytes( value.Select( m => m ? (byte)1 : (byte)0 ).ToArray( ), analysis.Content2 );
 			else
-				return new OperateResult( StringResources.Language.NotSupportedDataType );
+				return new OperateResult( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedBool );
 
 			return OperateResult.CreateSuccessResult( );
 		}
@@ -911,6 +911,9 @@ e9 42 d8 29 2c 42 85 9f 02 c2 00 00 00 00 00 00
 		#endregion
 
 		#region NetServer Override
+
+		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => new FanucRobotMessage( );
 
 		/// <inheritdoc/>
 		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
@@ -931,61 +934,20 @@ e9 42 d8 29 2c 42 85 9f 02 c2 00 00 00 00 00 00
 			OperateResult send2 = Send( socket, SoftBasic.HexStringToBytes( @"03 00 01 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 01 d4 10 0e 00 00 30 3a 00 00 01 01 00 00 00 00 00 00 01 01 ff 02 00 00 7c 21" ) );
 			if (!read2.IsSuccess) return;
 
-			// 开始接收数据信息
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-			try
-			{
-				socket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), appSession );
-				AddClient( appSession );
-			}
-			catch
-			{
-				socket.Close( );
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-			}
+			base.ThreadPoolLoginAfterClientCheck( socket, endPoint );
 		}
 
-		private void SocketAsyncCallBack( IAsyncResult ar )
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			if (ar.AsyncState is AppSession session)
-			{
-				try
-				{
-					int receiveCount = session.WorkSocket.EndReceive( ar );
-
-					OperateResult<byte[]> read1 = ReceiveByMessage( session.WorkSocket, 5000, new FanucRobotMessage( ) );
-					if (!read1.IsSuccess) { RemoveClient( session ); return; };
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{read1.Content.ToHexString( ' ' )}" );
-
-					byte[] receive = read1.Content;
-					int command = receive[2] == 6 ? receive[43] : receive[2] == 8 ? receive[43] : receive[2] == 9 ? receive[51] : 0;
+			int command = receive[2] == 6 ? receive[43] : receive[2] == 8 ? receive[43] : receive[2] == 9 ? receive[51] : 0;
 					
-					byte[] back = null;
-					if (command == FanucHelper.SELECTOR_G)       back = GetCommandBackMessage( receive[2] );
-					else if (receive[2] == 6)                    back = GetReadBackMessage(    receive, command );
-					else if (receive[2] == 8 || receive[2] == 9) back = GetWriteBackMessage(   receive, command );
-					else session.WorkSocket.Close( );
-
-					if (back != null)
-					{
-						LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{back.ToHexString( ' ' )}" );
-						Send( session.WorkSocket, back );
-						session.HeartTime = DateTime.Now;
-						RaiseDataReceived( session, receive );
-						if (!session.WorkSocket.BeginReceiveResult( SocketAsyncCallBack, session ).IsSuccess) RemoveClient( session );
-					}
-					else
-					{
-						RemoveClient( session, $"Not support function -> {command}" );
-					}
-				}
-				catch(Exception ex)
-				{
-					RemoveClient( session, $"SocketAsyncCallBack -> {ex.Message}" );
-				}
-			}
+			byte[] back = null;
+			if (command == FanucHelper.SELECTOR_G)       back = GetCommandBackMessage( receive[2] );
+			else if (receive[2] == 6)                    back = GetReadBackMessage(    receive, command );
+			else if (receive[2] == 8 || receive[2] == 9) back = GetWriteBackMessage(   receive, command );
+			else session.WorkSocket.Close( );
+			return OperateResult.CreateSuccessResult( back );
 		}
 
 		private byte[] GetCommandBackMessage( byte command  )

@@ -36,12 +36,12 @@ namespace HslCommunication.Robot.ABB
 		}
 
 
-		/// <inheritdoc cref="HttpServer.HandleRequest(HttpListenerRequest, HttpListenerResponse, string)"/>
+		/// <inheritdoc cref="HttpServer.HandleRequest(HttpListenerRequest, HttpListenerResponse, byte[])"/>
 
 #if NET20 || NET35
-		protected override string HandleRequest( HttpListenerRequest request, HttpListenerResponse response, string data )
+		protected override string HandleRequest( HttpListenerRequest request, HttpListenerResponse response,  byte[] data )
 #else
-		protected override async Task<string> HandleRequest( HttpListenerRequest request, HttpListenerResponse response, string data )
+		protected override async Task<string> HandleRequest( HttpListenerRequest request, HttpListenerResponse response, byte[] data )
 #endif
 		{
 			if (!Authorization.asdniasnfaksndiqwhawfskhfaiw()) { return StringResources.Language.InsufficientPrivileges; };

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HslCommunication.Core.Address;
+using System.IO;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -28,9 +29,10 @@ namespace HslCommunication.Profinet.Fuji
 		/// <inheritdoc cref="FujiSPBOverTcp()"/>
 		public FujiSPB( )
 		{
-			this.ByteTransform      = new RegularByteTransform( );
-			this.WordLength         = 1;
-			base.LogMsgFormatBinary = false;
+			this.ByteTransform         = new RegularByteTransform( );
+			this.WordLength            = 1;
+			this.LogMsgFormatBinary    = false;
+			this.ReceiveEmptyDataCount = 5;
 		}
 
 		#endregion
@@ -39,6 +41,12 @@ namespace HslCommunication.Profinet.Fuji
 
 		/// <inheritdoc cref="FujiSPBOverTcp.Station"/>
 		public byte Station { get => station; set => station = value; }
+
+		/// <inheritdoc/>
+		protected override bool CheckReceiveDataComplete( MemoryStream ms )
+		{
+			return ModBus.ModbusInfo.CheckAsciiReceiveDataComplete( ms.ToArray( ) );
+		}
 
 		#endregion
 

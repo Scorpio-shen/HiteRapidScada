@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using HslCommunication.Core;
 using HslCommunication.BasicFramework;
+using HslCommunication.Core.Address;
 #if !NET20 && !NET35
 using System.Threading.Tasks;
 #endif
@@ -55,24 +56,36 @@ namespace HslCommunication.Profinet.Keyence
 		/// <param name="address">软元件地址</param>
 		/// <param name="length">读取长度</param>
 		/// <returns>是否建立成功</returns>
-		public static OperateResult<byte[]> BuildReadCommand( string address, ushort length )
+		public static OperateResult<List<byte[]>> BuildReadCommand( string address, ushort length )
 		{
-			var addressResult = KvAnalysisAddress( address );
-			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( addressResult );
+			var addressResult = KeyenceNanoAddress.ParseFrom( address, length );
+			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<List<byte[]>>( addressResult );
 
-			if (length > 1) length = (ushort)(length / GetWordAddressMultiple( addressResult.Content1 ));
+			return BuildReadCommand( addressResult.Content, length );
+		}
 
-			StringBuilder cmd = new StringBuilder( );
-			cmd.Append( "RDS" );                               // 批量读取
-			cmd.Append( " " );                                 // 空格符
-			cmd.Append( addressResult.Content1 );              // 软元件类型，如DM
-			cmd.Append( addressResult.Content2.ToString( ) );  // 软元件的地址，如1000
-			cmd.Append( " " );                                 // 空格符
-			cmd.Append( length.ToString( ) );
-			cmd.Append( "\r" );                                //结束符
+		/// <inheritdoc cref="BuildReadCommand(string, ushort)"/>
+		public static OperateResult<List<byte[]>> BuildReadCommand( KeyenceNanoAddress address, ushort length )
+		{
+			if (length > 1) length = (ushort)(length / GetWordAddressMultiple( address.DataCode ));
+			int[] splits = SoftBasic.SplitIntegerToArray( length, address.SplitLength );
 
-			byte[] _PLCCommand = Encoding.ASCII.GetBytes( cmd.ToString( ) );
-			return OperateResult.CreateSuccessResult( _PLCCommand );
+			List<byte[]> array = new List<byte[]>( );
+			for (int i = 0; i < splits.Length; i++)
+			{
+				StringBuilder cmd = new StringBuilder( );
+				cmd.Append( "RDS" );                                                // 批量读取
+				cmd.Append( " " );                                                  // 空格符
+				cmd.Append( address.DataCode );                                     // 软元件类型，如DM
+				cmd.Append( address.GetAddressStartFormat( ) );                     // 软元件的地址，如1000, 100015
+				cmd.Append( " " );                                                  // 空格符
+				cmd.Append( splits[i].ToString( ) );
+				cmd.Append( "\r" );                                                 //结束符
+
+				array.Add( Encoding.ASCII.GetBytes( cmd.ToString( ) ) );
+				address.AddressStart += splits[i];
+			}
+			return OperateResult.CreateSuccessResult( array );
 		}
 
 		/// <summary>
@@ -84,21 +97,21 @@ namespace HslCommunication.Profinet.Keyence
 		/// <returns>是否成功的信息</returns>
 		public static OperateResult<byte[]> BuildWriteCommand( string address, byte[] value )
 		{
-			var addressResult = KvAnalysisAddress( address );
+			var addressResult = KeyenceNanoAddress.ParseFrom( address, 0 );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( addressResult );
 
 			StringBuilder cmd = new StringBuilder( );
-			cmd.Append( "WRS" );                         // 批量读取
-			cmd.Append( " " );                           // 空格符
-			cmd.Append( addressResult.Content1 );        // 软元件地址
-			cmd.Append( addressResult.Content2 );        // 软元件地址
-			cmd.Append( " " );                           // 空格符
-			int length = value.Length / (GetWordAddressMultiple( addressResult.Content1 ) * 2);
+			cmd.Append( "WRS" );                                            // 批量读取
+			cmd.Append( " " );                                              // 空格符
+			cmd.Append( addressResult.Content.DataCode );                   // 软元件地址
+			cmd.Append( addressResult.Content.GetAddressStartFormat( ) );   // 软元件地址
+			cmd.Append( " " );                                              // 空格符
+			int length = value.Length / (GetWordAddressMultiple( addressResult.Content.DataCode ) * 2);
 			cmd.Append( length.ToString( ) );
 			for (int i = 0; i < length; i++)
 			{
 				cmd.Append( " " );
-				cmd.Append( BitConverter.ToUInt16( value, i * GetWordAddressMultiple( addressResult.Content1 ) * 2 ) );
+				cmd.Append( BitConverter.ToUInt16( value, i * GetWordAddressMultiple( addressResult.Content.DataCode ) * 2 ) );
 			}
 			cmd.Append( "\r" );
 
@@ -145,18 +158,18 @@ namespace HslCommunication.Profinet.Keyence
 		/// <returns>是否成功的信息</returns>
 		public static OperateResult<byte[]> BuildWriteCommand( string address, bool value )
 		{
-			var addressResult = KvAnalysisAddress( address );
+			var addressResult = KeyenceNanoAddress.ParseFrom( address, 0 );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( addressResult );
 
 			StringBuilder cmd = new StringBuilder( );
 			if (value)
-				cmd.Append( "ST" );                      // 置位
+				cmd.Append( "ST" );                                         // 置位
 			else
-				cmd.Append( "RS" );                      // 复位
-			cmd.Append( " " );                           // 空格符
-			cmd.Append( addressResult.Content1 );        // 软元件地址
-			cmd.Append( addressResult.Content2 );        // 软元件地址
-			cmd.Append( "\r" );                          // 空格符
+				cmd.Append( "RS" );                                         // 复位
+			cmd.Append( " " );                                              // 空格符
+			cmd.Append( addressResult.Content.DataCode );                   // 软元件地址
+			cmd.Append( addressResult.Content.GetAddressStartFormat( ) );   // 软元件地址
+			cmd.Append( "\r" );                                             // 空格符
 			return OperateResult.CreateSuccessResult( Encoding.ASCII.GetBytes( cmd.ToString( ) ) );
 		}
 
@@ -169,22 +182,22 @@ namespace HslCommunication.Profinet.Keyence
 		/// <returns>写入bool数组的命令报文</returns>
 		public static OperateResult<byte[]> BuildWriteCommand( string address, bool[] value )
 		{
-			var addressResult = KvAnalysisAddress( address );
+			var addressResult = KeyenceNanoAddress.ParseFrom( address, 0 );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( addressResult );
 
 			StringBuilder cmd = new StringBuilder( );
 			cmd.Append( "WRS" );
-			cmd.Append( " " );                           // 空格符
-			cmd.Append( addressResult.Content1 );        // 软元件地址
-			cmd.Append( addressResult.Content2 );        // 软元件地址
-			cmd.Append( " " );                           // 空格符
-			cmd.Append( value.Length.ToString( ) );      // 写入的数据长度
+			cmd.Append( " " );                                                 // 空格符
+			cmd.Append( addressResult.Content.DataCode );                      // 软元件地址
+			cmd.Append( addressResult.Content.GetAddressStartFormat( ) );      // 软元件地址
+			cmd.Append( " " );                                                 // 空格符
+			cmd.Append( value.Length.ToString( ) );                            // 写入的数据长度
 			for (int i = 0; i < value.Length; i++)
 			{
-				cmd.Append( " " );                           // 空格符
+				cmd.Append( " " );                                             // 空格符
 				cmd.Append( value[i] ? "1" : "0" );
 			}
-			cmd.Append( "\r" );                          // 空格符
+			cmd.Append( "\r" );                                                // 空格符
 			return OperateResult.CreateSuccessResult( Encoding.ASCII.GetBytes( cmd.ToString( ) ) );
 		}
 
@@ -209,7 +222,7 @@ namespace HslCommunication.Profinet.Keyence
 		{
 			if (ack.Length == 0) return new OperateResult( StringResources.Language.MelsecFxReceiveZero );
 			if (ack[0] == 0x45) return new OperateResult( GetErrorText( Encoding.ASCII.GetString( ack ) ) );
-			if ((ack[ack.Length - 1] != 0x0A) && (ack[ack.Length - 2] != 0x0D)) return new OperateResult( StringResources.Language.MelsecFxAckWrong + " Actual: " + SoftBasic.ByteToHexString( ack, ' ' ) );
+			if ((ack[ack.Length - 1] != AsciiControl.LF) && (ack[ack.Length - 2] != AsciiControl.CR)) return new OperateResult( StringResources.Language.MelsecFxAckWrong + " Actual: " + SoftBasic.ByteToHexString( ack, ' ' ) );
 			return OperateResult.CreateSuccessResult( );
 		}
 
@@ -323,74 +336,13 @@ namespace HslCommunication.Profinet.Keyence
 			}
 		}
 
-		/// <summary>
-		/// 解析数据地址成不同的Keyence地址类型<br />
-		/// Parse data addresses into different keyence address types
-		/// </summary>
-		/// <param name="address">数据地址</param>
-		/// <returns>地址结果对象</returns>
-		public static OperateResult<string, int> KvAnalysisAddress( string address )
-		{
-			try
-			{
-				if (address.StartsWith( "CTH" ) || address.StartsWith( "cth" ))
-					return OperateResult.CreateSuccessResult( "CTH", int.Parse( address.Substring( 3 ) ) );
-				else if (address.StartsWith( "CTC" ) || address.StartsWith( "ctc" ))
-					return OperateResult.CreateSuccessResult( "CTC", int.Parse( address.Substring( 3 ) ) );
-				else if (address.StartsWith( "CR" ) || address.StartsWith( "cr" ))
-					return OperateResult.CreateSuccessResult( "CR", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "MR" ) || address.StartsWith( "mr" ))
-					return OperateResult.CreateSuccessResult( "MR", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "LR" ) || address.StartsWith( "lr" ))
-					return OperateResult.CreateSuccessResult( "LR", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "DM" ) || address.StartsWith( "DM" ))
-					return OperateResult.CreateSuccessResult( "DM", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "CM" ) || address.StartsWith( "cm" ))
-					return OperateResult.CreateSuccessResult( "CM", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "W" ) || address.StartsWith( "w" ))
-					return OperateResult.CreateSuccessResult( "W", int.Parse( address.Substring( 1 ) ) );
-				else if (address.StartsWith( "TM" ) || address.StartsWith( "tm" ))
-					return OperateResult.CreateSuccessResult( "TM", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "VM" ) || address.StartsWith( "vm" ))
-					return OperateResult.CreateSuccessResult( "VM", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "EM" ) || address.StartsWith( "em" ))
-					return OperateResult.CreateSuccessResult( "EM", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "FM" ) || address.StartsWith( "fm" ))
-					return OperateResult.CreateSuccessResult( "EM", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "ZF" ) || address.StartsWith( "zf" ))
-					return OperateResult.CreateSuccessResult( "ZF", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "AT" ) || address.StartsWith( "at" ))
-					return OperateResult.CreateSuccessResult( "AT", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "TS" ) || address.StartsWith( "ts" ))
-					return OperateResult.CreateSuccessResult( "TS", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "TC" ) || address.StartsWith( "tc" ))
-					return OperateResult.CreateSuccessResult( "TC", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "CC" ) || address.StartsWith( "cc" ))
-					return OperateResult.CreateSuccessResult( "CC", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "CS" ) || address.StartsWith( "cs" ))
-					return OperateResult.CreateSuccessResult( "CS", int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "Z" ) || address.StartsWith( "z" ))
-					return OperateResult.CreateSuccessResult( "Z", int.Parse( address.Substring( 1 ) ) );
-				else if (address.StartsWith( "R" ) || address.StartsWith( "r" ))
-					return OperateResult.CreateSuccessResult( "", int.Parse( address.Substring( 1 ) ) );
-				else if (address.StartsWith( "B" ) || address.StartsWith( "b" ))
-					return OperateResult.CreateSuccessResult( "B", int.Parse( address.Substring( 1 ) ) );
-				else if (address.StartsWith( "T" ) || address.StartsWith( "t" ))
-					return OperateResult.CreateSuccessResult( "T", int.Parse( address.Substring( 1 ) ) );
-				else if (address.StartsWith( "C" ) || address.StartsWith( "c" ))
-					return OperateResult.CreateSuccessResult( "C", int.Parse( address.Substring( 1 ) ) );
-				else
-					throw new Exception( StringResources.Language.NotSupportedDataType );
-			}
-			catch (Exception ex)
-			{
-				return new OperateResult<string, int>( ex.Message );
-			}
-		}
-
 		#endregion
 
 		/// <inheritdoc cref="IReadWriteNet.Read(string, ushort)"/>
+		/// <remarks>
+		/// 地址支持读取扩展单元缓冲存储器的数据，例如读取扩展单元号1，地址100的数据，地址写为 unit=1;100<br />
+		/// The address supports reading the data in the buffer memory of the expansion unit, such as reading the data of the expansion unit number 1, address 100, and the address is written as unit=1;100
+		/// </remarks>
 		public static OperateResult<byte[]> Read( IReadWriteDevice keyence, string address, ushort length )
 		{
 			if (address.StartsWith( "unit=" ))
@@ -400,24 +352,32 @@ namespace HslCommunication.Profinet.Keyence
 
 				return ReadExpansionMemory( keyence, unit, ushort.Parse( address ), length );
 			}
-
-			// 获取指令
-			OperateResult<byte[]> command = BuildReadCommand( address, length );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
-
-			// 核心交互
-			OperateResult<byte[]> read = keyence.ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
-
-			// 反馈检查
-			OperateResult ackResult = CheckPlcReadResponse( read.Content );
-			if (!ackResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( ackResult );
-
-			var addressResult = KvAnalysisAddress( address );
+			// 解析地址
+			var addressResult = KeyenceNanoAddress.ParseFrom( address, length );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( addressResult );
 
-			// 数据提炼
-			return ExtractActualData( addressResult.Content1, read.Content );
+			// 获取指令
+			OperateResult<List<byte[]>> command = BuildReadCommand( addressResult.Content, length );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
+
+			List<byte> array = new List<byte>( );
+			for (int i = 0; i < command.Content.Count; i++)
+			{
+				// 核心交互
+				OperateResult<byte[]> read = keyence.ReadFromCoreServer( command.Content[i] );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+
+				// 反馈检查
+				OperateResult ackResult = CheckPlcReadResponse( read.Content );
+				if (!ackResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( ackResult );
+
+				// 数据提炼
+				OperateResult<byte[]> extra = ExtractActualData( addressResult.Content.DataCode, read.Content );
+				if (!extra.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( extra );
+
+				array.AddRange( extra.Content );
+			}
+			return OperateResult.CreateSuccessResult( array.ToArray( ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, byte[])"/>
@@ -451,23 +411,32 @@ namespace HslCommunication.Profinet.Keyence
 				return await ReadExpansionMemoryAsync( keyence, unit, ushort.Parse( address ), length );
 			}
 
-			// 获取指令
-			OperateResult<byte[]> command = BuildReadCommand( address, length );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
-
-			// 核心交互
-			OperateResult<byte[]> read = await keyence.ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
-
-			// 反馈检查
-			OperateResult ackResult = CheckPlcReadResponse( read.Content );
-			if (!ackResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( ackResult );
-
-			var addressResult = KvAnalysisAddress( address );
+			// 解析地址
+			var addressResult = KeyenceNanoAddress.ParseFrom( address, length );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( addressResult );
 
-			// 数据提炼
-			return ExtractActualData( addressResult.Content1, read.Content );
+			// 获取指令
+			OperateResult<List<byte[]>> command = BuildReadCommand( addressResult.Content, length );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
+
+			List<byte> array = new List<byte>( );
+			for (int i = 0; i < command.Content.Count; i++)
+			{
+				// 核心交互
+				OperateResult<byte[]> read = await keyence.ReadFromCoreServerAsync( command.Content[i] );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+
+				// 反馈检查
+				OperateResult ackResult = CheckPlcReadResponse( read.Content );
+				if (!ackResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( ackResult );
+
+				// 数据提炼
+				OperateResult<byte[]> extra = ExtractActualData( addressResult.Content.DataCode, read.Content );
+				if (!extra.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( extra );
+
+				array.AddRange( extra.Content );
+			}
+			return OperateResult.CreateSuccessResult( array.ToArray( ) );
 		}
 
 		/// <inheritdoc cref="Write(IReadWriteDevice, string, byte[])"/>
@@ -495,23 +464,32 @@ namespace HslCommunication.Profinet.Keyence
 		/// <inheritdoc/>
 		public static OperateResult<bool[]> ReadBool( IReadWriteDevice keyence, string address, ushort length )
 		{
-			// 获取指令
-			OperateResult<byte[]> command = BuildReadCommand( address, length );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
-
-			// 核心交互
-			OperateResult<byte[]> read = keyence.ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
-
-			// 反馈检查
-			OperateResult ackResult = CheckPlcReadResponse( read.Content );
-			if (!ackResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( ackResult );
-
-			var addressResult = KvAnalysisAddress( address );
+			// 解析地址
+			var addressResult = KeyenceNanoAddress.ParseFrom( address, length );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( addressResult );
 
-			// 数据提炼
-			return ExtractActualBoolData( addressResult.Content1, read.Content );
+			// 获取指令
+			OperateResult<List<byte[]>> command = BuildReadCommand( addressResult.Content, length );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
+
+			List<bool> array = new List<bool>( );
+			for (int i = 0; i < command.Content.Count; i++)
+			{
+				// 核心交互
+				OperateResult<byte[]> read = keyence.ReadFromCoreServer( command.Content[i] );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
+
+				// 反馈检查
+				OperateResult ackResult = CheckPlcReadResponse( read.Content );
+				if (!ackResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( ackResult );
+
+				// 数据提炼
+				OperateResult<bool[]> extra = ExtractActualBoolData( addressResult.Content.DataCode, read.Content );
+				if (!extra.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( extra );
+
+				array.AddRange( extra.Content );
+			}
+			return OperateResult.CreateSuccessResult( array.ToArray( ) );
 		}
 
 		/// <inheritdoc/>
@@ -557,23 +535,32 @@ namespace HslCommunication.Profinet.Keyence
 		/// <inheritdoc cref="IReadWriteNet.ReadBool(string, ushort)"/>
 		public static async Task<OperateResult<bool[]>> ReadBoolAsync( IReadWriteDevice keyence, string address, ushort length )
 		{
-			// 获取指令
-			OperateResult<byte[]> command = BuildReadCommand( address, length );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
-
-			// 核心交互
-			OperateResult<byte[]> read = await keyence.ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
-
-			// 反馈检查
-			OperateResult ackResult = CheckPlcReadResponse( read.Content );
-			if (!ackResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( ackResult );
-
-			var addressResult = KvAnalysisAddress( address );
+			// 解析地址
+			var addressResult = KeyenceNanoAddress.ParseFrom( address, length );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( addressResult );
 
-			// 数据提炼
-			return ExtractActualBoolData( addressResult.Content1, read.Content );
+			// 获取指令
+			OperateResult<List<byte[]>> command = BuildReadCommand( addressResult.Content, length );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
+
+			List<bool> array = new List<bool>( );
+			for (int i = 0; i < command.Content.Count; i++)
+			{
+				// 核心交互
+				OperateResult<byte[]> read = await keyence.ReadFromCoreServerAsync( command.Content[i] );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
+
+				// 反馈检查
+				OperateResult ackResult = CheckPlcReadResponse( read.Content );
+				if (!ackResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( ackResult );
+
+				// 数据提炼
+				OperateResult<bool[]> extra = ExtractActualBoolData( addressResult.Content.DataCode, read.Content );
+				if (!extra.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( extra );
+
+				array.AddRange( extra.Content );
+			}
+			return OperateResult.CreateSuccessResult( array.ToArray( ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, bool)"/>

@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using HslCommunication.BasicFramework;
 using HslCommunication.Reflection;
+using HslCommunication.Profinet.Melsec.Helper;
+using System.IO;
 
 namespace HslCommunication.Profinet.Melsec
 {
@@ -19,7 +21,7 @@ namespace HslCommunication.Profinet.Melsec
 	/// <example>
 	/// <inheritdoc cref="MelsecFxLinksOverTcp" path="example"/>
 	/// </example>
-	public class MelsecFxLinks : SerialDeviceBase
+	public class MelsecFxLinks : SerialDeviceBase, IReadWriteFxLinks
 	{
 		#region Constructor
 
@@ -28,6 +30,34 @@ namespace HslCommunication.Profinet.Melsec
 		{
 			ByteTransform = new RegularByteTransform( );
 			WordLength = 1;
+		}
+
+		/// <inheritdoc/>
+		public override byte[] PackCommandWithHeader( byte[] command ) => MelsecFxLinksHelper.PackCommandWithHeader( this, command );
+
+		/// <inheritdoc/>
+		protected override bool CheckReceiveDataComplete( MemoryStream ms )
+		{
+			byte[] data = ms.ToArray( );
+			if (data.Length < 5) return false;
+			if (Format == 1)
+			{
+				if (data[0] == AsciiControl.NAK) return data.Length == 7;
+				if (data[0] == AsciiControl.ACK) return data.Length == 5;
+				if (data[0] == AsciiControl.STX)
+				{
+					if (SumCheck)
+						return data[data.Length - 3] == AsciiControl.ETX;
+					else
+						return data[data.Length - 1] == AsciiControl.ETX;
+				}
+				return false;
+			}
+			else if (Format == 4)
+			{
+				return data[data.Length - 1] == AsciiControl.LF && data[data.Length - 2] == AsciiControl.CR;
+			}
+			return false;
 		}
 
 		#endregion
@@ -57,57 +87,20 @@ namespace HslCommunication.Profinet.Melsec
 		/// <inheritdoc cref="MelsecFxLinksOverTcp.SumCheck"/>
 		public bool SumCheck { get => sumCheck; set => sumCheck = value; }
 
+		/// <inheritdoc cref="MelsecFxLinksOverTcp.Format"/>
+		public int Format { get; set; } = 1;
+
 		#endregion
 
 		#region Read Write Support
 
 		/// <inheritdoc cref="MelsecFxLinksOverTcp.Read(string, ushort)"/>
 		[HslMqttApi( "ReadByteArray", "" )]
-		public override OperateResult<byte[]> Read( string address, ushort length )
-		{
-			byte stat = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
-
-			// 解析指令
-			OperateResult<byte[]> command = MelsecFxLinksOverTcp.BuildReadCommand( stat, address, length, false, sumCheck, watiingTime );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
-
-			// 核心交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
-
-			// 结果验证
-			if (read.Content[0] != 0x02) return new OperateResult<byte[]>( read.Content[0], "Read Faild:" + BasicFramework.SoftBasic.ByteToHexString( read.Content, ' ' ) );
-
-			// 提取结果
-			byte[] Content = new byte[length * 2];
-			for (int i = 0; i < Content.Length / 2; i++)
-			{
-				ushort tmp = Convert.ToUInt16( Encoding.ASCII.GetString( read.Content, i * 4 + 5, 4 ), 16 );
-				BitConverter.GetBytes( tmp ).CopyTo( Content, i * 2 );
-			}
-			return OperateResult.CreateSuccessResult( Content );
-		}
+		public override OperateResult<byte[]> Read( string address, ushort length ) => MelsecFxLinksHelper.Read( this, address, length );
 
 		/// <inheritdoc cref="MelsecFxLinksOverTcp.Write(string, byte[])"/>
 		[HslMqttApi( "WriteByteArray", "" )]
-		public override OperateResult Write( string address, byte[] value )
-		{
-			byte stat = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
-
-			// 解析指令
-			OperateResult<byte[]> command = MelsecFxLinksOverTcp.BuildWriteByteCommand( stat, address, value, sumCheck, watiingTime );
-			if (!command.IsSuccess) return command;
-
-			// 核心交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-			
-			// 结果验证
-			if (read.Content[0] != 0x06) return new OperateResult( read.Content[0], "Write Faild:" + BasicFramework.SoftBasic.ByteToHexString( read.Content, ' ' ) );
-
-			// 提取结果
-			return OperateResult.CreateSuccessResult( );
-		}
+		public override OperateResult Write( string address, byte[] value ) => MelsecFxLinksHelper.Write( this, address, value );
 
 		#endregion
 
@@ -115,47 +108,11 @@ namespace HslCommunication.Profinet.Melsec
 
 		/// <inheritdoc cref="MelsecFxLinksOverTcp.ReadBool(string, ushort)"/>
 		[HslMqttApi( "ReadBoolArray", "" )]
-		public override OperateResult<bool[]> ReadBool( string address, ushort length )
-		{
-			byte stat = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
-
-			// 解析指令
-			OperateResult<byte[]> command = MelsecFxLinksOverTcp.BuildReadCommand( stat, address, length, true, sumCheck, watiingTime );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
-
-			// 核心交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if(!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
-
-			// 结果验证
-			if (read.Content[0] != 0x02) return new OperateResult<bool[]>( read.Content[0], "Read Faild:" + BasicFramework.SoftBasic.ByteToHexString( read.Content, ' ' ) );
-
-			// 提取结果
-			byte[] buffer = new byte[length];
-			Array.Copy( read.Content, 5, buffer, 0, length );
-			return OperateResult.CreateSuccessResult( buffer.Select( m => m == 0x31 ).ToArray( ) );
-		}
+		public override OperateResult<bool[]> ReadBool( string address, ushort length ) => MelsecFxLinksHelper.ReadBool( this, address, length );
 
 		/// <inheritdoc cref="MelsecFxLinksOverTcp.Write(string, bool[])"/>
 		[HslMqttApi( "WriteBoolArray", "" )]
-		public override OperateResult Write( string address, bool[] value )
-		{
-			byte stat = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
-
-			// 解析指令
-			OperateResult<byte[]> command = MelsecFxLinksOverTcp.BuildWriteBoolCommand( stat, address, value, sumCheck, watiingTime );
-			if (!command.IsSuccess) return command;
-
-			// 核心交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 结果验证
-			if (read.Content[0] != 0x06) return new OperateResult( read.Content[0], "Write Faild:" + BasicFramework.SoftBasic.ByteToHexString( read.Content, ' ' ) );
-
-			// 提取结果
-			return OperateResult.CreateSuccessResult( );
-		}
+		public override OperateResult Write( string address, bool[] value ) => MelsecFxLinksHelper.Write( this, address, value );
 
 		#endregion
 
@@ -163,66 +120,15 @@ namespace HslCommunication.Profinet.Melsec
 
 		/// <inheritdoc cref="MelsecFxLinksOverTcp.StartPLC(string)"/>
 		[HslMqttApi( Description = "Start the PLC operation, you can carry additional parameter information and specify the station number. Example: s=2; Note: The semicolon is required." )]
-		public OperateResult StartPLC( string parameter = "" )
-		{
-			byte stat = (byte)HslHelper.ExtractParameter( ref parameter, "s", this.station );
-
-			// 解析指令
-			OperateResult<byte[]> command = MelsecFxLinksOverTcp.BuildStart( stat, sumCheck, watiingTime );
-			if (!command.IsSuccess) return command;
-
-			// 核心交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 结果验证
-			if (read.Content[0] != 0x06) return new OperateResult( read.Content[0], "Start Faild:" + SoftBasic.ByteToHexString( read.Content, ' ' ) );
-
-			// 提取结果
-			return OperateResult.CreateSuccessResult( );
-		}
+		public OperateResult StartPLC( string parameter = "" ) => MelsecFxLinksHelper.StartPLC( this, parameter );
 
 		/// <inheritdoc cref="MelsecFxLinksOverTcp.StopPLC(string)"/>
 		[HslMqttApi( Description = "Stop PLC operation, you can carry additional parameter information and specify the station number. Example: s=2; Note: The semicolon is required." )]
-		public OperateResult StopPLC( string parameter = "" )
-		{
-			byte stat = (byte)HslHelper.ExtractParameter( ref parameter, "s", this.station );
-
-			// 解析指令
-			OperateResult<byte[]> command = MelsecFxLinksOverTcp.BuildStop( stat, sumCheck, watiingTime );
-			if (!command.IsSuccess) return command;
-
-			// 核心交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 结果验证
-			if (read.Content[0] != 0x06) return new OperateResult( read.Content[0], "Stop Faild:" + SoftBasic.ByteToHexString( read.Content, ' ' ) );
-
-			// 提取结果
-			return OperateResult.CreateSuccessResult( );
-		}
+		public OperateResult StopPLC( string parameter = "" ) => MelsecFxLinksHelper.StopPLC( this, parameter );
 
 		/// <inheritdoc cref="MelsecFxLinksOverTcp.ReadPlcType(string)"/>
 		[HslMqttApi( Description = "Read the PLC model information, you can carry additional parameter information, and specify the station number. Example: s=2; Note: The semicolon is required." )]
-		public OperateResult<string> ReadPlcType( string parameter = "" )
-		{
-			byte stat = (byte)HslHelper.ExtractParameter( ref parameter, "s", this.station );
-
-			// 解析指令
-			OperateResult<byte[]> command = MelsecFxLinksOverTcp.BuildReadPlcType( stat, sumCheck, watiingTime );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<string>( command );
-
-			// 核心交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-			// 结果验证
-			if (read.Content[0] != 0x06) return new OperateResult<string>( read.Content[0], "ReadPlcType Faild:" + SoftBasic.ByteToHexString( read.Content, ' ' ) );
-
-			// 提取结果
-			return MelsecFxLinksOverTcp.GetPlcTypeFromCode( Encoding.ASCII.GetString( read.Content, 5, 2 ) );
-		}
+		public OperateResult<string> ReadPlcType( string parameter = "" ) => MelsecFxLinksHelper.ReadPlcType( this, parameter );
 
 		#endregion
 

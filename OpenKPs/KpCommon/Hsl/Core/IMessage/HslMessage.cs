@@ -9,19 +9,13 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// 本组件系统使用的默认的消息规则，说明解析和反解析规则的
 	/// </summary>
-	public class HslMessage : INetMessage
+	public class HslMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 32;
 
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get ; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get ; set ; }
-
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token )
+		public override bool CheckHeadBytesLegal( byte[] token )
 		{
 			if (HeadBytes == null) return false;
 
@@ -41,7 +35,7 @@ namespace HslCommunication.Core.IMessage
 		}
 
 		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity()
+		public override int GetHeadBytesIdentity()
 		{
 			if (HeadBytes?.Length >= 32)
 				return BitConverter.ToInt32(HeadBytes, 4);
@@ -49,7 +43,5 @@ namespace HslCommunication.Core.IMessage
 				return 0;
 		}
 
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 	}
 }

@@ -350,7 +350,7 @@ namespace HslCommunication.Profinet.Yokogawa
 			OperateResult<SoftBuffer> buffer = GetDataAreaFromYokogawaAddress( analysis.Content, true );
 			if (!buffer.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( buffer );
 
-			return OperateResult.CreateSuccessResult( mBuffer.GetBytes( analysis.Content.AddressStart, length ).Select( m => m != 0x00 ).ToArray( ) );
+			return OperateResult.CreateSuccessResult( buffer.Content.GetBytes( analysis.Content.AddressStart, length ).Select( m => m != 0x00 ).ToArray( ) );
 		}
 
 		/// <inheritdoc cref="YokogawaLinkTcp.Write(string, bool[])"/>
@@ -396,77 +396,29 @@ namespace HslCommunication.Profinet.Yokogawa
 		#region NetServer Override
 
 		/// <inheritdoc/>
-		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
+		protected override INetMessage GetNewNetMessage( ) => new YokogawaLinkBinaryMessage( );
+
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			// 开始接收数据信息
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-			try
-			{
-				socket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), appSession );
-				AddClient( appSession );
-			}
-			catch
-			{
-				socket.Close( );
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-			}
-		}
-
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
-		{
-			if (ar.AsyncState is AppSession session)
-			{
-				try
-				{
-					int receiveCount = session.WorkSocket.EndReceive( ar );
-#if NET20 || NET35
-					OperateResult<byte[]> read1 = ReceiveByMessage( session.WorkSocket, 5000, new YokogawaLinkBinaryMessage( ) );
-#else
-					OperateResult<byte[]> read1 = await ReceiveByMessageAsync( session.WorkSocket, 5000, new YokogawaLinkBinaryMessage( ) );
-#endif
-					if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{read1.Content.ToHexString( ' ' )}" );
-
-					byte[] receive = read1.Content;
-					byte[] back = null;
-					if      (receive[0] == 0x01) back = ReadBoolByCommand(        receive );
-					else if (receive[0] == 0x02) back = WriteBoolByCommand(       receive );
-					else if (receive[0] == 0x04) back = ReadRandomBoolByCommand(  receive );
-					else if (receive[0] == 0x05) back = WriteRandomBoolByCommand( receive );
-					else if (receive[0] == 0x11) back = ReadWordByCommand(        receive );
-					else if (receive[0] == 0x12) back = WriteWordByCommand(       receive );
-					else if (receive[0] == 0x14) back = ReadRandomWordByCommand(  receive );
-					else if (receive[0] == 0x15) back = WriteRandomWordByCommand( receive );
-					else if (receive[0] == 0x31) back = ReadSpecialModule(        receive );
-					else if (receive[0] == 0x32) back = WriteSpecialModule(       receive );
-					else if (receive[0] == 0x45) back = StartByCommand(           receive );
-					else if (receive[0] == 0x46) back = StopByCommand(            receive );
-					else if (receive[0] == 0x61) throw new RemoteCloseException( );
-					else if (receive[0] == 0x62) back = ReadSystemByCommand(      receive );
-					else if (receive[0] == 0x63) back = ReadSystemDateTime(       receive );
-					else back = PackCommandBack( receive[0], 0x03, null );
-
-					session.WorkSocket.Send( back );
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{back.ToHexString( ' ' )}" );
-
-					session.HeartTime = DateTime.Now;
-					RaiseDataReceived( session, receive );
-					session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), session );
-				}
-				catch
-				{
-					RemoveClient( session );
-				}
-			}
+			byte[] back = null;
+			if      (receive[0] == 0x01) back = ReadBoolByCommand(        receive );
+			else if (receive[0] == 0x02) back = WriteBoolByCommand(       receive );
+			else if (receive[0] == 0x04) back = ReadRandomBoolByCommand(  receive );
+			else if (receive[0] == 0x05) back = WriteRandomBoolByCommand( receive );
+			else if (receive[0] == 0x11) back = ReadWordByCommand(        receive );
+			else if (receive[0] == 0x12) back = WriteWordByCommand(       receive );
+			else if (receive[0] == 0x14) back = ReadRandomWordByCommand(  receive );
+			else if (receive[0] == 0x15) back = WriteRandomWordByCommand( receive );
+			else if (receive[0] == 0x31) back = ReadSpecialModule(        receive );
+			else if (receive[0] == 0x32) back = WriteSpecialModule(       receive );
+			else if (receive[0] == 0x45) back = StartByCommand(           receive );
+			else if (receive[0] == 0x46) back = StopByCommand(            receive );
+			else if (receive[0] == 0x61) throw new RemoteCloseException( );
+			else if (receive[0] == 0x62) back = ReadSystemByCommand(      receive );
+			else if (receive[0] == 0x63) back = ReadSystemDateTime(       receive );
+			else back = PackCommandBack( receive[0], 0x03, null );
+			return OperateResult.CreateSuccessResult( back );
 		}
 
 		private byte[] ReadBoolByCommand( byte[] command )

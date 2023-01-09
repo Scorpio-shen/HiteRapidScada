@@ -43,6 +43,9 @@ namespace HslCommunication.Core
 		/// 当前连接的唯一ID号，默认为长度20的guid码加随机数组成，方便列表管理，也可以自己指定<br />
 		/// The unique ID number of the current connection. The default is a 20-digit guid code plus a random number.
 		/// </summary>
+		/// <remarks>
+		/// 当前的唯一连接ID信息在DTU的模式下，将发挥关键作用，标记唯一的DTU ID
+		/// </remarks>
 		string ConnectionId { get; set; }
 
 		#endregion
@@ -723,8 +726,8 @@ namespace HslCommunication.Core
 		#region Read Write Customer
 
 		/// <summary>
-		/// 读取自定义的数据类型，需要继承自IDataTransfer接口<br />
-		/// Read custom data types, need to inherit from IDataTransfer interface
+		/// 读取自定义的数据类型，需要继承自IDataTransfer接口，返回一个新的类型的实例对象。<br />
+		/// To read a custom data type, you need to inherit from the IDataTransfer interface and return an instance object of a new type.
 		/// </summary>
 		/// <typeparam name="T">自定义的类型</typeparam>
 		/// <param name="address">起始地址</param>
@@ -739,6 +742,26 @@ namespace HslCommunication.Core
 		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Core\NetworkDeviceBase.cs" region="ReadCustomerExample" title="ReadCustomer示例" />
 		/// </example>
 		OperateResult<T> ReadCustomer<T>( string address ) where T : IDataTransfer, new();
+
+		/// <summary>
+		/// 读取自定义的数据类型，需要继承自IDataTransfer接口，传入一个实例，对这个实例进行赋值，并返回该实例的对象。<br />
+		/// To read a custom data type, you need to inherit from the IDataTransfer interface, pass in an instance, 
+		/// assign a value to this instance, and return the object of the instance.
+		/// </summary>
+		/// <typeparam name="T">自定义的类型</typeparam>
+		/// <param name="address">起始地址</param>
+		/// <param name="obj">实例</param>
+		/// <returns>带有成功标识的自定义类型数据</returns>
+		/// <remarks>
+		/// 需要是定义一个类，选择好相对于的ByteTransform实例，才能调用该方法。
+		/// </remarks>
+		/// <example>
+		/// 此处演示三菱的读取示例，先定义一个类，实现<see cref="IDataTransfer"/>接口
+		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Core\NetworkDeviceBase.cs" region="IDataTransfer Example" title="DataMy示例" />
+		/// 接下来就可以实现数据的读取了
+		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Core\NetworkDeviceBase.cs" region="ReadCustomerExample1" title="ReadCustomer示例" />
+		/// </example>
+		OperateResult<T> ReadCustomer<T>( string address, T obj ) where T : IDataTransfer, new();
 
 		/// <summary>
 		/// 写入自定义类型的数据，该类型必须继承自IDataTransfer接口<br />
@@ -791,6 +814,21 @@ namespace HslCommunication.Core
 		/// </example>
 		/// <exception cref="ArgumentNullException"></exception>
 		OperateResult Write<T>( T data ) where T : class, new();
+
+		/// <summary>
+		/// 读取结构体类型的数据，根据结构体自身的定义，读取原始字节数组，然后解析出实际的结构体数据，结构体需要实现<see cref="HslStructAttribute"/>特性
+		/// </summary>
+		/// <typeparam name="T">类型对象信息</typeparam>
+		/// <param name="address">PLC的地址信息</param>
+		/// <param name="length">读取的地址长度信息</param>
+		/// <returns>如果成功，返回成功的结构体对象</returns>
+		/// <example>
+		/// 此处演示西门子的读取示例，先定义一个类，重点是将需要读取的数据，写入到属性的特性中去。
+		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Core\NetworkDeviceBase.cs" region="StructDefine" title="特性实现示例" />
+		/// 接下来就可以实现数据的读取了
+		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Core\NetworkDeviceBase.cs" region="ReadStructExample" title="ReadStruct示例" />
+		/// </example>
+		OperateResult<T> ReadStruct<T>( string address, ushort length ) where T : class, new();
 
 		#endregion
 
@@ -1356,16 +1394,7 @@ namespace HslCommunication.Core
 
 		#region Async Read Write Customer
 #if !NET35 && !NET20
-		/// <summary>
-		/// 异步读取自定义的数据类型，需要继承自IDataTransfer接口<br />
-		/// Asynchronously read custom data types, need to inherit from IDataTransfer interface
-		/// </summary>
-		/// <typeparam name="T">自定义的类型</typeparam>
-		/// <param name="address">起始地址</param>
-		/// <returns>带有成功标识的自定义类型数据</returns>
-		/// <remarks>
-		/// 需要是定义一个类，选择好相对于的ByteTransform实例，才能调用该方法。
-		/// </remarks>
+		/// <inheritdoc cref="ReadCustomer{T}(string)"/>
 		/// <example>
 		/// 此处演示三菱的读取示例，先定义一个类，实现<see cref="IDataTransfer"/>接口
 		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Core\NetworkDeviceBase.cs" region="IDataTransfer Example" title="DataMy示例" />
@@ -1374,17 +1403,16 @@ namespace HslCommunication.Core
 		/// </example>
 		Task<OperateResult<T>> ReadCustomerAsync<T>( string address ) where T : IDataTransfer, new();
 
-		/// <summary>
-		/// 异步写入自定义类型的数据，该类型必须继承自IDataTransfer接口<br />
-		/// Asynchronously write data of a custom type, which must inherit from the IDataTransfer interface
-		/// </summary>
-		/// <typeparam name="T">类型对象</typeparam>
-		/// <param name="address">起始地址</param>
-		/// <param name="value">写入值</param>
-		/// <returns>带有成功标识的结果类对象</returns>
-		/// <remarks>
-		/// 需要是定义一个类，选择好相对于的<see cref="IDataTransfer"/>实例，才能调用该方法。
-		/// </remarks>
+		/// <inheritdoc cref="ReadCustomer{T}(string, T)"/>
+		/// <example>
+		/// 此处演示三菱的读取示例，先定义一个类，实现<see cref="IDataTransfer"/>接口
+		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Core\NetworkDeviceBase.cs" region="IDataTransfer Example" title="DataMy示例" />
+		/// 接下来就可以实现数据的读取了
+		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Core\NetworkDeviceBase.cs" region="ReadCustomerAsyncExample1" title="ReadCustomerAsync示例" />
+		/// </example>
+		Task<OperateResult<T>> ReadCustomerAsync<T>( string address, T obj ) where T : IDataTransfer, new();
+
+		/// <inheritdoc cref="WriteCustomer{T}(string, T)"/>
 		/// <example>
 		/// 此处演示三菱的读取示例，先定义一个类，实现<see cref="IDataTransfer"/>接口
 		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Core\NetworkDeviceBase.cs" region="IDataTransfer Example" title="DataMy示例" />
@@ -1425,6 +1453,10 @@ namespace HslCommunication.Core
 		/// </example>
 		/// <exception cref="ArgumentNullException"></exception>
 		Task<OperateResult> WriteAsync<T>( T data ) where T : class, new();
+
+
+		/// <inheritdoc cref="ReadStruct{T}(string, ushort)"/>
+		Task<OperateResult<T>> ReadStructAsync<T>( string address, ushort length ) where T : class, new();
 #endif
 		#endregion
 	}

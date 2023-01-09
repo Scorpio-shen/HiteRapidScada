@@ -68,6 +68,11 @@ namespace HslCommunication.MQTT
 		public int ConnectTimeout { get; set; }
 
 		/// <summary>
+		/// 遗嘱消息，为空或是主题为空则表示不使用遗嘱，该遗嘱对于 <see cref="MqttSyncClient"/> 无效
+		/// </summary>
+		public MqttApplicationMessage WillMessage { get; set; }
+
+		/// <summary>
 		/// 登录服务器的凭证，包含用户名和密码，可以为空<br />
 		/// The credentials for logging in to the server, including the username and password, can be null
 		/// </summary>
@@ -98,6 +103,13 @@ namespace HslCommunication.MQTT
 		/// The default is to clean up the session.
 		/// </summary>
 		public bool CleanSession { get; set; }
+
+		/// <summary>
+		/// 获取或设置当前的连接是否加密处理，防止第三方对注册报文进行抓包处理，从而分析出用户名和密码，只适用于基于HslCommunication创建的MQTT Server。<br />
+		/// Get or set whether the current connection is encrypted or not, to prevent the third party from capturing the registration message, 
+		/// so as to analyze the user name and password. It is only applicable to the MQTT Server created based on HslCommunication.
+		/// </summary>
+		public bool UseRSAProvider { get; set; }
 
 
 		private string ipAddress = "127.0.0.1";

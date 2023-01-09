@@ -444,6 +444,16 @@ namespace HslCommunication.Core.Net
 #endif
 		#endregion
 
+		#region Protect Member
+
+		/// <summary>
+		/// 对客户端而言是的通讯用的套接字，对服务器来说是用于侦听的套接字<br />
+		/// A communication socket for the client, or a listening socket for the server
+		/// </summary>
+		protected Socket CoreSocket = null;
+
+		#endregion
+
 		#region Object Override
 
 		/// <inheritdoc/>

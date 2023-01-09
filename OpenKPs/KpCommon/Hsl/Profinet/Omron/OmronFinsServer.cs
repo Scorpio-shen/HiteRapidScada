@@ -9,6 +9,7 @@ using HslCommunication.Core.Net;
 using HslCommunication.Core.IMessage;
 using HslCommunication.Reflection;
 using HslCommunication.Core.Address;
+using System.IO;
 
 namespace HslCommunication.Profinet.Omron
 {
@@ -163,73 +164,28 @@ namespace HslCommunication.Profinet.Omron
 		#region NetServer Override
 
 		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => new FinsMessage( );
+
+		/// <inheritdoc/>
 		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
 		{
-			// 开始接收数据信息
-			FinsMessage finsMessage = new FinsMessage( );
-			OperateResult<byte[]> read1 = ReceiveByMessage( socket, 5000, finsMessage );
-			if (!read1.IsSuccess) return;
-
-			OperateResult send1 = Send( socket, SoftBasic.HexStringToBytes( "46 49 4E 53 00 00 00 10 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 01" ) );
-			if (!send1.IsSuccess) return;
-
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-			try
+			if (connectionInitialization)
 			{
-				socket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), appSession );
-				AddClient( appSession );
+				// 开始接收数据信息
+				OperateResult<byte[]> read1 = ReceiveByMessage( socket, 5000, GetNewNetMessage( ) );
+				if (!read1.IsSuccess) return;
+
+				OperateResult send1 = Send( socket, SoftBasic.HexStringToBytes( "46 49 4E 53 00 00 00 10 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 01" ) );
+				if (!send1.IsSuccess) return;
 			}
-			catch
-			{
-				socket.Close( );
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-			}
+
+			base.ThreadPoolLoginAfterClientCheck( socket, endPoint );
 		}
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
+
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			if (ar.AsyncState is AppSession session)
-			{
-				try
-				{
-					int receiveCount = session.WorkSocket.EndReceive( ar );
-#if NET20 || NET35
-					OperateResult<byte[]> read1 = ReceiveByMessage( session.WorkSocket, 5000, new FinsMessage( ) );
-#else
-					OperateResult<byte[]> read1 = await ReceiveByMessageAsync( session.WorkSocket, 5000, new FinsMessage( ) );
-#endif
-					if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{read1.Content.ToHexString( ' ' )}" );
-
-					byte[] back = ReadFromFinsCore( read1.Content.RemoveBegin( 16 + 10 ) );
-					if (back != null)
-					{
-						session.WorkSocket.Send( back );
-						LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{back.ToHexString( ' ' )}" );
-					}
-					else
-					{
-						RemoveClient( session );
-						return;
-					}
-
-					session.HeartTime = DateTime.Now;
-					RaiseDataReceived( session, read1.Content );
-					session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), session );
-				}
-				catch
-				{
-					RemoveClient( session );
-				}
-			}
+			return OperateResult.CreateSuccessResult( ReadFromFinsCore( receive.RemoveBegin( 16 + 10 ) ) );
 		}
 
 		/// <summary>
@@ -253,6 +209,12 @@ namespace HslCommunication.Profinet.Omron
 
 				// 写数据
 				return PackCommand( 0, finsCore, WriteByMessage( finsCore ) );
+			}
+			else if (finsCore[0] == 0x01 && finsCore[1] == 0x04)
+			{
+				// 多个数据块读取
+				byte[] read = ReadByMultiCommand( finsCore );
+				return PackCommand( read == null ? 0x02 : 0x00, finsCore, read );
 			}
 			else if (finsCore[0] == 0x04 && finsCore[1] == 0x01) return PackCommand( 0, finsCore, null );  // RUN
 			else if (finsCore[0] == 0x04 && finsCore[1] == 0x02) return PackCommand( 0, finsCore, null );  // STOP
@@ -288,6 +250,23 @@ namespace HslCommunication.Profinet.Omron
 			return back;
 		}
 
+		private SoftBuffer GetSoftBuffer( byte code )
+		{
+			if (code == OmronFinsDataType.DM.BitCode)   return dBuffer;
+			if (code == OmronFinsDataType.DM.WordCode)  return dBuffer;
+			if (code == OmronFinsDataType.CIO.BitCode)  return cioBuffer;
+			if (code == OmronFinsDataType.CIO.WordCode) return cioBuffer;
+			if (code == OmronFinsDataType.WR.BitCode)   return wBuffer;
+			if (code == OmronFinsDataType.WR.WordCode)  return wBuffer;
+			if (code == OmronFinsDataType.HR.BitCode)   return hBuffer;
+			if (code == OmronFinsDataType.HR.WordCode)  return hBuffer;
+			if (code == OmronFinsDataType.AR.BitCode)   return arBuffer;
+			if (code == OmronFinsDataType.AR.WordCode)  return arBuffer;
+			if ((0x20 <= code && code < 0x30) || (0xD0 <= code && code < 0xE0)) return emBuffer;
+			if ((0xA0 <= code && code < 0xB0) || (0x50 <= code && code < 0x60)) return emBuffer;
+			throw new Exception( StringResources.Language.NotSupportedDataType );
+		}
+
 		private byte[] ReadByCommand( byte[] command )
 		{
 			if (command[2] == OmronFinsDataType.DM.BitCode || 
@@ -301,20 +280,7 @@ namespace HslCommunication.Profinet.Omron
 				ushort length = (ushort)(command[6] * 256 + command[7]);
 				int startIndex = (command[3] * 256 + command[4]) * 16 + command[5];
 
-				if (command[2] == OmronFinsDataType.DM.BitCode)
-					return dBuffer.GetBool( startIndex, length ).Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( );
-				else if (command[2] == OmronFinsDataType.CIO.BitCode)
-					return cioBuffer.GetBool( startIndex, length ).Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( );
-				else if (command[2] == OmronFinsDataType.WR.BitCode)
-					return wBuffer.GetBool( startIndex, length ).Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( );
-				else if (command[2] == OmronFinsDataType.HR.BitCode)
-					return hBuffer.GetBool( startIndex, length ).Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( );
-				else if (command[2] == OmronFinsDataType.AR.BitCode)
-					return arBuffer.GetBool( startIndex, length ).Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( );
-				else if ((0x20 <= command[2] && command[2] < 0x30) || (0xD0 <= command[2] && command[2] < 0xE0))
-					return emBuffer.GetBool( startIndex, length ).Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( );
-				else
-					throw new Exception( StringResources.Language.NotSupportedDataType );
+				return GetSoftBuffer( command[2] ).GetBool( startIndex, length ).Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( );
 			}
 			else if( 
 				command[2] == OmronFinsDataType.DM.WordCode ||
@@ -330,24 +296,34 @@ namespace HslCommunication.Profinet.Omron
 
 				// 不能大于999字的读取，直接返回失败信息
 				if (length > 999) return null;
-
-				if (command[2] == OmronFinsDataType.DM.WordCode)
-					return dBuffer.GetBytes( startIndex * 2, length * 2 );
-				else if (command[2] == OmronFinsDataType.CIO.WordCode)
-					return cioBuffer.GetBytes( startIndex * 2, length * 2 );
-				else if (command[2] == OmronFinsDataType.WR.WordCode)
-					return wBuffer.GetBytes( startIndex * 2, length * 2 );
-				else if (command[2] == OmronFinsDataType.HR.WordCode)
-					return hBuffer.GetBytes( startIndex * 2, length * 2 );
-				else if (command[2] == OmronFinsDataType.AR.WordCode)
-					return arBuffer.GetBytes( startIndex * 2, length * 2 );
-				else if ((0xA0 <= command[2] && command[2] < 0xB0) || (0x50 <= command[2] && command[2] < 0x60))
-					return emBuffer.GetBytes( startIndex * 2, length * 2 );
-				else
-					throw new Exception( StringResources.Language.NotSupportedDataType );
+				return GetSoftBuffer( command[2] ).GetBytes( startIndex * 2, length * 2 );
 			}
 			else
 				return new byte[0];
+		}
+
+		private byte[] ReadByMultiCommand( byte[] command )
+		{
+			MemoryStream ms = new MemoryStream( );
+			int index = 2;
+			while(index < command.Length)
+			{
+				// 字读取
+				int startIndex = (command[index + 1] * 256 + command[index + 2]);
+				if (
+					command[index] == OmronFinsDataType.DM.WordCode ||
+					command[index] == OmronFinsDataType.CIO.WordCode ||
+					command[index] == OmronFinsDataType.WR.WordCode ||
+					command[index] == OmronFinsDataType.HR.WordCode ||
+					command[index] == OmronFinsDataType.AR.WordCode ||
+					(0xA0 <= command[index] && command[index] < 0xB0) || (0x50 <= command[index] && command[index] < 0x60))
+					{
+						ms.WriteByte( command[index] );
+						ms.Write( GetSoftBuffer( command[index] ).GetBytes( startIndex * 2, 2 ) );
+					}
+				index += 4;
+			}
+			return ms.ToArray( );
 		}
 
 		private byte[] WriteByMessage( byte[] command )
@@ -364,20 +340,7 @@ namespace HslCommunication.Profinet.Omron
 				int startIndex = (command[3] * 256 + command[4]) * 16 + command[5];
 				bool[] buffer = SoftBasic.ArrayRemoveBegin( command, 8 ).Select( m => m == 0x01 ).ToArray( );
 
-				if (command[2] == OmronFinsDataType.DM.BitCode)
-					dBuffer.SetBool( buffer, startIndex );
-				else if (command[2] == OmronFinsDataType.CIO.BitCode)
-					cioBuffer.SetBool( buffer, startIndex );
-				else if (command[2] == OmronFinsDataType.WR.BitCode)
-					wBuffer.SetBool( buffer, startIndex );
-				else if (command[2] == OmronFinsDataType.HR.BitCode)
-					hBuffer.SetBool( buffer, startIndex );
-				else if (command[2] == OmronFinsDataType.AR.BitCode)
-					arBuffer.SetBool( buffer, startIndex );
-				else if ((0x20 <= command[2] && command[2] < 0x30) || (0xD0 <= command[2] && command[2] < 0xE0))
-					emBuffer.SetBool( buffer, startIndex );
-				else
-					throw new Exception( StringResources.Language.NotSupportedDataType );
+				GetSoftBuffer( command[2] ).SetBool( buffer, startIndex );
 				return new byte[0];
 			}
 			else
@@ -387,20 +350,7 @@ namespace HslCommunication.Profinet.Omron
 				int startIndex = (command[3] * 256 + command[4]);
 				byte[] buffer = SoftBasic.ArrayRemoveBegin( command, 8 );
 
-				if (command[2] == OmronFinsDataType.DM.WordCode)
-					dBuffer.SetBytes( buffer, startIndex * 2 );
-				else if (command[2] == OmronFinsDataType.CIO.WordCode)
-					cioBuffer.SetBytes( buffer, startIndex * 2 );
-				else if (command[2] == OmronFinsDataType.WR.WordCode)
-					wBuffer.SetBytes( buffer, startIndex * 2 );
-				else if (command[2] == OmronFinsDataType.HR.WordCode)
-					hBuffer.SetBytes( buffer, startIndex * 2 );
-				else if (command[2] == OmronFinsDataType.AR.WordCode)
-					arBuffer.SetBytes( buffer, startIndex * 2 );
-				else if ((0xA0 <= command[2] && command[2] < 0xB0) || (0x50 <= command[2] && command[2] < 0x60))
-					emBuffer.SetBytes( buffer, startIndex * 2 );
-				else
-					throw new Exception( StringResources.Language.NotSupportedDataType );
+				GetSoftBuffer( command[2] ).SetBytes( buffer, startIndex * 2 );
 				return new byte[0];
 			}
 		}
@@ -459,12 +409,16 @@ namespace HslCommunication.Profinet.Omron
 
 		#region Private Member
 
-		private SoftBuffer dBuffer;                      // d寄存器的数据池
-		private SoftBuffer cioBuffer;                    // cio寄存器的数据池
-		private SoftBuffer wBuffer;                      // w寄存器的数据池
-		private SoftBuffer hBuffer;                      // h寄存器的数据池
-		private SoftBuffer arBuffer;                     // ar寄存器的数据池
-		private SoftBuffer emBuffer;                     // em寄存器的数据池
+#pragma warning disable CS1591 // 缺少对公共可见类型或成员的 XML 注释
+		protected SoftBuffer dBuffer;                      // d寄存器的数据池
+		protected SoftBuffer cioBuffer;                    // cio寄存器的数据池
+		protected SoftBuffer wBuffer;                      // w寄存器的数据池
+		protected SoftBuffer hBuffer;                      // h寄存器的数据池
+		protected SoftBuffer arBuffer;                     // ar寄存器的数据池
+		protected SoftBuffer emBuffer;                     // em寄存器的数据池
+		protected bool connectionInitialization = true;    // 是否需要连接初始化
+#pragma warning restore CS1591 // 缺少对公共可见类型或成员的 XML 注释
+
 
 		private const int DataPoolLength = 65536;      // 数据的长度
 

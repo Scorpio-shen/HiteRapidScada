@@ -25,9 +25,11 @@ namespace HslCommunication.Profinet.Melsec
 	/// <see cref="MelsecMcNet"/>，<see cref="MelsecMcAsciiNet"/>，<see cref="MelsecMcUdp"/>, <see cref="MelsecMcAsciiUdp"/> 这四个类都是MC协议的Qna兼容3E帧实现，分别
 	/// 是TCP二进制，TCP的ASCII，UDP的二进制，UDP的ASCI格式。适用Q系列，L系列，FX5U系列，还有以太网模块QJ71E71。<br />
 	/// <see cref="MelsecA1ENet"/>, <see cref="MelsecA1EAsciiNet"/> 这两个类是MC协议的Qna兼容1E协议实现，
-	/// 分别是二进制和ASCII格式的实现，主要适用A系列的PLC，Fx3u，已经有些老的PLC，使用了北辰模块实现了通信。<br />
+	/// 分别是二进制和ASCII格式的实现，主要适用A系列的PLC，Fx3u，以及有些老的PLC，使用了北辰模块实现的通信也是选择的是 A1E 协议来通信。<br />
 	/// <see cref="MelsecA3CNet"/> 是MC协议的3C帧的实现，主要支持串行通信的模块的实现。<br />
-	/// <see cref="MelsecFxSerial"/> 是FX编程口的协议的实现，测试不太稳定。具体支持的系列需要参照类的说明。<br />
+	/// <see cref="MelsecFxSerial"/> 是FX编程口的协议的实现，测试并不在所有的老型号上都很稳定。具体支持的系列需要参照类的说明，
+	/// 当使用GOT触摸屏连接PLC时，需要使用类<see cref="MelsecFxSerialOverTcp"/>并将属性<see cref="MelsecFxSerialOverTcp.UseGOT"/>设置为 <c>True</c>。<br />
+	/// <see cref="MelsecFxLinks"/> 是三菱的计算机链接协议，通常是三菱的485接口，而不是编程口，该协议支持多种格式及是否和校验，实际参数选择需要根据PLC的配置来决定。<br />
 	/// <br />
 	/// 三菱Q系列PLC带以太网模块，使用MC 二进制协议通讯，在网络中断情况下无法正常连接的情况，解决方案如下：<br />
 	/// 1. 生存确认选择确认模式；<br />

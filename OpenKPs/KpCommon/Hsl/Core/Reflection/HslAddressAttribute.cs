@@ -84,6 +84,16 @@ namespace HslCommunication.Reflection
 			this.DeviceType = deviceType;
 		}
 
+		/// <summary>
+		/// 获取数据的数量信息，如果小于0，则返回1<b />
+		/// Get the quantity information of the data, if it is less than 0, return 1
+		/// </summary>
+		/// <returns>数据的个数</returns>
+		public int GetDataLength( )
+		{
+			return this.Length < 0 ? 1: this.Length;
+		}
+
 		/// <inheritdoc/>
 		public override string ToString( ) => $"HslDeviceAddressAttribute[{Address}:{Length}]";
 	}

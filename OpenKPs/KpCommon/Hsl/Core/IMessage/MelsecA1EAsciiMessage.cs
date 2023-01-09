@@ -8,7 +8,7 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// 三菱的A兼容1E帧ASCII协议解析规则
 	/// </summary>
-	public class MelsecA1EAsciiMessage : INetMessage
+	public class MelsecA1EAsciiMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 4;
@@ -38,23 +38,11 @@ namespace HslCommunication.Core.IMessage
 		}
 
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token )
+		public override bool CheckHeadBytesLegal( byte[] token )
 		{
 			if (HeadBytes != null) return ((HeadBytes[0] - SendBytes[0]) == 0x08);
 			return false;
 		}
-
-		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => 0;
-
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 
 	}
 }

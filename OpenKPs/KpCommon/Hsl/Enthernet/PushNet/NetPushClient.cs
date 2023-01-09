@@ -85,9 +85,8 @@ namespace HslCommunication.Enthernet
 			}
 
 			// 异步接收
-			AppSession appSession = new AppSession( );
+			AppSession appSession = new AppSession( connect.Content );
 			CoreSocket = connect.Content;
-			appSession.WorkSocket = connect.Content;
 			try
 			{
 				appSession.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( ReceiveCallback ), appSession );

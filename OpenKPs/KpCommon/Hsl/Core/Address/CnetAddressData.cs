@@ -11,7 +11,7 @@ namespace HslCommunication.Core.Address
 	public class CnetAddressData : DeviceAddressDataBase
 	{
 		/// <summary>
-		/// 数据的代号，通常是 P,M,L,K,F,T,C,D,R,I,Q,W 等
+		/// 数据的代号，通常是 'P', 'M', 'L', 'K', 'F', 'T', 'C', 'D', 'S', 'Q', 'I', 'N', 'U', 'Z', 'R'
 		/// </summary>
 		public string DataCode { get; set; }
 
@@ -19,8 +19,6 @@ namespace HslCommunication.Core.Address
 		/// 数据的类型，通常是 X,B,W,D,L
 		/// </summary>
 		public string DataType { get; set; }
-
-
 
 		/// <summary>
 		/// 从实际的PLC的地址里面解析出地址对象<br />

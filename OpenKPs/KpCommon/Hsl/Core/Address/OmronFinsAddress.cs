@@ -51,6 +51,15 @@ namespace HslCommunication.Core.Address
 			return ParseFrom( address, 0 );
 		}
 
+		private static int CalculateBitIndex( string address )
+		{
+			string[] splits = address.SplitDot( );
+			int addr = ushort.Parse( splits[0] ) * 16;
+			// 包含位的情况，例如 D100.F
+			if (splits.Length > 1) addr += HslHelper.CalculateBitStartIndex( splits[1] );
+			return addr;
+		}
+
 		/// <summary>
 		/// 从实际的欧姆龙的地址里面解析出地址对象<br />
 		/// Resolve the address object from the actual Omron address
@@ -64,84 +73,110 @@ namespace HslCommunication.Core.Address
 			try
 			{
 				addressData.Length = length;
-				switch (address[0])
+				if (address.StartsWith( "DR" ) || address.StartsWith( "dr" ))
 				{
-					case 'D':
-					case 'd':
-						{
-							// DM区数据
-							addressData.BitCode  = OmronFinsDataType.DM.BitCode;
-							addressData.WordCode = OmronFinsDataType.DM.WordCode;
-							break;
-						}
-					case 'C':
-					case 'c':
-						{
-							// CIO区数据
-							addressData.BitCode  = OmronFinsDataType.CIO.BitCode;
-							addressData.WordCode = OmronFinsDataType.CIO.WordCode;
-							break;
-						}
-					case 'W':
-					case 'w':
-						{
-							// WR区
-							addressData.BitCode  = OmronFinsDataType.WR.BitCode;
-							addressData.WordCode = OmronFinsDataType.WR.WordCode;
-							break;
-						}
-					case 'H':
-					case 'h':
-						{
-							// HR区
-							addressData.BitCode  = OmronFinsDataType.HR.BitCode;
-							addressData.WordCode = OmronFinsDataType.HR.WordCode;
-							break;
-						}
-					case 'A':
-					case 'a':
-						{
-							// AR区
-							addressData.BitCode  = OmronFinsDataType.AR.BitCode;
-							addressData.WordCode = OmronFinsDataType.AR.WordCode;
-							break;
-						}
-					case 'E':
-					case 'e':
-						{
-							// E区，比较复杂，需要专门的计算
-							string[] splits = address.SplitDot( );
-							int block = Convert.ToInt32( splits[0].Substring( 1 ), 16 );
-							if (block < 16)
-							{
-								addressData.BitCode  = (byte)(0x20 + block);
-								addressData.WordCode = (byte)(0xA0 + block);
-							}
-							else
-							{
-								addressData.BitCode  = (byte)(0xE0 + block - 16);
-								addressData.WordCode = (byte)(0x60 + block - 16);
-							}
-							break;
-						}
-					default: throw new Exception( StringResources.Language.NotSupportedDataType );
+					addressData.WordCode     = 0xBC;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 2 ) ) + 0x200 * 16;
 				}
-
-				if (address[0] == 'E' || address[0] == 'e')
+				else if (address.StartsWith( "IR" ) || address.StartsWith( "ir" ))
 				{
+					addressData.WordCode     = 0xDC;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 2 ) ) + 0x100 * 16;
+				}
+				else if (address.StartsWith( "DM" ) || address.StartsWith( "dm" ))
+				{
+					// DM区数据
+					addressData.BitCode      = OmronFinsDataType.DM.BitCode;
+					addressData.WordCode     = OmronFinsDataType.DM.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 2 ) );
+				}
+				else if (address.StartsWith( "TIM" ) || address.StartsWith( "tim" ))
+				{
+					addressData.BitCode      = OmronFinsDataType.TIM.BitCode;
+					addressData.WordCode     = OmronFinsDataType.TIM.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 3 ) );
+				}
+				else if (address.StartsWith( "CNT" ) || address.StartsWith( "cnt" ))
+				{
+					addressData.BitCode      = OmronFinsDataType.TIM.BitCode;
+					addressData.WordCode     = OmronFinsDataType.TIM.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 3 ) ) + 0x8000 * 16;
+				}
+				else if (address.StartsWith( "CIO" ) || address.StartsWith( "cio" ))
+				{
+					addressData.BitCode      = OmronFinsDataType.CIO.BitCode;
+					addressData.WordCode     = OmronFinsDataType.CIO.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 3 ) );
+				}
+				else if (address.StartsWith( "WR" ) || address.StartsWith( "wr" ))
+				{
+					addressData.BitCode      = OmronFinsDataType.WR.BitCode;
+					addressData.WordCode     = OmronFinsDataType.WR.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 2 ) );
+				}
+				else if (address.StartsWith( "HR" ) || address.StartsWith( "hr" ))
+				{
+					addressData.BitCode      = OmronFinsDataType.HR.BitCode;
+					addressData.WordCode     = OmronFinsDataType.HR.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 2 ) );
+				}
+				else if (address.StartsWith( "AR" ) || address.StartsWith( "ar" ))
+				{
+					addressData.BitCode      = OmronFinsDataType.AR.BitCode;
+					addressData.WordCode     = OmronFinsDataType.AR.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 2 ) );
+				}
+				else if (address.StartsWith( "EM" ) || address.StartsWith( "em" ) || address.StartsWith( "E" ) || address.StartsWith( "e" ))
+				{
+					// E区，比较复杂，需要专门的计算
 					string[] splits = address.SplitDot( );
-					int addr = ushort.Parse( splits[1] ) * 16;
-					// 包含位的情况，例如 E1.100.F
-					if (splits.Length > 2) addr += HslHelper.CalculateBitStartIndex( splits[2] );
-					addressData.AddressStart = addr;
+					int block = Convert.ToInt32( splits[0].Substring( (address[1] == 'M' || address[1] == 'm') ? 2 : 1 ), 16 );
+					if (block < 16)
+					{
+						addressData.BitCode  = (byte)(0x20 + block);
+						addressData.WordCode = (byte)(0xA0 + block);
+					}
+					else
+					{
+						addressData.BitCode  = (byte)(0xE0 + block - 16);
+						addressData.WordCode = (byte)(0x60 + block - 16);
+					}
+					addressData.AddressStart = CalculateBitIndex( address.Substring( address.IndexOf( '.' ) + 1 ) );
+				}
+				else if (address.StartsWith( "D" ) || address.StartsWith( "d" ))
+				{
+					// DM区数据
+					addressData.BitCode      = OmronFinsDataType.DM.BitCode;
+					addressData.WordCode     = OmronFinsDataType.DM.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 1 ) );
+				}
+				else if (address.StartsWith( "C" ) || address.StartsWith( "c" ))
+				{
+					addressData.BitCode      = OmronFinsDataType.CIO.BitCode;
+					addressData.WordCode     = OmronFinsDataType.CIO.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 1 ) );
+				}
+				else if (address.StartsWith( "W" ) || address.StartsWith( "w" ))
+				{
+					addressData.BitCode      = OmronFinsDataType.WR.BitCode;
+					addressData.WordCode     = OmronFinsDataType.WR.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 1 ) );
+				}
+				else if (address.StartsWith( "H" ) || address.StartsWith( "h" ))
+				{
+					addressData.BitCode      = OmronFinsDataType.HR.BitCode;
+					addressData.WordCode     = OmronFinsDataType.HR.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 1 ) );
+				}
+				else if (address.StartsWith( "A" ) || address.StartsWith( "a" ))
+				{
+					addressData.BitCode      = OmronFinsDataType.AR.BitCode;
+					addressData.WordCode     = OmronFinsDataType.AR.WordCode;
+					addressData.AddressStart = CalculateBitIndex( address.Substring( 1 ) );
 				}
 				else
 				{
-					string[] splits = address.Substring( 1 ).SplitDot();
-					int addr = ushort.Parse( splits[0] ) * 16;
-					// 包含位的情况，例如 D100.F
-					if (splits.Length > 1) addr += HslHelper.CalculateBitStartIndex( splits[1] );
-					addressData.AddressStart = addr;
+					throw new Exception( StringResources.Language.NotSupportedDataType );
 				}
 			}
 			catch (Exception ex)

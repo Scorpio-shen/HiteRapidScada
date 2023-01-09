@@ -173,18 +173,35 @@ namespace HslCommunication.WebSocket
 			try
 			{
 				string[] sub = WebSocketHelper.GetWebSocketSubscribes( http );
+				if (sub == null) sub = WebSocketHelper.GetWebSocketSubscribesFromUrl( session.Url );
+
 				if (sub != null)
 				{
 					session.Topics = new List<string>( sub );
 					if (isRetain)
 						lock (keysLock)
 						{
-							for (int i = 0; i < session.Topics.Count; i++)
+							// 如果启用通配符，这里就使用高级的判断方法
+							if (TopicWildcard)
 							{
-								if (retainKeys.ContainsKey( session.Topics[i] ))
+								foreach (var key in retainKeys)
 								{
-									send = Send( socket, WebSocketHelper.WebScoketPackData( 0x01, false, retainKeys[session.Topics[i]] ) );
-									if (!send.IsSuccess) return;
+									if (session.IsClientSubscribe( key.Key, TopicWildcard ))
+									{
+										send = Send( socket, WebSocketHelper.WebScoketPackData( 0x01, false, key.Value ) );
+										if (!send.IsSuccess) return;
+									}
+								}
+							}
+							else
+							{
+								for (int i = 0; i < session.Topics.Count; i++)
+								{
+									if (retainKeys.ContainsKey( session.Topics[i] ))
+									{
+										send = Send( socket, WebSocketHelper.WebScoketPackData( 0x01, false, retainKeys[session.Topics[i]] ) );
+										if (!send.IsSuccess) return;
+									}
 								}
 							}
 						}
@@ -341,7 +358,7 @@ namespace HslCommunication.WebSocket
 				for (int i = 0; i < wsSessions.Count; i++)
 				{
 					if (wsSessions[i].IsQASession) continue;
-					if (wsSessions[i].IsClientSubscribe( topic ))
+					if (wsSessions[i].IsClientSubscribe( topic, willcard: topicWildcard ))
 					{
 						sessions.Add( wsSessions[i] );
 					}
@@ -388,7 +405,8 @@ namespace HslCommunication.WebSocket
 				for (int i = 0; i < wsSessions.Count; i++)
 				{
 					if (wsSessions[i].IsQASession) continue;
-					if (wsSessions[i].IsClientSubscribe( topic ))
+
+					if (wsSessions[i].IsClientSubscribe( topic, willcard: topicWildcard ))
 					{
 						sessions.Add( wsSessions[i] );
 					}
@@ -428,6 +446,9 @@ namespace HslCommunication.WebSocket
 		/// Get the current number of online clients
 		/// </summary>
 		public int OnlineCount => wsSessions.Count;
+
+		/// <inheritdoc cref="MQTT.MqttServer.TopicWildcard"/>
+		public bool TopicWildcard { get => this.topicWildcard; set => this.topicWildcard = value; }
 
 		/// <summary>
 		/// 获取或设置当前的服务器是否对订阅主题信息缓存，方便订阅客户端立即收到结果，默认开启<br />
@@ -549,6 +570,7 @@ namespace HslCommunication.WebSocket
 		private readonly object sessionsLock = new object( );
 		private System.Threading.Timer timerHeart;
 		private bool disposedValue;
+		private bool topicWildcard = false;                                                              // 是否用订阅通配符
 
 		#endregion
 
@@ -564,24 +586,14 @@ namespace HslCommunication.WebSocket
 			{
 				if (disposing)
 				{
-					// TODO: 释放托管状态(托管对象)
 					OnClientApplicationMessageReceive = null;
 					OnClientConnected = null;
 					OnClientDisConnected = null;
 				}
 
-				// TODO: 释放未托管的资源(未托管的对象)并重写终结器
-				// TODO: 将大型字段设置为 null
 				disposedValue = true;
 			}
 		}
-
-		// // TODO: 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
-		// ~WebSocketServer()
-		// {
-		//     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-		//     Dispose(disposing: false);
-		// }
 
 		/// <inheritdoc cref="IDisposable.Dispose"/>
 		public void Dispose( )

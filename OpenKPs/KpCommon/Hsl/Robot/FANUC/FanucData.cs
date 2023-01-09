@@ -115,15 +115,8 @@ namespace HslCommunication.Robot.FANUC
 		public void LoadByContent( byte[] content )
 		{
 			IByteTransform byteTransform = new RegularByteTransform( );
-			Encoding encoding;
-			try
-			{
-				encoding = Encoding.GetEncoding( "shift_jis", EncoderFallback.ReplacementFallback, new DecoderReplacementFallback( ) );
-			}
-			catch
-			{
-				encoding = Encoding.UTF8;
-			}
+			Encoding encoding = Encoding.GetEncoding( "gb2312" );
+			//encoding = Encoding.GetEncoding( "shift_jis", EncoderFallback.ReplacementFallback, new DecoderReplacementFallback( ) );
 
 			string[] cmds = FanucHelper.GetFanucCmds( );
 			int[] indexs = new int[cmds.Length - 1];
@@ -136,20 +129,20 @@ namespace HslCommunication.Robot.FANUC
 			}
 
 			AlarmList            = GetFanucAlarmArray(         byteTransform, content, indexs[0], 5, encoding );
-			AlarmCurrent         = FanucAlarm.PraseFrom( byteTransform, content, indexs[1], encoding );
-			AlarmPassword        = FanucAlarm.PraseFrom( byteTransform, content, indexs[2], encoding );
-			CurrentPose          = FanucPose.PraseFrom(  byteTransform, content, indexs[3] );
-			CurrentPoseUF        = FanucPose.PraseFrom(  byteTransform, content, indexs[4] );
-			CurrentPose2         = FanucPose.PraseFrom(  byteTransform, content, indexs[5] );
-			CurrentPose3         = FanucPose.PraseFrom(  byteTransform, content, indexs[6] );
-			CurrentPose4         = FanucPose.PraseFrom(  byteTransform, content, indexs[7] );
-			CurrentPose5         = FanucPose.PraseFrom(  byteTransform, content, indexs[8] );
-			Task                 = FanucTask.PraseFrom(  byteTransform, content, indexs[9], encoding );
-			TaskIgnoreMacro      = FanucTask.PraseFrom(  byteTransform, content, indexs[10], encoding );
-			TaskIgnoreKarel      = FanucTask.PraseFrom(  byteTransform, content, indexs[11], encoding );
-			TaskIgnoreMacroKarel = FanucTask.PraseFrom(  byteTransform, content, indexs[12], encoding );
+			AlarmCurrent         = FanucAlarm.PraseFrom(       byteTransform, content, indexs[1],    encoding );
+			AlarmPassword        = FanucAlarm.PraseFrom(       byteTransform, content, indexs[2],    encoding );
+			CurrentPose          = FanucPose.ParseFrom(        byteTransform, content, indexs[3] );
+			CurrentPoseUF        = FanucPose.ParseFrom(        byteTransform, content, indexs[4] );
+			CurrentPose2         = FanucPose.ParseFrom(        byteTransform, content, indexs[5] );
+			CurrentPose3         = FanucPose.ParseFrom(        byteTransform, content, indexs[6] );
+			CurrentPose4         = FanucPose.ParseFrom(        byteTransform, content, indexs[7] );
+			CurrentPose5         = FanucPose.ParseFrom(        byteTransform, content, indexs[8] );
+			Task                 = FanucTask.ParseFrom(        byteTransform, content, indexs[9],      encoding );
+			TaskIgnoreMacro      = FanucTask.ParseFrom(        byteTransform, content, indexs[10],     encoding );
+			TaskIgnoreKarel      = FanucTask.ParseFrom(        byteTransform, content, indexs[11],     encoding );
+			TaskIgnoreMacroKarel = FanucTask.ParseFrom(        byteTransform, content, indexs[12],     encoding );
 			PosRegGP1            = GetFanucPoseArray(          byteTransform, content, indexs[13], 10, encoding );
-			PosRegGP2            = GetFanucPoseArray(          byteTransform, content, indexs[14], 4, encoding );
+			PosRegGP2            = GetFanucPoseArray(          byteTransform, content, indexs[14], 4,  encoding );
 			PosRegGP3            = GetFanucPoseArray(          byteTransform, content, indexs[15], 10, encoding );
 			PosRegGP4            = GetFanucPoseArray(          byteTransform, content, indexs[16], 10, encoding );
 			PosRegGP5            = GetFanucPoseArray(          byteTransform, content, indexs[17], 10, encoding );
@@ -159,7 +152,7 @@ namespace HslCommunication.Robot.FANUC
 			DUTY_TEMP            = BitConverter.ToSingle(      content, indexs[21] );
 			TIMER10_COMMENT      = encoding.GetString(         content, indexs[22], 80 ).Trim( '\u0000' );
 			TIMER2_COMMENT       = encoding.GetString(         content, indexs[23], 80 ).Trim( '\u0000' );
-			MNUTOOL1_1           = FanucPose.PraseFrom(  byteTransform, content, indexs[24] );
+			MNUTOOL1_1           = FanucPose.ParseFrom(        byteTransform, content, indexs[24] );
 			HTTPKCL_CMDS         = encoding.GetString(         content, indexs[25], 80 ).Trim( '\u0000' );
 			NumReg1              = byteTransform.TransInt32(   content, indexs[26], 5 );
 			NumReg2              = byteTransform.TransSingle(  content, indexs[27], 5 );
@@ -299,7 +292,7 @@ namespace HslCommunication.Robot.FANUC
 		{
 			FanucPose[] array = new FanucPose[arraySize];
 			for (int i = 0; i < arraySize; i++)
-				array[i] = FanucPose.PraseFrom( byteTransform, content, index + i * 100 );
+				array[i] = FanucPose.ParseFrom( byteTransform, content, index + i * 100 );
 			return array;
 		}
 

@@ -7,6 +7,7 @@ using System.Net;
 using HslCommunication.LogNet;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.IO;
 #if !NET35 && !NET20
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -20,7 +21,7 @@ namespace HslCommunication.Core.Net
 	/// A base class for data access based on webapi that provides basic HTTP interface interaction
 	/// </summary>
 	/// <remarks>
-	/// 当前的基类在.net framework上存在问题，在.net framework4.5及.net standard上运行稳定而且正常
+	/// 当前的基类在.net framework2.0上存在问题，在.net framework4.5及.net standard上运行稳定而且正常
 	/// </remarks>
 	public class NetworkWebApiBase
 	{
@@ -69,12 +70,14 @@ namespace HslCommunication.Core.Net
 				handler.UseProxy = false;
 				ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback( TrustAllValidationCallback );
 				this.httpClient = new HttpClient( handler );
+				// this.httpClient.DefaultRequestHeaders.ConnectionClose = true;
 				ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
 			}
 			else
 			{
 				ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback( TrustAllValidationCallback );
 				this.httpClient = new HttpClient( );
+				// this.httpClient.DefaultRequestHeaders.ConnectionClose = true;
 				ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
 			}
 #endif
@@ -115,9 +118,17 @@ namespace HslCommunication.Core.Net
 				using (HttpContent content = response.Content)
 				{
 					response.EnsureSuccessStatusCode( );
-					string result = content.ReadAsStringAsync( ).Result;
-
-					return OperateResult.CreateSuccessResult( result );
+					if (UseEncodingISO)
+					{
+						using (StreamReader sr = new StreamReader( content.ReadAsStreamAsync( ).Result, Encoding.GetEncoding( "iso-8859-1" ) ))
+						{
+							return OperateResult.CreateSuccessResult( sr.ReadToEnd( ) );
+						}
+					}
+					else
+					{
+						return OperateResult.CreateSuccessResult( content.ReadAsStringAsync( ).Result );
+					}
 				}
 #else
 					WebClient webClient = new WebClient( );
@@ -160,9 +171,17 @@ namespace HslCommunication.Core.Net
 					using (HttpContent content = response.Content)
 					{
 						response.EnsureSuccessStatusCode( );
-						string result = content.ReadAsStringAsync( ).Result;
-
-						return OperateResult.CreateSuccessResult( result );
+						if (UseEncodingISO)
+						{
+							using (StreamReader sr = new StreamReader( content.ReadAsStreamAsync( ).Result, Encoding.GetEncoding( "iso-8859-1" ) ))
+							{
+								return OperateResult.CreateSuccessResult( sr.ReadToEnd( ) );
+							}
+						}
+						else
+						{
+							return OperateResult.CreateSuccessResult( content.ReadAsStringAsync( ).Result );
+						}
 					}
 				}
 #else
@@ -200,9 +219,17 @@ namespace HslCommunication.Core.Net
 				using (HttpContent content = response.Content)
 				{
 					response.EnsureSuccessStatusCode( );
-					string result = await content.ReadAsStringAsync( );
-
-					return OperateResult.CreateSuccessResult( result );
+					if (UseEncodingISO)
+					{
+						using (StreamReader sr = new StreamReader( await content.ReadAsStreamAsync( ), Encoding.GetEncoding( "iso-8859-1" ) ))
+						{
+							return OperateResult.CreateSuccessResult( sr.ReadToEnd( ) );
+						}
+					}
+					else
+					{
+						return OperateResult.CreateSuccessResult( await content.ReadAsStringAsync( ) );
+					}
 				}
 			}
 			catch (Exception ex)
@@ -227,9 +254,17 @@ namespace HslCommunication.Core.Net
 					using (HttpContent content = response.Content)
 					{
 						response.EnsureSuccessStatusCode( );
-						string result = await content.ReadAsStringAsync( );
-
-						return OperateResult.CreateSuccessResult( result );
+						if (UseEncodingISO)
+						{
+							using(StreamReader sr = new StreamReader(await content.ReadAsStreamAsync(), Encoding.GetEncoding( "iso-8859-1" ) ))
+							{
+								return OperateResult.CreateSuccessResult( sr.ReadToEnd( ) );
+							}
+						}
+						else
+						{
+							return OperateResult.CreateSuccessResult( await content.ReadAsStringAsync( ) );
+						}
 					}
 				}
 			}
@@ -287,18 +322,30 @@ namespace HslCommunication.Core.Net
 		public ILogNet LogNet { get; set; }
 
 		/// <summary>
-		/// 是否启用Https的协议访问
+		/// 是否启用Https的协议访问，对于Https来说，端口号默认为 443<br />
+		/// Whether to enable Https protocol access, for Https, the port number defaults to 443
 		/// </summary>
 		public bool UseHttps { get; set; }
 
 		/// <summary>
-		/// 默认的内容类型，如果为空，则不进行设置操作。
+		/// 默认的内容类型，如果为空，则不进行设置操作。例如设置为 "text/plain", "application/json", "text/html" 等等。<br />
+		/// The default content type, if it is empty, no setting operation will be performed. For example, set to "text/plain", "application/json", "text/html" and so on.
 		/// </summary>
 		public string DefaultContentType { get; set; }
 
+		/// <summary>
+		/// 获取或设置是否使用ISO的编码信息，默认为 False<br />
+		/// Get or set whether to use ISO encoding information, the default is False
+		/// </summary>
+		/// <remarks>
+		/// 在访问某些特殊的API的时候，会发生异常"The character set provided in ContentType is invalid...."，这时候，只需要将本属性设置为 True 即可。
+		/// </remarks>
+		public bool UseEncodingISO { get; set; } = false;
+
 #if !NET20 && !NET35
 		/// <summary>
-		/// 获取当前的HttpClinet的客户端
+		/// 获取当前的HttpClinet的客户端<br />
+		/// Get the current HttpClinet client
 		/// </summary>
 		public HttpClient Client => httpClient;
 #endif

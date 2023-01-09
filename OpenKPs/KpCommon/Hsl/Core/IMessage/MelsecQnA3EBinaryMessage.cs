@@ -8,7 +8,7 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// 三菱的Qna兼容3E帧协议解析规则
 	/// </summary>
-	public class MelsecQnA3EBinaryMessage : INetMessage
+	public class MelsecQnA3EBinaryMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 9;
@@ -17,7 +17,7 @@ namespace HslCommunication.Core.IMessage
 		public int GetContentLengthByHeadBytes() => BitConverter.ToUInt16( HeadBytes, 7 );
 
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token )
+		public override bool CheckHeadBytesLegal( byte[] token )
 		{
 			if (HeadBytes == null) return false;
 
@@ -27,17 +27,6 @@ namespace HslCommunication.Core.IMessage
 				return false;
 		}
 
-		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => 0;
-
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 	}
 
 }

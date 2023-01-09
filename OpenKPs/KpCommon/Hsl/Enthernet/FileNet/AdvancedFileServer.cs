@@ -669,7 +669,7 @@ namespace HslCommunication.Enthernet
 		public string FilesDirectoryPathTemp
 		{
 			get { return m_FilesDirectoryPathTemp; }
-			set { m_FilesDirectoryPathTemp = PreprocessFolderName( value ); }
+			set { m_FilesDirectoryPathTemp =  value; }
 		}
 
 		#endregion

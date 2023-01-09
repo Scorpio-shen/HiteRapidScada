@@ -75,20 +75,20 @@ namespace HslCommunication.DCS
 			if (netMessage != null) netMessage.SendBytes = send;
 
 			// send
-			OperateResult sendResult = Send( socket, send );
-			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
-			if (receiveTimeOut < 0)    return OperateResult.CreateSuccessResult( new byte[0] );
-			if (!hasResponseData)      return OperateResult.CreateSuccessResult( new byte[0] );
+			OperateResult sendResult      = Send( socket, send );
+			if (!sendResult.IsSuccess)    return OperateResult.CreateFailedResult<byte[]>( sendResult );
+			if (this.ReceiveTimeOut < 0)  return OperateResult.CreateSuccessResult( new byte[0] );
+			if (!hasResponseData)         return OperateResult.CreateSuccessResult( new byte[0] );
 			if (SleepTime > 0) Thread.Sleep( SleepTime );
 
 			// receive msg
-			OperateResult<byte[]> resultReceive = ReceiveByMessage( socket, receiveTimeOut, netMessage );
+			OperateResult<byte[]> resultReceive = ReceiveByMessage( socket, this.ReceiveTimeOut, netMessage );
 			if (!resultReceive.IsSuccess) return resultReceive;
 
 			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + (LogMsgFormatBinary ? resultReceive.Content.ToHexString( ' ' ) : Encoding.ASCII.GetString( resultReceive.Content )) );
 
 			if (resultReceive.Content.Length == 0x06 && CheckResponseStatus( resultReceive.Content ))
-				resultReceive = ReceiveByMessage( socket, receiveTimeOut, netMessage );
+				resultReceive = ReceiveByMessage( socket, this.ReceiveTimeOut, netMessage );
 
 			// check
 			if (netMessage != null && !netMessage.CheckHeadBytesLegal( Token.ToByteArray( ) ))
@@ -113,20 +113,20 @@ namespace HslCommunication.DCS
 			if (netMessage != null) netMessage.SendBytes = sendValue;
 
 			// send
-			OperateResult sendResult = await SendAsync( socket, sendValue );
-			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
-			if (receiveTimeOut < 0)    return OperateResult.CreateSuccessResult( new byte[0] );
-			if (!hasResponseData)      return OperateResult.CreateSuccessResult( new byte[0] );
+			OperateResult sendResult      = await SendAsync( socket, sendValue );
+			if (!sendResult.IsSuccess)    return OperateResult.CreateFailedResult<byte[]>( sendResult );
+			if (ReceiveTimeOut < 0)       return OperateResult.CreateSuccessResult( new byte[0] );
+			if (!hasResponseData)         return OperateResult.CreateSuccessResult( new byte[0] );
 			if (SleepTime > 0) await Task.Delay( SleepTime );
 
 			// receive msg
-			OperateResult<byte[]> resultReceive = await ReceiveByMessageAsync( socket, receiveTimeOut, netMessage );
+			OperateResult<byte[]> resultReceive = await ReceiveByMessageAsync( socket, ReceiveTimeOut, netMessage );
 			if (!resultReceive.IsSuccess) return resultReceive;
 
 			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + (LogMsgFormatBinary ? resultReceive.Content.ToHexString( ' ' ) : Encoding.ASCII.GetString( resultReceive.Content )) );
 
 			if (resultReceive.Content.Length == 0x06 && CheckResponseStatus( resultReceive.Content ))
-				resultReceive = await ReceiveByMessageAsync( socket, receiveTimeOut, netMessage );
+				resultReceive = await ReceiveByMessageAsync( socket, ReceiveTimeOut, netMessage );
 
 			// check
 			if (netMessage != null && !netMessage.CheckHeadBytesLegal( Token.ToByteArray( ) ))

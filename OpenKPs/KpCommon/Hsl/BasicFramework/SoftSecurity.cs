@@ -23,7 +23,7 @@ namespace HslCommunication.BasicFramework
 	public static class SoftSecurity
 	{
 		/// <summary>
-		/// 加密数据，采用对称加密的方式
+		/// 加密数据，采用DES对称加密的方式
 		/// </summary>
 		/// <param name="pToEncrypt">待加密的数据</param>
 		/// <returns>加密后的数据</returns>
@@ -32,9 +32,8 @@ namespace HslCommunication.BasicFramework
 			return MD5Encrypt(pToEncrypt, "zxcvBNMM");
 		}
 
-
 		/// <summary>
-		/// 加密数据，采用对称加密的方式
+		/// 加密数据，采用DES对称加密的方式
 		/// </summary>
 		/// <param name="pToEncrypt">待加密的数据</param>
 		/// <param name="Password">密钥，长度为8，英文或数字</param>
@@ -60,7 +59,7 @@ namespace HslCommunication.BasicFramework
 		}
 
 		/// <summary>
-		/// 解密过程，使用的是对称的加密
+		/// 解密过程，使用的是DES对称的加密
 		/// </summary>
 		/// <param name="pToDecrypt">等待解密的字符</param>
 		/// <returns>返回原密码，如果解密失败，返回‘解密失败’</returns>
@@ -70,7 +69,7 @@ namespace HslCommunication.BasicFramework
 		}
 
 		/// <summary>
-		/// 解密过程，使用的是对称的加密
+		/// 解密过程，使用的是DES对称的加密
 		/// </summary>
 		/// <param name="pToDecrypt">等待解密的字符</param>
 		/// <param name="password">密钥，长度为8，英文或数字</param>

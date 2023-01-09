@@ -1,8 +1,12 @@
 ﻿using HslCommunication.ModBus;
+using HslCommunication.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+#if !NET35 && !NET20
+using System.Threading.Tasks;
+#endif
 
 namespace HslCommunication.Profinet.Inovance
 {
@@ -46,6 +50,13 @@ namespace HslCommunication.Profinet.Inovance
 	///     <term>MW0-MW65535</term>
 	///     <term>10</term>
 	///     <term>按照字访问的</term>
+	///   </item>
+	///   <item>
+	///     <term>M寄存器</term>
+	///     <term>M</term>
+	///     <term>MX0.0-MX1000.10</term>
+	///     <term>10</term>
+	///     <term>按照位访问</term>
 	///   </item>
 	/// </list>
 	/// 针对AM600的TCP还支持下面的两种地址读写
@@ -268,14 +279,22 @@ namespace HslCommunication.Profinet.Inovance
 		/// <summary>
 		/// 实例化一个默认的对象
 		/// </summary>
-		public InovanceSerial( ) : base( ) { Series = InovanceSeries.AM; }
+		public InovanceSerial( ) : base( ) 
+		{ 
+			this.Series        = InovanceSeries.AM;
+			this.DataFormat    = Core.DataFormat.CDAB;
+		}
 
 		/// <summary>
 		/// 指定服务器地址，端口号，客户端自己的站号来初始化<br />
 		/// Specify the server address, port number, and client's own station number to initialize
 		/// </summary>
 		/// <param name="station">客户端自身的站号</param>
-		public InovanceSerial( byte station = 0x01 ) : base( station ) { Series = InovanceSeries.AM; }
+		public InovanceSerial( byte station = 0x01 ) : base( station )
+		{
+			this.Series       = InovanceSeries.AM;
+			this.DataFormat   = Core.DataFormat.CDAB;
+		}
 
 		/// <summary>
 		/// 指定服务器地址，端口号，客户端自己的站号来初始化<br />
@@ -283,7 +302,12 @@ namespace HslCommunication.Profinet.Inovance
 		/// </summary>
 		/// <param name="series">PLC的系列选择</param>
 		/// <param name="station">客户端自身的站号</param>
-		public InovanceSerial( InovanceSeries series, byte station = 0x01 ) : base( station ) { Series = series; }
+		public InovanceSerial( InovanceSeries series, byte station = 0x01 ) : base( station ) 
+		{
+			this.Series       = series;
+			this.Series       = InovanceSeries.AM;
+			this.DataFormat   = Core.DataFormat.CDAB;
+		}
 
 		#endregion
 
@@ -294,6 +318,17 @@ namespace HslCommunication.Profinet.Inovance
 		/// </summary>
 		public InovanceSeries Series { get; set; }
 
+		#endregion
+
+		#region Read Write Byte
+
+		/// <inheritdoc cref="InovanceHelper.ReadByte(IModbus, string)"/>
+		[HslMqttApi( "ReadByte", "" )]
+		public OperateResult<byte> ReadByte( string address ) => InovanceHelper.ReadByte( this, address );
+#if !NET35 && !NET20
+		/// <inheritdoc cref="InovanceHelper.ReadByte(IModbus, string)"/>
+		public async Task<OperateResult<byte>> ReadByteAsync( string address ) => await InovanceHelper.ReadByteAsync( this, address );
+#endif
 		#endregion
 
 		#region Override

@@ -1,9 +1,6 @@
 ﻿using HslCommunication;
 using HslCommunication.Core;
 using HslCommunication.Profinet.Melsec;
-using HslCommunication.Profinet.Melsec.Helper;
-using HslCommunication.Profinet.Omron;
-using KpCommon.Hsl.Profinet.Omron.InterFace;
 using KpCommon.Model;
 using KpMelsec.Model;
 using KpMelsec.Model.EnumType;
@@ -16,7 +13,6 @@ using System.IO;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace Scada.Comm.Devices
 {

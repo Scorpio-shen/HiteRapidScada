@@ -7,8 +7,9 @@ using System.Text;
 namespace HslCommunication.Core
 {
 	/// <summary>
-	/// 数据转换类的基础，提供了一些基础的方法实现.<br />
-	/// The basis of the data conversion class provides some basic method implementations.
+	/// 数据转换类的基础，提供了一些基础的方法实现，默认 <see cref="DataFormat.CDAB"/> 的顺序，和C#的字节顺序是一致的。<br />
+	/// The basis of the data conversion class provides some basic method implementations. 
+	/// The default order of <see cref="DataFormat.CDAB"/> is consistent with the byte order of C#.
 	/// </summary>
 	public class ByteTransformBase : IByteTransform
 	{
@@ -38,14 +39,17 @@ namespace HslCommunication.Core
 		#region Get Value From Bytes
 
 		/// <inheritdoc cref="IByteTransform.TransBool(byte[], int)"/>
-		public virtual bool TransBool( byte[] buffer, int index ) => (buffer[index] & 0x01) == 0x01;
+		public virtual bool TransBool( byte[] buffer, int index ) => buffer.GetBoolByIndex( index );
 
 		/// <inheritdoc cref="IByteTransform.TransBool(byte[], int, int)"/>
-		public bool[] TransBool( byte[] buffer, int index, int length )
+		public virtual bool[] TransBool( byte[] buffer, int index, int length )
 		{
-			byte[] tmp = new byte[length];
-			Array.Copy( buffer, index, tmp, 0, length );
-			return SoftBasic.ByteToBoolArray( tmp, length * 8 );
+			bool[] result = new bool[ length ];
+			for ( int i = 0; i < length; i++)
+			{
+				result[i] = buffer.GetBoolByIndex( i + index );
+			}
+			return result;
 		}
 
 		/// <inheritdoc cref="IByteTransform.TransByte(byte[], int)"/>

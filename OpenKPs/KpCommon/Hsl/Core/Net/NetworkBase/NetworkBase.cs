@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using HslCommunication.LogNet;
 using System.Net.Sockets;
@@ -11,6 +12,9 @@ using HslCommunication.BasicFramework;
 using HslCommunication.WebSocket;
 using HslCommunication.Enthernet.Redis;
 using HslCommunication.MQTT;
+using System.Runtime.InteropServices;
+using HslCommunication.Enthernet;
+using HslCommunication.Core.Security;
 
 #if !NET35 && !NET20
 using System.Threading.Tasks;
@@ -81,12 +85,6 @@ namespace HslCommunication.Core.Net
 		#endregion
 
 		#region Protect Member
-
-		/// <summary>
-		/// 对客户端而言是的通讯用的套接字，对服务器来说是用于侦听的套接字<br />
-		/// A communication socket for the client, or a listening socket for the server
-		/// </summary>
-		protected Socket CoreSocket = null;
 
 		/// <summary>
 		/// 文件传输的时候的缓存大小，直接影响传输的速度，值越大，传输速度越快，越占内存，默认为100K大小<br />
@@ -165,8 +163,19 @@ namespace HslCommunication.Core.Net
 		{
 			if (length == 0) return OperateResult.CreateSuccessResult( new byte[0] );
 			if (!Authorization.nzugaydgwadawdibbas( )) return new OperateResult<byte[]>( StringResources.Language.AuthorizationFailed );
+			
+			byte[] buffer;
+			int bufferLength = length > 0 ? length : 2048;
+			try
+			{
+				buffer = new byte[bufferLength];
+			}
+			catch (Exception ex)
+			{
+				socket?.Close( );
+				return new OperateResult<byte[]>( $"Create byte[{bufferLength}] buffer failed: " + ex.Message );
+			}
 
-			byte[] buffer = length > 0 ? new byte[length] : new byte[2048];
 			OperateResult<int> receive = Receive( socket, buffer, 0, length, timeOut, reportProgress );
 			if (!receive.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( receive );
 
@@ -287,21 +296,60 @@ namespace HslCommunication.Core.Net
 		{
 			if (netMessage == null) return Receive( socket, -1, timeOut );
 
-			// 接收指令头
-			OperateResult<byte[]> headResult = Receive( socket, netMessage.ProtocolHeadBytesLength, timeOut );
-			if (!headResult.IsSuccess) return headResult;
+			if (netMessage.ProtocolHeadBytesLength < 0)
+			{
+				// 表示接收的是固定的结束字符
+				byte[] headCode = BitConverter.GetBytes( netMessage.ProtocolHeadBytesLength );
+				int codeLength = headCode[3] & 0x0f;
+				OperateResult<byte[]> receive = null;
+				if      (codeLength == 1) receive = ReceiveCommandLineFromSocket( socket, headCode[1], timeOut );
+				else if (codeLength == 2) receive = ReceiveCommandLineFromSocket( socket, headCode[1], headCode[0], timeOut );
 
-			netMessage.HeadBytes = headResult.Content;
-			int contentLength = netMessage.GetContentLengthByHeadBytes( );
-			if (contentLength <= 0) return OperateResult.CreateSuccessResult( headResult.Content );
+				if (receive == null) return new OperateResult<byte[]>( "Receive by specified code failed, length check failed" );
+				if (!receive.IsSuccess) return receive;
 
-			byte[] result = new byte[netMessage.ProtocolHeadBytesLength + contentLength];
-			headResult.Content.CopyTo( result, 0 );
+				netMessage.HeadBytes = receive.Content;
+				if (netMessage is SpecifiedCharacterMessage message)
+				{
+					if (message.EndLength == 0) return receive;
+					OperateResult<byte[]> endResult = Receive( socket, message.EndLength, timeOut );
+					if (!endResult.IsSuccess) return endResult;
 
-			OperateResult contentResult = Receive( socket, result, netMessage.ProtocolHeadBytesLength, contentLength, timeOut, reportProgress );
-			if (!contentResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( contentResult );
+					return OperateResult.CreateSuccessResult( SoftBasic.SpliceArray( receive.Content, endResult.Content ) );
+				}
+				return receive;
+			}
+			else
+			{
+				// 表示接收的数据是固定长度+可变长度组成的数据
+				OperateResult<byte[]> headResult = Receive( socket, netMessage.ProtocolHeadBytesLength, timeOut );
+				if (!headResult.IsSuccess) return headResult;
 
-			return OperateResult.CreateSuccessResult( result );
+				int start = netMessage.PependedUselesByteLength( headResult.Content );
+				if (start > 0)
+				{
+					OperateResult<byte[]> head2Result = Receive( socket, start, timeOut );
+					if (!head2Result.IsSuccess) return head2Result;
+
+					headResult.Content = SoftBasic.SpliceArray( headResult.Content.RemoveBegin( start ), head2Result.Content );
+				}
+
+				netMessage.HeadBytes = headResult.Content;
+				int contentLength = netMessage.GetContentLengthByHeadBytes( );
+				//while( contentLength < 0)
+				//{
+
+				//}
+				if (contentLength == 0) return OperateResult.CreateSuccessResult( headResult.Content );
+
+				byte[] result = new byte[netMessage.ProtocolHeadBytesLength + contentLength];
+				headResult.Content.CopyTo( result, 0 );
+
+				OperateResult contentResult = Receive( socket, result, netMessage.ProtocolHeadBytesLength, contentLength, timeOut, reportProgress );
+				if (!contentResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( contentResult );
+
+				return OperateResult.CreateSuccessResult( result );
+			}
 		}
 
 		#endregion
@@ -400,38 +448,16 @@ namespace HslCommunication.Core.Net
 		/// </example>
 		protected OperateResult<Socket> CreateSocketAndConnect( IPEndPoint endPoint, int timeOut, IPEndPoint local = null )
 		{
-			int connectCount = 0;
-			while (true)
+			OperateResult<Socket> connect = NetSupport.CreateSocketAndConnect( endPoint, timeOut, local );
+			if (connect.IsSuccess)
 			{
-				connectCount++;
-				var socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp );
-				HslTimeOut connectTimeout = HslTimeOut.HandleTimeOutCheck( socket, timeOut );
-				try
-				{
-					if (local != null) socket.Bind( local );
-					socket.Connect( endPoint );
-					connectErrorCount = 0;
-					connectTimeout.IsSuccessful = true;
-					return OperateResult.CreateSuccessResult( socket );
-				}
-				catch (Exception ex)
-				{
-					// 如果连接一次出现了立即失败的情况，那就马上立即重试一次连接
-					// If the connection fails immediately, try to retry the connection immediately
-					socket?.Close( );
-					connectTimeout.IsSuccessful = true;
-					if (connectErrorCount < 10_0000_0000) connectErrorCount++;
-					if (connectTimeout.GetConsumeTime( ) < TimeSpan.FromMilliseconds( 500 ) && connectCount < 2) { Thread.Sleep( 100 ); continue; }
-
-					if (connectTimeout.IsTimeout)
-					{
-						return new OperateResult<Socket>( -connectErrorCount, string.Format( StringResources.Language.ConnectTimeout, endPoint, timeOut ) + " ms" );
-					}
-					else
-					{
-						return new OperateResult<Socket>( -connectErrorCount, $"Socket Connect {endPoint} Exception -> " + ex.Message );
-					}
-				}
+				connectErrorCount = 0;
+				return connect;
+			}
+			else
+			{
+				if (connectErrorCount < 10_0000_0000) connectErrorCount++;
+				return new OperateResult<Socket>( -connectErrorCount, connect.Message );
 			}
 		}
 
@@ -912,40 +938,16 @@ namespace HslCommunication.Core.Net
 		/// <inheritdoc cref="CreateSocketAndConnect(IPEndPoint, int, IPEndPoint)"/>
 		protected async Task<OperateResult<Socket>> CreateSocketAndConnectAsync( IPEndPoint endPoint, int timeOut, IPEndPoint local = null )
 		{
-			int connectCount = 0;
-			while (true)
+			OperateResult<Socket> connect = await NetSupport.CreateSocketAndConnectAsync( endPoint, timeOut, local );
+			if (connect.IsSuccess)
 			{
-				connectCount++;
-				var socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp );
-				HslTimeOut connectTimeout = HslTimeOut.HandleTimeOutCheck( socket, timeOut );
-
-				try
-				{
-					if (local != null) socket.Bind( local );
-					await Task.Factory.FromAsync( socket.BeginConnect( endPoint, null, socket ), socket.EndConnect );
-					connectErrorCount = 0;
-					connectTimeout.IsSuccessful = true;
-					return OperateResult.CreateSuccessResult( socket );
-				}
-				catch (Exception ex)
-				{
-					connectTimeout.IsSuccessful = true;
-					socket?.Close( );
-					if (connectErrorCount < 10_0000_0000) connectErrorCount++;
-
-					// 如果连接一次出现了立即失败的情况，那就马上立即重试一次连接
-					// If the connection fails immediately, try to retry the connection immediately
-					if (connectTimeout.GetConsumeTime( ) < TimeSpan.FromMilliseconds( 500 ) && connectCount < 2) { await Task.Delay( 100 ); continue; }
-
-					if (connectTimeout.IsTimeout)
-					{
-						return new OperateResult<Socket>( -connectErrorCount, string.Format( StringResources.Language.ConnectTimeout, endPoint, timeOut ) + " ms" );
-					}
-					else
-					{
-						return new OperateResult<Socket>( -connectErrorCount, $"Socket Exception -> {ex.Message}" );
-					}
-				}
+				connectErrorCount = 0;
+				return connect;
+			}
+			else
+			{
+				if (connectErrorCount < 10_0000_0000) connectErrorCount++;
+				return new OperateResult<Socket>( -connectErrorCount, connect.Message );
 			}
 		}
 
@@ -961,7 +963,18 @@ namespace HslCommunication.Core.Net
 			if (length == 0) return OperateResult.CreateSuccessResult( new byte[0] );
 			if (!Authorization.nzugaydgwadawdibbas( )) new OperateResult<byte[]>( StringResources.Language.AuthorizationFailed );
 
-			byte[] buffer = length > 0 ? new byte[length] : new byte[2048];
+			byte[] buffer;
+			int bufferLength = length > 0 ? length : 2048;
+			try
+			{
+				buffer = new byte[bufferLength];
+			}
+			catch (Exception ex)
+			{
+				socket?.Close( );
+				return new OperateResult<byte[]>( $"Create byte[{bufferLength}] buffer failed: " + ex.Message );
+			}
+
 			OperateResult<int> receive = await ReceiveAsync( socket, buffer, 0, length, timeOut, reportProgress );
 			if (!receive.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( receive );
 
@@ -1146,25 +1159,59 @@ namespace HslCommunication.Core.Net
 		protected virtual async Task<OperateResult<byte[]>> ReceiveByMessageAsync( Socket socket, int timeOut, INetMessage netMessage, Action<long, long> reportProgress = null )
 		{
 			if (netMessage == null) return await ReceiveAsync( socket, -1, timeOut );
+			if (netMessage.ProtocolHeadBytesLength < 0)
+			{
+				// 表示接收的是固定的结束字符
+				byte[] headCode = BitConverter.GetBytes( netMessage.ProtocolHeadBytesLength );
+				int codeLength = headCode[3] & 0x0f;
+				OperateResult<byte[]> receive = null;
+				if      (codeLength == 1) receive = await ReceiveCommandLineFromSocketAsync( socket, headCode[1], timeOut );                    // 固定一个字符结尾
+				else if (codeLength == 2) receive = await ReceiveCommandLineFromSocketAsync( socket, headCode[1], headCode[0], timeOut );       // 固定两个字符结尾
 
-			// 接收指令头
-			OperateResult<byte[]> headResult = await ReceiveAsync( socket, netMessage.ProtocolHeadBytesLength, timeOut );
-			if (!headResult.IsSuccess) return headResult;
+				if (receive == null) return new OperateResult<byte[]>( "Receive by specified code failed, length check failed" );
+				if (!receive.IsSuccess) return receive;
 
-			// 获取剩余接收的数据长度
-			netMessage.HeadBytes = headResult.Content;
-			int contentLength = netMessage.GetContentLengthByHeadBytes( );
-			if (contentLength <= 0) return OperateResult.CreateSuccessResult( headResult.Content );
+				netMessage.HeadBytes = receive.Content;
+				if (netMessage is SpecifiedCharacterMessage message)
+				{
+					if (message.EndLength == 0) return receive;
+					OperateResult<byte[]> endResult = await ReceiveAsync( socket, message.EndLength, timeOut );                                 // 如果还有剩余的长度需要接收
+					if (!endResult.IsSuccess) return endResult;
 
-			// 生成结果报文信息
-			byte[] buffer = new byte[netMessage.ProtocolHeadBytesLength + contentLength];
-			headResult.Content.CopyTo( buffer, 0 );
+					return OperateResult.CreateSuccessResult( SoftBasic.SpliceArray( receive.Content, endResult.Content ) );
+				}
+				return receive;
+			}
+			else
+			{
+				// 接收指令头
+				OperateResult<byte[]> headResult = await ReceiveAsync( socket, netMessage.ProtocolHeadBytesLength, timeOut );
+				if (!headResult.IsSuccess) return headResult;
 
-			// 接收剩余的数据长度信息
-			OperateResult<int> contentResult = await ReceiveAsync( socket, buffer, netMessage.ProtocolHeadBytesLength, contentLength, timeOut, reportProgress );
-			if (!contentResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( contentResult );
+				int start = netMessage.PependedUselesByteLength( headResult.Content );
+				if (start > 0)
+				{
+					OperateResult<byte[]> head2Result = await ReceiveAsync( socket, start, timeOut );
+					if (!head2Result.IsSuccess) return head2Result;
 
-			return OperateResult.CreateSuccessResult( buffer );
+					headResult.Content = SoftBasic.SpliceArray( headResult.Content.RemoveBegin( start ), head2Result.Content );
+				}
+
+				// 获取剩余接收的数据长度
+				netMessage.HeadBytes = headResult.Content;
+				int contentLength = netMessage.GetContentLengthByHeadBytes( );
+				if (contentLength <= 0) return OperateResult.CreateSuccessResult( headResult.Content );
+
+				// 生成结果报文信息
+				byte[] buffer = new byte[netMessage.ProtocolHeadBytesLength + contentLength];
+				headResult.Content.CopyTo( buffer, 0 );
+
+				// 接收剩余的数据长度信息
+				OperateResult<int> contentResult = await ReceiveAsync( socket, buffer, netMessage.ProtocolHeadBytesLength, contentLength, timeOut, reportProgress );
+				if (!contentResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( contentResult );
+
+				return OperateResult.CreateSuccessResult( buffer );
+			}
 		}
 
 		/// <inheritdoc cref="ReadStream(Stream, byte[])"/>
@@ -1607,7 +1654,7 @@ namespace HslCommunication.Core.Net
 			List<byte> buffer = new List<byte>( );
 			while (true)
 			{
-				OperateResult<byte[]> read = Receive( socket, 1, 5_000 );
+				OperateResult<byte[]> read = Receive( socket, 1, 10_000 );
 				if (!read.IsSuccess) return OperateResult.CreateFailedResult<int>( read );
 
 				buffer.Add( read.Content[0] );
@@ -1656,8 +1703,13 @@ namespace HslCommunication.Core.Net
 		/// <param name="fileSize">数据大小</param>
 		/// <param name="timeOut">超时时间</param>
 		/// <param name="reportProgress">进度报告，第一个参数是已完成的字节数量，第二个参数是总字节数量。</param>
+		/// <param name="aesCryptography">AES数据加密对象，如果为空，则不进行加密</param>
+		/// <param name="cancelToken">取消的令牌操作信息</param>
 		/// <returns>是否操作成功</returns>
-		protected OperateResult ReceiveMqttStream( Socket socket, Stream stream, long fileSize, int timeOut, Action<long, long> reportProgress = null )
+		protected OperateResult ReceiveMqttStream( Socket socket, Stream stream, long fileSize, int timeOut, 
+			Action<long, long> reportProgress = null, 
+			AesCryptography aesCryptography = null,
+			HslCancelToken cancelToken = null )
 		{
 			long already = 0;
 			while (already < fileSize)
@@ -1666,6 +1718,18 @@ namespace HslCommunication.Core.Net
 				if (!receive.IsSuccess) return receive;
 
 				if (receive.Content1 == MqttControlMessage.FAILED) { socket?.Close( ); return new OperateResult( Encoding.UTF8.GetString( receive.Content2 ) ); }
+				if(aesCryptography != null)
+				{
+					try
+					{
+						receive.Content2 = aesCryptography.Decrypt( receive.Content2 );
+					}
+					catch(Exception ex)
+					{
+						socket?.Close( );
+						return new OperateResult( "AES Decrypt file stream failed: " + ex.Message );
+					}
+				}
 
 				OperateResult write = WriteStream( stream, receive.Content2 );
 				if (!write.IsSuccess) return write;
@@ -1674,6 +1738,15 @@ namespace HslCommunication.Core.Net
 				byte[] ack = new byte[16];
 				BitConverter.GetBytes( already ).CopyTo( ack, 0 );
 				BitConverter.GetBytes( fileSize ).CopyTo( ack, 8 );
+
+				if (cancelToken?.IsCancelled == true) 
+				{
+					OperateResult cancel = Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FAILED, null, HslHelper.GetUTF8Bytes( StringResources.Language.UserCancelOperate ) ).Content );
+					if (!cancel.IsSuccess) { socket?.Close( ); return cancel; }
+
+					socket?.Close( ); 
+					return new OperateResult( StringResources.Language.UserCancelOperate ); 
+				}
 
 				OperateResult send = Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileNoSense, null, ack ).Content );
 				if (!send.IsSuccess) return send;
@@ -1694,8 +1767,13 @@ namespace HslCommunication.Core.Net
 		/// <param name="fileSize">总的数据大小</param>
 		/// <param name="timeOut">超时信息</param>
 		/// <param name="reportProgress">进度报告，第一个参数是已完成的字节数量，第二个参数是总字节数量。</param>
+		/// <param name="aesCryptography">AES数据加密对象，如果为空，则不进行加密</param>
+		/// <param name="cancelToken">取消操作的令牌信息</param>
 		/// <returns>是否操作成功</returns>
-		protected OperateResult SendMqttStream( Socket socket, Stream stream, long fileSize, int timeOut, Action<long, long> reportProgress = null )
+		protected OperateResult SendMqttStream( Socket socket, Stream stream, long fileSize, int timeOut, 
+			Action<long, long> reportProgress = null, 
+			AesCryptography aesCryptography = null,
+			HslCancelToken cancelToken = null )
 		{
 			byte[] buffer = new byte[fileCacheSize]; // 100K的数据缓存池
 			long already = 0;
@@ -1707,13 +1785,26 @@ namespace HslCommunication.Core.Net
 				if (!read.IsSuccess) { socket?.Close( ); return read; }
 
 				already += read.Content;
+
+				if (cancelToken?.IsCancelled == true)    // 用户取消了当前的操作
+				{
+					OperateResult cancel = Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FAILED, null, HslHelper.GetUTF8Bytes( StringResources.Language.UserCancelOperate ) ).Content );
+					if (!cancel.IsSuccess) { socket?.Close( ); return cancel; }
+
+					socket?.Close( );
+					return new OperateResult( StringResources.Language.UserCancelOperate ); 
+				}
+
 				// 然后再异步写到socket中
-				OperateResult write = Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileNoSense, null, buffer.SelectBegin( read.Content ) ).Content );
+				OperateResult write = Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileNoSense, null, buffer.SelectBegin( read.Content ), aesCryptography ).Content );
 				if (!write.IsSuccess) { socket?.Close( ); return write; }
 
 				// 等待对方接收完成
 				OperateResult<byte, byte[]> receive = ReceiveMqttMessage( socket, timeOut, null );
 				if (!receive.IsSuccess) return receive;
+
+				// 如果是远程用户取消了操作，则直接报告
+				if (receive.Content1 == MqttControlMessage.FAILED) { socket?.Close( ); return new OperateResult( Encoding.UTF8.GetString( receive.Content2 ) ); }
 
 				// 报告进度
 				reportProgress?.Invoke( already, fileSize );
@@ -1732,8 +1823,13 @@ namespace HslCommunication.Core.Net
 		/// <param name="servername">对方接收后保存的文件名</param>
 		/// <param name="filetag">文件的描述信息</param>
 		/// <param name="reportProgress">进度报告，第一个参数是已完成的字节数量，第二个参数是总字节数量。</param>
+		/// <param name="aesCryptography">AES数据加密对象，如果为空，则不进行加密</param>
+		/// <param name="cancelToken">用户取消的令牌</param>
 		/// <returns>是否操作成功</returns>
-		protected OperateResult SendMqttFile( Socket socket, string filename, string servername, string filetag, Action<long, long> reportProgress = null )
+		protected OperateResult SendMqttFile( Socket socket, string filename, string servername, string filetag, 
+			Action<long, long> reportProgress = null, 
+			AesCryptography aesCryptography = null,
+			HslCancelToken cancelToken = null )
 		{
 			// 发送文件名，大小，标签
 			FileInfo info = new FileInfo( filename );
@@ -1762,7 +1858,7 @@ namespace HslCommunication.Core.Net
 				OperateResult result = new OperateResult( );
 				using (FileStream fs = new FileStream( filename, FileMode.Open, FileAccess.Read ))
 				{
-					result = SendMqttStream( socket, fs, info.Length, 60_000, reportProgress );
+					result = SendMqttStream( socket, fs, info.Length, 60_000, reportProgress, aesCryptography, cancelToken );
 				}
 				return result;
 			}
@@ -1782,8 +1878,13 @@ namespace HslCommunication.Core.Net
 		/// <param name="servername">对方接收后保存的文件名</param>
 		/// <param name="filetag">文件的描述信息</param>
 		/// <param name="reportProgress">进度报告，第一个参数是已完成的字节数量，第二个参数是总字节数量。</param>
+		/// <param name="aesCryptography">AES数据加密对象，如果为空，则不进行加密</param>
+		/// <param name="cancelToken">用户取消的令牌信息</param>
 		/// <returns>是否操作成功</returns>
-		protected OperateResult SendMqttFile( Socket socket, Stream stream, string servername, string filetag, Action<long, long> reportProgress = null )
+		protected OperateResult SendMqttFile( Socket socket, Stream stream, string servername, string filetag, 
+			Action<long, long> reportProgress = null, 
+			AesCryptography aesCryptography = null,
+			HslCancelToken cancelToken = null )
 		{
 			// 文件存在的情况，就先发送文件信息
 			string[] array = new string[] { servername, stream.Length.ToString( ), filetag };
@@ -1797,7 +1898,7 @@ namespace HslCommunication.Core.Net
 
 			try
 			{
-				return SendMqttStream( socket, stream, stream.Length, 60_000, reportProgress );
+				return SendMqttStream( socket, stream, stream.Length, 60_000, reportProgress, aesCryptography, cancelToken );
 			}
 			catch (Exception ex)
 			{
@@ -1813,8 +1914,13 @@ namespace HslCommunication.Core.Net
 		/// <param name="socket">网络套接字</param>
 		/// <param name="source">文件名或是流</param>
 		/// <param name="reportProgress">进度报告</param>
+		/// <param name="aesCryptography">AES数据加密对象，如果为空，则不进行加密</param>
+		/// <param name="cancelToken">用户取消的令牌信息</param>
 		/// <returns>是否操作成功，如果成功，携带文件基本信息</returns>
-		protected OperateResult<FileBaseInfo> ReceiveMqttFile( Socket socket, object source, Action<long, long> reportProgress = null )
+		protected OperateResult<FileBaseInfo> ReceiveMqttFile( Socket socket, object source, 
+			Action<long, long> reportProgress = null, 
+			AesCryptography aesCryptography = null,
+			HslCancelToken cancelToken = null )
 		{
 			// 先接收文件头信息
 			OperateResult<byte, byte[]> receiveFileInfo = ReceiveMqttMessage( socket, 60_000, null );
@@ -1833,7 +1939,7 @@ namespace HslCommunication.Core.Net
 			fileBaseInfo.Size = long.Parse( array[1] );
 			fileBaseInfo.Tag = array[2];
 
-			// 回发一条数据确认接收，如果限定了文件大小，则通知Filed
+			// 回发一条数据确认接收，如果限定了文件大小，则通知 FAILED
 			Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileNoSense, null, null ).Content );
 
 			try
@@ -1842,7 +1948,7 @@ namespace HslCommunication.Core.Net
 				if (source is string savename)
 				{
 					using (FileStream fs = new FileStream( savename, FileMode.Create, FileAccess.Write ))
-						write = ReceiveMqttStream( socket, fs, fileBaseInfo.Size, 60_000, reportProgress );
+						write = ReceiveMqttStream( socket, fs, fileBaseInfo.Size, 60_000, reportProgress, aesCryptography, cancelToken );
 
 					if (!write.IsSuccess)
 					{
@@ -1852,7 +1958,7 @@ namespace HslCommunication.Core.Net
 				}
 				else if (source is Stream stream)
 				{
-					write = ReceiveMqttStream( socket, stream, fileBaseInfo.Size, 60_000, reportProgress );
+					write = ReceiveMqttStream( socket, stream, fileBaseInfo.Size, 60_000, reportProgress, aesCryptography, cancelToken );
 				}
 				else
 				{
@@ -1874,7 +1980,7 @@ namespace HslCommunication.Core.Net
 			List<byte> buffer = new List<byte>( );
 			while (true)
 			{
-				OperateResult<byte[]> rece = await ReceiveAsync( socket, 1, 5_000 );
+				OperateResult<byte[]> rece = await ReceiveAsync( socket, 1, 10_000 );
 				if (!rece.IsSuccess) return OperateResult.CreateFailedResult<int>( rece );
 
 				buffer.Add( rece.Content[0] );
@@ -1907,8 +2013,11 @@ namespace HslCommunication.Core.Net
 			return OperateResult.CreateSuccessResult( readCode.Content[0], readContent.Content );
 		}
 
-		/// <inheritdoc cref="ReceiveMqttStream(Socket, Stream, long, int, Action{long, long})"/>
-		protected async Task<OperateResult> ReceiveMqttStreamAsync( Socket socket, Stream stream, long fileSize, int timeOut, Action<long, long> reportProgress = null )
+		/// <inheritdoc cref="ReceiveMqttStream(Socket, Stream, long, int, Action{long, long}, AesCryptography, HslCancelToken)"/>
+		protected async Task<OperateResult> ReceiveMqttStreamAsync( Socket socket, Stream stream, long fileSize, int timeOut, 
+			Action<long, long> reportProgress = null, 
+			AesCryptography aesCryptography = null,
+			HslCancelToken cancelToken = null )
 		{
 			long already = 0;
 			while(already < fileSize)
@@ -1917,6 +2026,18 @@ namespace HslCommunication.Core.Net
 				if (!receive.IsSuccess) return receive;
 
 				if (receive.Content1 == MqttControlMessage.FAILED) { socket?.Close( ); return new OperateResult( Encoding.UTF8.GetString( receive.Content2 ) ); }
+				if (aesCryptography != null)
+				{
+					try
+					{
+						receive.Content2 = aesCryptography.Decrypt( receive.Content2 );
+					}
+					catch (Exception ex)
+					{
+						socket?.Close( );
+						return new OperateResult( "AES Decrypt file stream failed: " + ex.Message );
+					}
+				}
 
 				OperateResult write = await WriteStreamAsync( stream, receive.Content2 );
 				if (!write.IsSuccess) return write;
@@ -1927,6 +2048,16 @@ namespace HslCommunication.Core.Net
 				BitConverter.GetBytes( already  ).CopyTo( ack, 0 );
 				BitConverter.GetBytes( fileSize ).CopyTo( ack, 8 );
 
+				// 用户取消了操作
+				if (cancelToken?.IsCancelled == true)
+				{
+					OperateResult cancel = Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FAILED, null, HslHelper.GetUTF8Bytes( StringResources.Language.UserCancelOperate ) ).Content );
+					if (!cancel.IsSuccess) { socket?.Close( ); return cancel; }
+
+					socket?.Close( );
+					return new OperateResult( StringResources.Language.UserCancelOperate );
+				}
+
 				OperateResult send = await SendAsync( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileNoSense, null, ack ).Content );
 				if (!send.IsSuccess) return send;
 				reportProgress?.Invoke( already, fileSize );
@@ -1935,10 +2066,13 @@ namespace HslCommunication.Core.Net
 			return OperateResult.CreateSuccessResult( );
 		}
 
-		/// <inheritdoc cref="SendMqttStream(Socket, Stream, long, int, Action{long, long})"/>
-		protected async Task<OperateResult> SendMqttStreamAsync( Socket socket, Stream stream, long fileSize, int timeOut, Action<long, long> reportProgress = null )
+		/// <inheritdoc cref="SendMqttStream(Socket, Stream, long, int, Action{long, long}, AesCryptography, HslCancelToken)"/>
+		protected async Task<OperateResult> SendMqttStreamAsync( Socket socket, Stream stream, long fileSize, int timeOut, 
+			Action<long, long> reportProgress = null, 
+			AesCryptography aesCryptography = null,
+			HslCancelToken cancelToken = null )
 		{
-			byte[] buffer = new byte[fileCacheSize]; // 100K的数据缓存池
+			byte[] buffer = new byte[fileCacheSize]; // 默认100K的数据缓存池
 			long already = 0;
 			stream.Position = 0;
 			while (already < fileSize)
@@ -1947,14 +2081,26 @@ namespace HslCommunication.Core.Net
 				OperateResult<int> read = await ReadStreamAsync( stream, buffer );
 				if (!read.IsSuccess) { socket?.Close( ); return read; }
 
+				if (cancelToken?.IsCancelled == true)    // 用户取消了当前的操作
+				{
+					OperateResult cancel = await SendAsync( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FAILED, null, HslHelper.GetUTF8Bytes( StringResources.Language.UserCancelOperate ) ).Content );
+					if (!cancel.IsSuccess) { socket?.Close( ); return cancel; }
+
+					socket?.Close( );
+					return new OperateResult( StringResources.Language.UserCancelOperate );
+				}
+
 				already += read.Content;
 				// 然后再异步写到socket中
-				OperateResult write = await SendAsync( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileNoSense, null, buffer.SelectBegin( read.Content ) ).Content );
+				OperateResult write = await SendAsync( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileNoSense, null, buffer.SelectBegin( read.Content ), aesCryptography ).Content );
 				if (!write.IsSuccess) { socket?.Close( ); return write; }
 
 				// 等待对方接收完成
 				OperateResult<byte, byte[]> receive = await ReceiveMqttMessageAsync( socket, timeOut, null );
 				if (!receive.IsSuccess) return receive;
+
+				// 如果是远程用户取消了操作，则直接报告
+				if (receive.Content1 == MqttControlMessage.FAILED) { socket?.Close( ); return new OperateResult( Encoding.UTF8.GetString( receive.Content2 ) ); }
 
 				// 报告进度
 				reportProgress?.Invoke( already, fileSize );
@@ -1963,8 +2109,11 @@ namespace HslCommunication.Core.Net
 			return OperateResult.CreateSuccessResult( );
 		}
 
-		/// <inheritdoc cref="SendMqttFile(Socket, string, string, string, Action{long, long})"/>
-		protected async Task<OperateResult> SendMqttFileAsync( Socket socket, string filename, string servername, string filetag, Action<long, long> reportProgress = null )
+		/// <inheritdoc cref="SendMqttFile(Socket, string, string, string, Action{long, long}, AesCryptography, HslCancelToken)"/>
+		protected async Task<OperateResult> SendMqttFileAsync( Socket socket, string filename, string servername, string filetag, 
+			Action<long, long> reportProgress = null, 
+			AesCryptography aesCryptography = null,
+			HslCancelToken cancelToken = null )
 		{
 			// 发送文件名，大小，标签
 			FileInfo info = new FileInfo( filename );
@@ -1993,7 +2142,7 @@ namespace HslCommunication.Core.Net
 				OperateResult result = new OperateResult( );
 				using (FileStream fs = new FileStream( filename, FileMode.Open, FileAccess.Read ))
 				{
-					result = await SendMqttStreamAsync( socket, fs, info.Length, 60_000, reportProgress );
+					result = await SendMqttStreamAsync( socket, fs, info.Length, 60_000, reportProgress, aesCryptography, cancelToken );
 				}
 				return result;
 			}
@@ -2004,8 +2153,11 @@ namespace HslCommunication.Core.Net
 			}
 		}
 
-		/// <inheritdoc cref="SendMqttFile(Socket, Stream, string, string, Action{long, long})"/>
-		protected async Task<OperateResult> SendMqttFileAsync( Socket socket, Stream stream, string servername, string filetag, Action<long, long> reportProgress = null )
+		/// <inheritdoc cref="SendMqttFile(Socket, Stream, string, string, Action{long, long}, AesCryptography, HslCancelToken)"/>
+		protected async Task<OperateResult> SendMqttFileAsync( Socket socket, Stream stream, string servername, string filetag, 
+			Action<long, long> reportProgress = null, 
+			AesCryptography aesCryptography = null,
+			HslCancelToken cancelToken = null )
 		{
 			// 文件存在的情况，就先发送文件信息
 			string[] array = new string[] { servername, stream.Length.ToString( ), filetag };
@@ -2019,7 +2171,7 @@ namespace HslCommunication.Core.Net
 
 			try
 			{
-				return await SendMqttStreamAsync( socket, stream, stream.Length, 60_000, reportProgress );
+				return await SendMqttStreamAsync( socket, stream, stream.Length, 60_000, reportProgress, aesCryptography, cancelToken );
 			}
 			catch (Exception ex)
 			{
@@ -2028,8 +2180,11 @@ namespace HslCommunication.Core.Net
 			}
 		}
 
-		/// <inheritdoc cref="ReceiveMqttFile(Socket, object, Action{long, long})"/>
-		protected async Task<OperateResult<FileBaseInfo>> ReceiveMqttFileAsync( Socket socket, object source, Action<long, long> reportProgress = null )
+		/// <inheritdoc cref="ReceiveMqttFile(Socket, object, Action{long, long}, AesCryptography, HslCancelToken)"/>
+		protected async Task<OperateResult<FileBaseInfo>> ReceiveMqttFileAsync( Socket socket, object source, 
+			Action<long, long> reportProgress = null, 
+			AesCryptography aesCryptography = null,
+			HslCancelToken cancelToken = null )
 		{
 			// 先接收文件头信息
 			OperateResult<byte, byte[]> receiveFileInfo = await ReceiveMqttMessageAsync( socket, 60_000, null );
@@ -2044,9 +2199,11 @@ namespace HslCommunication.Core.Net
 
 			FileBaseInfo fileBaseInfo = new FileBaseInfo( );
 			string[] array = HslProtocol.UnPackStringArrayFromByte( receiveFileInfo.Content2 );
+			if (array.Length < 3) { socket?.Close( ); return new OperateResult<FileBaseInfo>( "FileBaseInfo Check failed: " + array.ToArrayString( ) ); }
+
 			fileBaseInfo.Name = array[0];
 			fileBaseInfo.Size = long.Parse( array[1] );
-			fileBaseInfo.Tag = array[2];
+			fileBaseInfo.Tag  = array[2];
 
 			// 回发一条数据确认接收，如果限定了文件大小，则通知Filed
 			await SendAsync( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileNoSense, null, null ).Content );
@@ -2057,7 +2214,7 @@ namespace HslCommunication.Core.Net
 				if(source is string savename)
 				{
 					using (FileStream fs = new FileStream( savename, FileMode.Create, FileAccess.Write ))
-						write = await ReceiveMqttStreamAsync( socket, fs, fileBaseInfo.Size, 60_000, reportProgress );
+						write = await ReceiveMqttStreamAsync( socket, fs, fileBaseInfo.Size, 60_000, reportProgress, aesCryptography, cancelToken );
 
 					if (!write.IsSuccess)
 					{
@@ -2067,7 +2224,7 @@ namespace HslCommunication.Core.Net
 				}
 				else if( source is Stream stream)
 				{
-					write = await ReceiveMqttStreamAsync( socket, stream, fileBaseInfo.Size, 60_000, reportProgress );
+					write = await ReceiveMqttStreamAsync( socket, stream, fileBaseInfo.Size, 60_000, reportProgress, aesCryptography, cancelToken );
 				}
 				else
 				{
@@ -2274,41 +2431,90 @@ namespace HslCommunication.Core.Net
 #endif
 		#endregion
 
+		#region Vigor Message Receive
+
+		/// <summary>
+		/// 从Socket接收一条VigorPLC的消息数据信息，指定套接字对象及超时时间<br />
+		/// Receive a message data information of VigorPLC from Socket, specify socket object and timeout time
+		/// </summary>
+		/// <param name="socket">套接字对象</param>
+		/// <param name="timeOut">超时时间</param>
+		/// <returns>接收的结果内容</returns>
+		internal protected OperateResult<byte[]> ReceiveVigorMessage( Socket socket, int timeOut )
+		{
+			MemoryStream ms = new MemoryStream( );
+			while (true)
+			{
+				OperateResult<byte[]> read1 = Receive( socket, 1, timeOut );  // 先接收第一个数据
+				if (!read1.IsSuccess) return read1;
+
+				ms.WriteByte( read1.Content[0] );                             // 不为0x10，则继续接收
+				if (read1.Content[0] != 0x10) continue;
+
+				OperateResult<byte[]> read2 = Receive( socket, 1, timeOut );  // 如果为 0x10 则需要再接收，看后面的内容
+				if (!read2.IsSuccess) return read2;
+
+				ms.WriteByte( read2.Content[0] );                             // 第二个不是0x03则放进去
+				if (read2.Content[0] != 0x03) continue;                       // 不是 0x10 0x03 的话，则继续接收
+
+				OperateResult<byte[]> read3 = Receive( socket, 2, timeOut );  // 再接收两个字节就结束了
+				if (!read3.IsSuccess) return read3;
+				ms.Write( read3.Content, 0, read3.Content.Length );
+				break;
+			}
+			return OperateResult.CreateSuccessResult( ms.ToArray( ) );
+		}
+#if !NET35 && !NET20
+		/// <inheritdoc cref="ReceiveVigorMessage(Socket, int)"/>
+		internal protected async Task<OperateResult<byte[]>> ReceiveVigorMessageAsync( Socket socket, int timeOut )
+		{
+			MemoryStream ms = new MemoryStream( );
+			while (true)
+			{
+				OperateResult<byte[]> read1 = await ReceiveAsync( socket, 1, timeOut );  // 先接收第一个数据
+				if (!read1.IsSuccess) return read1;
+
+				ms.WriteByte( read1.Content[0] );                                        // 不为0x10，则继续接收
+				if (read1.Content[0] != 0x10) continue;
+
+				OperateResult<byte[]> read2 = await ReceiveAsync( socket, 1, timeOut );  // 如果为 0x10 则需要再接收，看后面的内容
+				if (!read2.IsSuccess) return read2;
+
+				ms.WriteByte( read2.Content[0] );                                        // 第二个不是0x03则放进去
+				if (read2.Content[0] != 0x03) continue;                                  // 不是 0x10 0x03 的话，则继续接收
+
+				OperateResult<byte[]> read3 = await ReceiveAsync( socket, 2, timeOut );  // 再接收两个字节就结束了
+				if (!read3.IsSuccess) return read3;
+				ms.Write( read3.Content, 0, read3.Content.Length );
+				break;
+			}
+			return OperateResult.CreateSuccessResult( ms.ToArray( ) );
+		}
+#endif
+		#endregion
+
 		#region File Operate
 
 		/// <summary>
-		/// 删除文件的操作<br />
-		/// Delete file operation
+		/// 删除一个指定的文件，如果文件不存在，直接返回 <c>True</c>，如果文件存在则直接删除，删除成功返回 <c>True</c>，如果发生了异常，返回<c>False</c><br />
+		/// Delete a specified file, if the file does not exist, return <c>True</c> directly, if the file exists, delete it directly, 
+		/// if the deletion is successful, return <c>True</c>, if an exception occurs, return <c> False</c>
 		/// </summary>
-		/// <param name="filename">完整的真实的文件路径</param>
+		/// <param name="fileName">完整的文件路径</param>
 		/// <returns>是否删除成功</returns>
-		protected bool DeleteFileByName( string filename )
+		protected bool DeleteFileByName( string fileName )
 		{
 			try
 			{
-				if (!File.Exists( filename )) return true;
-				File.Delete( filename );
+				if (!File.Exists( fileName )) return true;
+				File.Delete( fileName );
 				return true;
 			}
 			catch (Exception ex)
 			{
-				LogNet?.WriteException( ToString( ), "delete file failed:" + filename, ex );
+				LogNet?.WriteException( ToString( ), $"delete file [{fileName}] failed: ", ex );
 				return false;
 			}
-		}
-
-		/// <summary>
-		/// 预处理文件夹的名称，除去文件夹名称最后一个'\'或'/'，如果有的话<br />
-		/// Preprocess the name of the folder, removing the last '\' or '/' in the folder name
-		/// </summary>
-		/// <param name="folder">文件夹名称</param>
-		/// <returns>返回处理之后的名称</returns>
-		protected string PreprocessFolderName( string folder )
-		{
-			if (folder.EndsWith( @"\" ) || folder.EndsWith( @"/" ))        // 兼容windows和linux的系统
-				return folder.Substring( 0, folder.Length - 1 );
-			else
-				return folder;
 		}
 
 		#endregion
@@ -2323,23 +2529,6 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc/>
 		public override string ToString( ) => "NetworkBase";
-
-		#endregion
-
-		#region Static Member
-
-		/// <summary>
-		/// 通过主机名或是IP地址信息，获取到真实的IP地址信息<br />
-		/// Obtain the real IP address information through the host name or IP address information
-		/// </summary>
-		/// <param name="hostName">主机名或是IP地址</param>
-		/// <returns>IP地址信息</returns>
-		public static string GetIpAddressHostName( string hostName )
-		{
-			IPHostEntry host = Dns.GetHostEntry( hostName );
-			IPAddress ip = host.AddressList[0];
-			return ip.ToString( );
-		}
 
 		#endregion
 	}

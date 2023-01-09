@@ -1,0 +1,95 @@
+﻿namespace KpAllenBrandly.View
+{
+    partial class CtrlTreeView
+    {
+        /// <summary> 
+        /// 必需的设计器变量。
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary> 
+        /// 清理所有正在使用的资源。
+        /// </summary>
+        /// <param name="disposing">如果应释放托管资源，为 true；否则为 false。</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region 组件设计器生成的代码
+
+        /// <summary> 
+        /// 设计器支持所需的方法 - 不要修改
+        /// 使用代码编辑器修改此方法的内容。
+        /// </summary>
+        private void InitializeComponent()
+        {
+            this.trvSource = new System.Windows.Forms.TreeView();
+            this.btnMoveAll = new System.Windows.Forms.Button();
+            this.btnMove = new System.Windows.Forms.Button();
+            this.trvTarget = new System.Windows.Forms.TreeView();
+            this.SuspendLayout();
+            // 
+            // trvSource
+            // 
+            this.trvSource.AllowDrop = true;
+            this.trvSource.Location = new System.Drawing.Point(3, 3);
+            this.trvSource.Name = "trvSource";
+            this.trvSource.Size = new System.Drawing.Size(307, 387);
+            this.trvSource.TabIndex = 1;
+            this.trvSource.MouseClick += new System.Windows.Forms.MouseEventHandler(this.trvSource_MouseClick);
+            // 
+            // btnMoveAll
+            // 
+            this.btnMoveAll.Location = new System.Drawing.Point(316, 170);
+            this.btnMoveAll.Name = "btnMoveAll";
+            this.btnMoveAll.Size = new System.Drawing.Size(75, 23);
+            this.btnMoveAll.TabIndex = 5;
+            this.btnMoveAll.Text = ">>";
+            this.btnMoveAll.UseVisualStyleBackColor = true;
+            this.btnMoveAll.Click += new System.EventHandler(this.btnMoveAll_Click);
+            // 
+            // btnMove
+            // 
+            this.btnMove.Location = new System.Drawing.Point(316, 141);
+            this.btnMove.Name = "btnMove";
+            this.btnMove.Size = new System.Drawing.Size(75, 23);
+            this.btnMove.TabIndex = 4;
+            this.btnMove.Text = ">";
+            this.btnMove.UseVisualStyleBackColor = true;
+            this.btnMove.Click += new System.EventHandler(this.btnMove_Click);
+            // 
+            // trvTarget
+            // 
+            this.trvTarget.AllowDrop = true;
+            this.trvTarget.Location = new System.Drawing.Point(397, 3);
+            this.trvTarget.Name = "trvTarget";
+            this.trvTarget.Size = new System.Drawing.Size(307, 387);
+            this.trvTarget.TabIndex = 6;
+            // 
+            // CtrlTreeView
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.trvTarget);
+            this.Controls.Add(this.btnMoveAll);
+            this.Controls.Add(this.btnMove);
+            this.Controls.Add(this.trvSource);
+            this.Name = "CtrlTreeView";
+            this.Size = new System.Drawing.Size(713, 397);
+            this.ResumeLayout(false);
+
+        }
+
+        #endregion
+
+        private System.Windows.Forms.TreeView trvSource;
+        private System.Windows.Forms.Button btnMoveAll;
+        private System.Windows.Forms.Button btnMove;
+        private System.Windows.Forms.TreeView trvTarget;
+    }
+}

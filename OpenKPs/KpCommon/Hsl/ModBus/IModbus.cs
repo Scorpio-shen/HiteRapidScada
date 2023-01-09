@@ -30,6 +30,9 @@ namespace HslCommunication.ModBus
 		/// <inheritdoc cref="ModbusTcpNet.IsStringReverse"/>
 		bool IsStringReverse { get; set; }
 
+		/// <inheritdoc cref="NetworkDoubleBase.ByteTransform"/>
+		IByteTransform ByteTransform { get; set; }
+
 		/// <summary>
 		/// 将当前的地址信息转换成Modbus格式的地址，如果转换失败，返回失败的消息。默认不进行任何的转换。<br />
 		/// Convert the current address information into a Modbus format address. If the conversion fails, a failure message will be returned. No conversion is performed by default.

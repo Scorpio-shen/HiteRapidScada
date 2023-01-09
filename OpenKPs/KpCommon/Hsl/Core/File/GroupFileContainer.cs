@@ -50,6 +50,26 @@ namespace HslCommunication.Core
 		public int FileCount => filesCount;
 
 		/// <summary>
+		/// 获取当前目录中所有子文件的下载次数统计<br />
+		/// Get the download count of all subfiles in the current directory
+		/// </summary>
+		public long TotalDownloadTimes
+		{
+			get
+			{
+				long totalDownloadTimes = 0;
+				lock (hybirdLock)
+				{
+					for (int i = 0; i < groupFileItems.Count; i++)
+					{
+						totalDownloadTimes += groupFileItems[i].DownloadTimes;
+					}
+				}
+				return totalDownloadTimes;
+			}
+		}
+
+		/// <summary>
 		/// 当前的目录信息<br />
 		/// Current catalog information
 		/// </summary>
@@ -59,14 +79,17 @@ namespace HslCommunication.Core
 		/// 获取当前目录所有文件的大小之和<br />
 		/// Get the sum of the size of all files in the current directory
 		/// </summary>
-		public GroupFileInfo GetGroupFileInfo( )
+		/// <param name="withLastFileInfo">是否携带最新的文件信息</param>
+		public GroupFileInfo GetGroupFileInfo( bool withLastFileInfo = false )
 		{
 			GroupFileInfo groupFile = new GroupFileInfo( );
 			lock (hybirdLock)
 			{
-				groupFile.FileCount = filesCount;
-				groupFile.FileTotalSize = totalFileSize;
-				groupFile.LastModifyTime = lastModifyTime;
+				groupFile.PathName                             = this.dirPath;
+				groupFile.FileCount                            = this.filesCount;
+				groupFile.FileTotalSize                        = this.totalFileSize;
+				groupFile.LastModifyTime                       = this.lastModifyTime;
+				if (withLastFileInfo) groupFile.LastModifyFile = this.lastModifyFile;
 			}
 			return groupFile;
 		}
@@ -140,15 +163,18 @@ namespace HslCommunication.Core
 					if (groupFileItems[i].FileName == fileName)
 					{
 						this.totalFileSize -= groupFileItems[i].FileSize;
-						originalFileName = groupFileItems[i].MappingName;
+						originalFileName    = groupFileItems[i].MappingName;
 						groupFileItems[i].MappingName = mappingName;
 						groupFileItems[i].Description = description;
-						groupFileItems[i].FileSize = fileSize;
-						groupFileItems[i].Owner = owner;
-						groupFileItems[i].UploadTime = DateTime.Now;
+						groupFileItems[i].FileSize    = fileSize;
+						groupFileItems[i].Owner       = owner;
+						groupFileItems[i].UploadTime  = DateTime.Now;
 						this.totalFileSize += fileSize;
 						if (this.lastModifyTime < groupFileItems[i].UploadTime)
+						{
 							this.lastModifyTime = groupFileItems[i].UploadTime;
+							this.lastModifyFile = groupFileItems[i];
+						}
 						break;
 					}
 				}
@@ -170,13 +196,43 @@ namespace HslCommunication.Core
 					filesCount = groupFileItems.Count;
 					this.totalFileSize += fileSize;
 					if (this.lastModifyTime < fileItem.UploadTime)
+					{
 						this.lastModifyTime = fileItem.UploadTime;
+						this.lastModifyFile = fileItem;
+					}
 				}
 			}
 
 			// 更新缓存
 			coordinatorCacheJsonArray.StartOperaterInfomation( );
 			return originalFileName;
+		}
+
+		/// <summary>
+		/// 根据文件的名称获取对应的文件信息<br />
+		/// Get the corresponding file information according to the file name
+		/// </summary>
+		/// <param name="fileName">文件的真实名称</param>
+		/// <returns>是否获取成功的结果对象</returns>
+		public OperateResult<GroupFileItem> GetUploadTimeByFileName( string fileName )
+		{
+			GroupFileItem fileItem = null;
+			bool exist = false;
+			lock (hybirdLock)
+			{
+				for (int i = 0; i < groupFileItems.Count; i++)
+				{
+					if (groupFileItems[i].FileName == fileName)
+					{
+						fileItem = groupFileItems[i];
+						exist = true;
+						break;
+					}
+				}
+			}
+
+			if (!exist) return new OperateResult<GroupFileItem>( "File not exist" );
+			return OperateResult.CreateSuccessResult( fileItem );
 		}
 
 		/// <summary>
@@ -298,14 +354,18 @@ namespace HslCommunication.Core
 
 		private void UpdatePathInfomation( )
 		{
-			filesCount = groupFileItems.Count;
+			this.filesCount = groupFileItems.Count;
 			long fileSize = 0; 
 			this.lastModifyTime = DateTime.MinValue;
-			for (int i = 0; i < groupFileItems.Count; i++)
+			this.lastModifyFile = null;
+			for (int i = 0; i < this.groupFileItems.Count; i++)
 			{
-				fileSize += groupFileItems[i].FileSize;
-				if (this.lastModifyTime < groupFileItems[i].UploadTime)
-					this.lastModifyTime = groupFileItems[i].UploadTime;
+				fileSize += this.groupFileItems[i].FileSize;
+				if (this.lastModifyTime < this.groupFileItems[i].UploadTime)
+				{
+					this.lastModifyTime = this.groupFileItems[i].UploadTime;
+					this.lastModifyFile = this.groupFileItems[i];
+				}
 			}
 			this.totalFileSize = fileSize;
 		}
@@ -387,6 +447,7 @@ namespace HslCommunication.Core
 		private string fileFullPath;                                      // 列表文件的完整路径
 		private long totalFileSize = 0;                                   // 所有文件的总大小
 		private DateTime lastModifyTime = DateTime.MinValue;              // 最后一次更新文件的时间
+		private GroupFileItem lastModifyFile = null;                      // 最后一次更新的文件内容
 
 		#endregion
 

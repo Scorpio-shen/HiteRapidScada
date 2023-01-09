@@ -53,11 +53,7 @@ namespace HslCommunication.BasicFramework
 		{
 			hybirdLock.Enter( );
 
-			if(lastIndex < (capacity + count))
-			{
-				array[lastIndex++] = value;
-			}
-			else
+			if (lastIndex >= (capacity + count))
 			{
 				// 需要重新挪位置了
 				T[] buffer = new T[capacity + count];
@@ -65,7 +61,7 @@ namespace HslCommunication.BasicFramework
 				array = buffer;
 				lastIndex = count;
 			}
-
+			array[lastIndex++] = value;
 			hybirdLock.Leave( );
 		}
 
@@ -150,6 +146,31 @@ namespace HslCommunication.BasicFramework
 
 				hybirdLock.Leave( );
 			}
+		}
+
+		/// <summary>
+		/// 获取最后一个值，如果从来没有添加过，则引发异常<br />
+		/// Gets the last value and throws an exception if it has never been added
+		/// </summary>
+		/// <returns>值信息</returns>
+		public T LastValue( )
+		{
+			T result = default(T);
+			hybirdLock.Enter( );
+			try
+			{
+				if (lastIndex - 1 < count + capacity)
+				{
+					result = array[lastIndex - 1];
+				}
+				hybirdLock.Leave( );
+			}
+			catch
+			{
+				hybirdLock.Leave( );
+				throw;
+			}
+			return result;
 		}
 
 		#endregion

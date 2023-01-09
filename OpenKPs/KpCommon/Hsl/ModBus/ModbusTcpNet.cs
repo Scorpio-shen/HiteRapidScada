@@ -28,8 +28,10 @@ namespace HslCommunication.ModBus
 	/// <example>
 	/// 本客户端支持的标准的modbus协议，Modbus-Tcp及Modbus-Udp内置的消息号会进行自增，比如我们想要控制消息号在0-1000之间自增，不能超过一千，可以写如下的代码：
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Modbus\Modbus.cs" region="Sample1" title="序号示例" />
+	/// 在标准的Modbus协议里面，客户端发送消息ID给服务器，服务器是需要复制返回客户端的，在HSL里会默认进行检查操作，如果想要忽略消息ID一致性的检查，可以编写如下的方法。
+	/// 
 	/// <note type="important">
-	/// 地址共可以携带3个信息，最完整的表示方式"s=2;x=3;100"，对应的modbus报文是 02 03 00 64 00 01 的前四个字节，站号，功能码，起始地址，下面举例
+	/// 地址共可以携带4个信息，常见的使用表示方式"s=2;x=3;100"，对应的modbus报文是 02 03 00 64 00 01 的前四个字节，站号，功能码，起始地址，下面举例
 	/// </note>
 	/// 当读写int, uint, float, double, long, ulong类型的时候，支持动态指定数据格式，也就是 DataFormat 信息，本部分内容为商业授权用户专有，感谢支持。<br />
 	/// ReadInt32("format=BADC;100") 指示使用BADC的格式来解析byte数组，从而获得int数据，同时支持和站号信息叠加，例如：ReadInt32("format=BADC;s=2;100")
@@ -70,7 +72,9 @@ namespace HslCommunication.ModBus
 	///     <description>Write("100",(short)123)表示写寄存器100的值123，Write("s=2;100",(short)123)表示写入站号为2，寄存器100的值123</description>
 	/// </item>
 	/// </list>
-	/// 特殊说明部分：
+	/// 特殊说明部分：<br />
+	/// 当碰到自定义的功能码时，比如读取功能码 07,写入功能码 08 的自定义寄存器时，地址可以这么写<br />
+	/// ReadInt16("s=2;x=7;w=8;100")表示读取这个自定义寄存器地址 100 的数据，读取使用的是 07 功能码，写入使用的是 08 功能码，也就是说 w=8 可以强制指定写入的功能码信息 <br />
 	///  <list type="definition">
 	/// <item>
 	///     <term>01功能码</term>
@@ -136,18 +140,15 @@ namespace HslCommunication.ModBus
 		/// <param name="ipAddress">服务器的Ip地址</param>
 		/// <param name="port">服务器的端口号</param>
 		/// <param name="station">客户端自身的站号</param>
-		public ModbusTcpNet( string ipAddress, int port = 502, byte station = 0x01 )
+		public ModbusTcpNet( string ipAddress, int port = 502, byte station = 0x01 ) :this( )
 		{
-			this.softIncrementCount       = new SoftIncrementCount( ushort.MaxValue );
 			this.IpAddress                = ipAddress;
 			this.Port                     = port;
-			this.WordLength               = 1;
 			this.station                  = station;
-			this.ByteTransform            = new ReverseWordTransform( );
 		}
 
 		/// <inheritdoc/>
-		protected override INetMessage GetNewNetMessage( ) => new ModbusTcpMessage( );
+		protected override INetMessage GetNewNetMessage( ) => new ModbusTcpMessage( ) { IsCheckMessageId = IsCheckMessageId };
 
 		#endregion
 
@@ -169,6 +170,19 @@ namespace HslCommunication.ModBus
 			return base.InitializationOnConnect( socket );
 		}
 
+		/// <summary>
+		/// 将Modbus报文数据发送到当前的通道中，并从通道中接收Modbus的报文，通道将根据当前连接自动获取，本方法是线程安全的。<br />
+		/// Send Modbus message data to the current channel, and receive Modbus messages from the channel. The channel will automatically obtain it according to the current connection. This method is thread-safe.
+		/// </summary>
+		/// <param name="send">发送的完整的报文信息</param>
+		/// <returns>接收到的Modbus报文信息</returns>
+		/// <remarks>
+		/// 需要注意的是，本方法的发送和接收都只需要输入Modbus核心报文，例如读取寄存器0的字数据 01 03 00 00 00 01，最前面的6个字节是自动添加的，收到的数据也是只有modbus核心报文，例如：01 03 02 00 00 , 所以在解析的时候需要注意。<br />
+		/// It should be noted that the sending and receiving of this method only need to input the Modbus core message, for example, read the word data 01 03 00 00 00 01 of register 0, 
+		/// the first 6 bytes are automatically added, and the received The data is also only modbus core messages, for example: 01 03 02 00 00, so you need to pay attention when parsing.
+		/// </remarks>
+		public override OperateResult<byte[]> ReadFromCoreServer( byte[] send ) => base.ReadFromCoreServer( send );
+
 #if !NET35 && !NET20
 
 		/// <inheritdoc/>
@@ -178,6 +192,9 @@ namespace HslCommunication.ModBus
 
 			return await base.InitializationOnConnectAsync( socket );
 		}
+
+		/// <inheritdoc cref="ReadFromCoreServer(byte[])"/>
+		public async override Task<OperateResult<byte[]>> ReadFromCoreServerAsync( byte[] send ) => await base.ReadFromCoreServerAsync( send );
 
 #endif
 		#endregion
@@ -189,7 +206,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<int[]> ReadInt32( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => transform.TransInt32( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => transform.TransInt32( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32(string, ushort)"/>
@@ -197,7 +214,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<uint[]> ReadUInt32( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => transform.TransUInt32( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => transform.TransUInt32( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloat(string, ushort)"/>
@@ -205,7 +222,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<float[]> ReadFloat( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => transform.TransSingle( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => transform.TransSingle( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64(string, ushort)"/>
@@ -213,7 +230,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<long[]> ReadInt64( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => transform.TransInt64( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => transform.TransInt64( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64(string, ushort)"/>
@@ -221,7 +238,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<ulong[]> ReadUInt64( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => transform.TransUInt64( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => transform.TransUInt64( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDouble(string, ushort)"/>
@@ -229,7 +246,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<double[]> ReadDouble( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => transform.TransDouble( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => transform.TransDouble( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, int[])"/>
@@ -285,42 +302,42 @@ namespace HslCommunication.ModBus
 		public override async Task<OperateResult<int[]>> ReadInt32Async( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => transform.TransInt32( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => transform.TransInt32( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32Async(string, ushort)"/>
 		public override async Task<OperateResult<uint[]>> ReadUInt32Async( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => transform.TransUInt32( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => transform.TransUInt32( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloatAsync(string, ushort)"/>
 		public override async Task<OperateResult<float[]>> ReadFloatAsync( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => transform.TransSingle( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => transform.TransSingle( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64Async(string, ushort)"/>
 		public override async Task<OperateResult<long[]>> ReadInt64Async( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => transform.TransInt64( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => transform.TransInt64( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64Async(string, ushort)"/>
 		public override async Task<OperateResult<ulong[]>> ReadUInt64Async( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => transform.TransUInt64( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => transform.TransUInt64( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDoubleAsync(string, ushort)"/>
 		public override async Task<OperateResult<double[]>> ReadDoubleAsync( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => transform.TransDouble( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => transform.TransDouble( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, int[])"/>
@@ -415,6 +432,9 @@ namespace HslCommunication.ModBus
 			set { ByteTransform.IsStringReverseByteWord = value; }
 		}
 
+		/// <inheritdoc cref="ModbusTcpMessage.IsCheckMessageId"/>
+		public bool IsCheckMessageId { get; set; } = true;
+
 		/// <summary>
 		/// 获取modbus协议自增的消息号，你可以自定义modbus的消息号的规则，详细参见<see cref="ModbusTcpNet"/>说明，也可以查找<see cref="SoftIncrementCount"/>说明。<br />
 		/// Get the message number incremented by the modbus protocol. You can customize the rules of the message number of the modbus. For details, please refer to the description of <see cref = "ModbusTcpNet" />, or you can find the description of <see cref = "SoftIncrementCount" />
@@ -432,13 +452,13 @@ namespace HslCommunication.ModBus
 		#region Core Override
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command )
+		public override byte[] PackCommandWithHeader( byte[] command )
 		{
 			return ModbusInfo.PackCommandToTcp( command, (ushort)softIncrementCount.GetCurrentValue( ) );
 		}
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
 		{
 			return ModbusInfo.ExtractActualData( ModbusInfo.ExplodeTcpCommandToCore( response ) );
 		}

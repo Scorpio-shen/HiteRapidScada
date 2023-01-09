@@ -5,6 +5,8 @@ using System.Text;
 using HslCommunication.Core.Net;
 using System.Net.Sockets;
 using System.Net;
+using HslCommunication.LogNet;
+using HslCommunication.BasicFramework;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -42,8 +44,7 @@ namespace HslCommunication.Profinet.Toledo
 		/// <inheritdoc/>
 		protected override void ThreadPoolLogin( Socket socket, IPEndPoint endPoint )
 		{
-			AppSession session = new AppSession( );
-			session.WorkSocket = socket;
+			AppSession session = new AppSession( socket );
 
 			LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOnlineInfo, session.IpEndPoint ) );
 
@@ -71,9 +72,21 @@ namespace HslCommunication.Profinet.Toledo
 					return;
 				}
 
-				OnToledoStandardDataReceived?.Invoke( this, new ToledoStandardData( read.Content ) );
+				LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + read.Content.ToHexString( ' ' ) );
 
-				if(!appSession.WorkSocket.BeginReceiveResult( ReceiveCallBack, appSession ).IsSuccess)
+				ToledoStandardData toledo = null;
+				try
+				{
+					toledo = new ToledoStandardData( read.Content );
+				}
+				catch (Exception ex)
+				{
+					LogNet?.WriteException( ToString( ), "ToledoStandardData new failed: " + read.Content.ToHexString( ' ' ), ex );
+				}
+				if (toledo != null) OnToledoStandardDataReceived?.Invoke( this, toledo );
+
+
+				if (!appSession.WorkSocket.BeginReceiveResult( ReceiveCallBack, appSession ).IsSuccess)
 					LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, appSession.IpEndPoint ) );
 			}
 		}

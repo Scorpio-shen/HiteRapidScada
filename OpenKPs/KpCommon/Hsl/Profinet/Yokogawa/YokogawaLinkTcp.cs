@@ -252,6 +252,8 @@ namespace HslCommunication.Profinet.Yokogawa
 				if (!read.IsSuccess) return read;
 
 				OperateResult<byte[]> check = CheckContent( read.Content );
+				if (!check.IsSuccess) return check;
+
 				content.AddRange( check.Content );
 			}
 
@@ -335,8 +337,8 @@ namespace HslCommunication.Profinet.Yokogawa
 		#region Read Write Random
 
 		/// <summary>
-		/// <b>[商业授权]</b> 随机读取<see cref="bool"/>数组信息，主需要出传入<see cref="bool"/>数组地址信息，就可以返回批量<see cref="bool"/>值<br />
-		/// <b>[Authorization]</b> Random read <see cref="bool"/> array information, the master needs to pass in the <see cref="bool"/> array address information, and then the batch can be returned to <see cref="bool"/> value
+		/// <b>[商业授权]</b> 随机读取<see cref="bool"/>数组信息，主需要出传入<see cref="string"/>数组地址信息，就可以返回批量<see cref="bool"/>值<br />
+		/// <b>[Authorization]</b> Random read <see cref="bool"/> array information, the master needs to pass in the <see cref="string"/> array address information, and then the batch can be returned to <see cref="bool"/> value
 		/// </summary> 
 		/// <param name="address">批量地址信息</param>
 		/// <remarks>
@@ -367,8 +369,8 @@ namespace HslCommunication.Profinet.Yokogawa
 		}
 
 		/// <summary>
-		/// <b>[商业授权]</b> 随机写入<see cref="bool"/>数组信息，主需要出传入<see cref="bool"/>数组地址信息，以及对应的<see cref="bool"/>数组值<br />
-		/// <b>[Authorization]</b> Randomly write the <see cref="bool"/> array information, the main need to pass in the <see cref="bool"/> array address information, 
+		/// <b>[商业授权]</b> 随机写入<see cref="bool"/>数组信息，主需要出传入<see cref="string"/>数组地址信息，以及对应的<see cref="bool"/>数组值<br />
+		/// <b>[Authorization]</b> Randomly write the <see cref="bool"/> array information, the main need to pass in the <see cref="string"/> array address information, 
 		/// and the corresponding <see cref="bool"/> array value
 		/// </summary>
 		/// <param name="address">批量地址信息</param>
@@ -398,12 +400,13 @@ namespace HslCommunication.Profinet.Yokogawa
 		}
 
 		/// <summary>
-		/// <b>[商业授权]</b> 随机读取<see cref="byte"/>数组信息，主需要出传入<see cref="byte"/>数组地址信息，就可以返回批量<see cref="byte"/>值<br />
-		/// <b>[Authorization]</b> Random read <see cref="byte"/> array information, the master needs to pass in the <see cref="byte"/> array address information, and then the batch can be returned to <see cref="byte"/> value
+		/// <b>[商业授权]</b> 随机读取<see cref="byte"/>数组信息，主需要出传入<see cref="string"/>数组地址信息，就可以返回批量<see cref="byte"/>值<br />
+		/// <b>[Authorization]</b> Random read <see cref="byte"/> array information, the master needs to pass in the <see cref="string"/> array address information, and then the batch can be returned to <see cref="byte"/> value
 		/// </summary> 
-		/// <param name="address">批量地址信息</param>
 		/// <remarks>
+		/// Supports D,B,F,R,V,Z,W,TN,CN，example: D100
 		/// </remarks>
+		/// <param name="address">批量地址信息</param>
 		/// <returns>带有成功标志的Bool数组信息</returns>
 		[HslMqttApi(Description = "Read random register, supports D,B,F,R,V,Z,W,TN,CN，example: D100" )]
 		public OperateResult<byte[]> ReadRandom(string[] address )
@@ -428,7 +431,7 @@ namespace HslCommunication.Profinet.Yokogawa
 		}
 
 		/// <summary>
-		/// <b>[商业授权]</b> 随机读取<see cref="short"/>数组信息，主需要出传入<see cref="short"/>数组地址信息，就可以返回批量<see cref="short"/>值<br />
+		/// <b>[商业授权]</b> 随机读取<see cref="short"/>数组信息，主需要出传入<see cref="string"/>数组地址信息，就可以返回批量<see cref="short"/>值<br />
 		/// <b>[Authorization]</b> Random read <see cref="short"/> array information, the master needs to pass in the <see cref="short"/> array address information, and then the batch can be returned to <see cref="short"/> value
 		/// </summary> 
 		/// <param name="address">批量地址信息</param>
@@ -437,19 +440,25 @@ namespace HslCommunication.Profinet.Yokogawa
 		public OperateResult<short[]> ReadRandomInt16( string[] address ) => ReadRandom( address ).Then( m => OperateResult.CreateSuccessResult( ByteTransform.TransInt16( m, 0, address.Length ) ) );
 
 		/// <summary>
-		/// <b>[商业授权]</b> 随机读取<see cref="ushort"/>数组信息，主需要出传入<see cref="ushort"/>数组地址信息，就可以返回批量<see cref="ushort"/>值<br />
+		/// <b>[商业授权]</b> 随机读取<see cref="ushort"/>数组信息，主需要出传入<see cref="string"/>数组地址信息，就可以返回批量<see cref="ushort"/>值<br />
 		/// <b>[Authorization]</b> Random read <see cref="ushort"/> array information, the master needs to pass in the <see cref="ushort"/> array address information, and then the batch can be returned to <see cref="ushort"/> value
 		/// </summary> 
+		/// <remarks>
+		/// Supports D, B, F, R, V, Z, W, TN, CN，example: D100
+		/// </remarks>
 		/// <param name="address">批量地址信息</param>
 		/// <returns>带有成功标志的Bool数组信息</returns>
 		[HslMqttApi( Description = "Read random register, and get ushort array, supports D, B, F, R, V, Z, W, TN, CN，example: D100" )]
 		public OperateResult<ushort[]> ReadRandomUInt16( string[] address ) => ReadRandom( address ).Then( m => OperateResult.CreateSuccessResult( ByteTransform.TransUInt16( m, 0, address.Length ) ) );
 
 		/// <summary>
-		/// <b>[商业授权]</b> 随机写入<see cref="byte"/>数组信息，主需要出传入<see cref="byte"/>数组地址信息，以及对应的<see cref="byte"/>数组值<br />
-		/// <b>[Authorization]</b> Randomly write the <see cref="byte"/> array information, the main need to pass in the <see cref="byte"/> array address information, 
+		/// <b>[商业授权]</b> 随机写入<see cref="byte"/>数组信息，主需要出传入<see cref="string"/>数组地址信息，以及对应的<see cref="byte"/>数组值<br />
+		/// <b>[Authorization]</b> Randomly write the <see cref="byte"/> array information, the main need to pass in the <see cref="string"/> array address information, 
 		/// and the corresponding <see cref="byte"/> array value
 		/// </summary>
+		/// <remarks>
+		/// Supports D, B, F, R, V, Z, W, TN, CN，example: D100
+		/// </remarks>
 		/// <param name="address">批量地址信息</param>
 		/// <param name="value">批量的数据值信息</param>
 		/// <returns>是否写入成功</returns>
@@ -473,10 +482,13 @@ namespace HslCommunication.Profinet.Yokogawa
 		}
 
 		/// <summary>
-		/// <b>[商业授权]</b> 随机写入<see cref="short"/>数组信息，主需要出传入<see cref="short"/>数组地址信息，以及对应的<see cref="short"/>数组值<br />
+		/// <b>[商业授权]</b> 随机写入<see cref="short"/>数组信息，主需要出传入<see cref="string"/>数组地址信息，以及对应的<see cref="short"/>数组值<br />
 		/// <b>[Authorization]</b> Randomly write the <see cref="short"/> array information, the main need to pass in the <see cref="short"/> array address information, 
 		/// and the corresponding <see cref="short"/> array value
 		/// </summary>
+		/// <remarks>
+		/// Supports D, B, F, R, V, Z, W, TN, CN，example: D100
+		/// </remarks>
 		/// <param name="address">批量地址信息</param>
 		/// <param name="value">批量的数据值信息</param>
 		/// <returns>是否写入成功</returns>
@@ -484,10 +496,13 @@ namespace HslCommunication.Profinet.Yokogawa
 		public OperateResult WriteRandom( string[] address, short[] value ) => WriteRandom( address, ByteTransform.TransByte( value ) );
 
 		/// <summary>
-		/// <b>[商业授权]</b> 随机写入<see cref="ushort"/>数组信息，主需要出传入<see cref="ushort"/>数组地址信息，以及对应的<see cref="ushort"/>数组值<br />
+		/// <b>[商业授权]</b> 随机写入<see cref="ushort"/>数组信息，主需要出传入<see cref="string"/>数组地址信息，以及对应的<see cref="ushort"/>数组值<br />
 		/// <b>[Authorization]</b> Randomly write the <see cref="ushort"/> array information, the main need to pass in the <see cref="ushort"/> array address information, 
 		/// and the corresponding <see cref="ushort"/> array value
 		/// </summary>
+		/// <remarks>
+		/// Supports D, B, F, R, V, Z, W, TN, CN，example: D100
+		/// </remarks>
 		/// <param name="address">批量地址信息</param>
 		/// <param name="value">批量的数据值信息</param>
 		/// <returns>是否写入成功</returns>
@@ -522,6 +537,8 @@ namespace HslCommunication.Profinet.Yokogawa
 				if (!read.IsSuccess) return read;
 
 				OperateResult<byte[]> check = CheckContent( read.Content );
+				if (!check.IsSuccess) return check;
+
 				content.AddRange( check.Content );
 			}
 
@@ -789,7 +806,7 @@ namespace HslCommunication.Profinet.Yokogawa
 			OperateResult<byte[]> check = CheckContent( read.Content );
 			if (!check.IsSuccess) return OperateResult.CreateFailedResult<YokogawaSystemInfo>( check ); ;
 
-			return YokogawaSystemInfo.Prase( check.Content );
+			return YokogawaSystemInfo.Parse( check.Content );
 		}
 
 		/// <summary>
@@ -921,7 +938,7 @@ namespace HslCommunication.Profinet.Yokogawa
 			OperateResult<byte[]> check = CheckContent( read.Content );
 			if (!check.IsSuccess) return OperateResult.CreateFailedResult<YokogawaSystemInfo>( check ); ;
 
-			return YokogawaSystemInfo.Prase( check.Content );
+			return YokogawaSystemInfo.Parse( check.Content );
 		}
 
 		/// <inheritdoc cref="ReadDateTime"/>

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HslCommunication.Reflection;
+using System.IO;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -31,6 +32,8 @@ namespace HslCommunication.Profinet.Panasonic
 			this.ByteTransform            = new RegularByteTransform( );
 			this.Station                  = station;
 			this.ByteTransform.DataFormat = DataFormat.DCBA;
+			this.WordLength               = 1;
+			this.ReceiveEmptyDataCount    = 5;
 		}
 
 		#endregion
@@ -40,45 +43,24 @@ namespace HslCommunication.Profinet.Panasonic
 		/// <inheritdoc cref="PanasonicMewtocolOverTcp.Station"/>
 		public byte Station { get; set; }
 
+		/// <inheritdoc/>
+		protected override bool CheckReceiveDataComplete( MemoryStream ms )
+		{
+			byte[] buffer = ms.ToArray( );
+			if (buffer.Length > 5) return buffer[buffer.Length - 1] == 0x0D;
+			return false;
+		}
 		#endregion
 
 		#region Read Write Override
 
 		/// <inheritdoc cref="PanasonicMewtocolOverTcp.Read(string, ushort)"/>
 		[HslMqttApi( "ReadByteArray", "" )]
-		public override OperateResult<byte[]> Read( string address, ushort length )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildReadCommand( station, address, length );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取数据
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
+		public override OperateResult<byte[]> Read( string address, ushort length ) => Helper.MewtocolHelper.Read( this, this.Station, address, length );
 
 		/// <inheritdoc cref="PanasonicMewtocolOverTcp.Write(string, byte[])"/>
 		[HslMqttApi( "WriteByteArray", "" )]
-		public override OperateResult Write( string address, byte[] value )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildWriteCommand( station, address, value );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取结果
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
+		public override OperateResult Write( string address, byte[] value ) => Helper.MewtocolHelper.Write( this, this.Station, address, value );
 
 		#endregion
 
@@ -86,93 +68,25 @@ namespace HslCommunication.Profinet.Panasonic
 
 		/// <inheritdoc cref="PanasonicMewtocolOverTcp.ReadBool(string, ushort)"/>
 		[HslMqttApi( "ReadBoolArray", "" )]
-		public override OperateResult<bool[]> ReadBool( string address, ushort length )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
+		public override OperateResult<bool[]> ReadBool( string address, ushort length ) => Helper.MewtocolHelper.ReadBool( this, this.Station, address, length );
 
-			OperateResult<string, int> analysis = PanasonicHelper.AnalysisAddress( address );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildReadCommand( station, address, length );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
-
-			// 提取数据
-			OperateResult<byte[]> extra = PanasonicHelper.ExtraActualData( read.Content );
-			if (!extra.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( extra );
-
-			// 提取bool
-			return OperateResult.CreateSuccessResult( BasicFramework.SoftBasic.ByteToBoolArray(
-				extra.Content ).SelectMiddle( analysis.Content2 % 16, length ) );
-		}
+		/// <inheritdoc cref="Helper.MewtocolHelper.ReadBool(IReadWriteDevice, byte, string[])"/>
+		public OperateResult<bool[]> ReadBool( string[] address ) => Helper.MewtocolHelper.ReadBool( this, this.Station, address );
 
 		/// <inheritdoc cref="PanasonicMewtocolOverTcp.ReadBool(string)"/>
 		[HslMqttApi( "ReadBool", "" )]
-		public override OperateResult<bool> ReadBool( string address )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildReadOneCoil( station, address );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool>( command );
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool>( read );
-
-			// 提取数据
-			return PanasonicHelper.ExtraActualBool( read.Content );
-		}
+		public override OperateResult<bool> ReadBool( string address ) => Helper.MewtocolHelper.ReadBool( this, this.Station, address );
 
 		/// <inheritdoc cref="PanasonicMewtocolOverTcp.Write(string, bool[])"/>
 		[HslMqttApi( "WriteBoolArray", "" )]
-		public override OperateResult Write( string address, bool[] values )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
-
-			// 强制地址从字单位开始，强制写入长度为16个长度
-			OperateResult<string, int> analysis = PanasonicHelper.AnalysisAddress( address );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
-
-			if (analysis.Content2 % 16 != 0) return new OperateResult( StringResources.Language.PanasonicAddressBitStartMulti16 );
-			if (values.Length % 16 != 0) return new OperateResult( StringResources.Language.PanasonicBoolLengthMulti16 );
-
-			// 计算字节数据
-			byte[] buffer = BasicFramework.SoftBasic.BoolArrayToByte( values );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildWriteCommand( station, address, buffer );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取结果
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
+		public override OperateResult Write( string address, bool[] values ) => Helper.MewtocolHelper.Write( this, this.Station, address, values );
 
 		/// <inheritdoc cref="PanasonicMewtocolOverTcp.Write(string, bool)"/>
 		[HslMqttApi( "WriteBool", "" )]
-		public override OperateResult Write( string address, bool value )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
+		public override OperateResult Write( string address, bool value ) => Helper.MewtocolHelper.Write( this, this.Station, address, value );
 
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildWriteOneCoil( station, address, value );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取结果
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
+		/// <inheritdoc cref="Helper.MewtocolHelper.Write(IReadWriteDevice, byte, string[], bool[])"/>
+		public OperateResult Write( string[] address, bool[] value ) => Helper.MewtocolHelper.Write( this, this.Station, address, value );
 
 		#endregion
 
@@ -183,13 +97,19 @@ namespace HslCommunication.Profinet.Panasonic
 
 		/// <inheritdoc cref="Write(string, bool)"/>
 		public async override Task<OperateResult> WriteAsync( string address, bool value ) => await Task.Run( ( ) => Write( address, value ) );
+
+		/// <inheritdoc cref="ReadBool(string[])"/>
+		public async Task<OperateResult<bool[]>> ReadBoolAsync(string[] address ) => await Helper.MewtocolHelper.ReadBoolAsync( this, this.Station, address );
+
+		/// <inheritdoc cref="Write(string[], bool[])"/>
+		public async Task<OperateResult> WriteAsync(string[] address, bool[] value) => await Helper.MewtocolHelper.WriteAsync( this, this.Station, address, value );
 #endif
 		#endregion
 
 		#region Object Override
 
 		/// <inheritdoc/>
-		public override string ToString( ) => $"Panasonic Mewtocol[{PortName}:{BaudRate}]";
+		public override string ToString( ) => $"PanasonicMewtocol[{PortName}:{BaudRate}]";
 
 		#endregion
 	}

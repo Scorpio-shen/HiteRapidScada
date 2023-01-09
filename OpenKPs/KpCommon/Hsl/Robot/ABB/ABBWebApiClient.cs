@@ -198,7 +198,7 @@ namespace HslCommunication.Robot.ABB
 		private OperateResult<string> AnalysisRobotTarget( string content )
 		{
 			return AnalysisClassAttribute( content,
-				new string[] { "x", "y", "z", "q1", "q2", "q3" } );
+				new string[] { "x", "y", "z", "q1", "q2", "q3", "q4" } );
 		}
 
 		#endregion
@@ -406,11 +406,11 @@ namespace HslCommunication.Robot.ABB
 		}
 
 		/// <summary>
-		/// 获取当前机器人的系统信息，版本号，唯一ID等信息<br />
-		/// Get the current robot's system information, version number, unique ID and other information
+		/// 获取机器人的目标坐标信息<br />
+		/// Get the current robot's target information
 		/// </summary>
 		/// <returns>系统的基本信息</returns>
-		[HslMqttApi( Description = "Get the current robot's system information, version number, unique ID and other information")]
+		[HslMqttApi( Description = "Get the current robot's target information" )]
 		public OperateResult<string> GetRobotTarget( )
 		{
 			OperateResult<string> read = ReadString( "url=/rw/motionsystem/mechunits/ROB_1/robtarget" );

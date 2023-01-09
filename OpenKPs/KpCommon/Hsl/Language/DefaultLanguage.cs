@@ -17,12 +17,15 @@ namespace HslCommunication.Language
 		 * 
 		 ************************************************************************************/
 
+		internal static string Contact = "QQ: 200962190，Wechat：13516702732，Email:hsl200909@163.com";
+
 		public virtual string TimeDescriptionSecond => " 秒";
 		public virtual string TimeDescriptionMinute => " 分钟";
 		public virtual string TimeDescriptionHour => " 小时";
 		public virtual string TimeDescriptionDay => " 天";
-		public virtual string AuthorizationFailed => "系统授权失败，需要使用激活码授权，谢谢支持。设备激活数：" + Authorization.iahsduiwikaskfhishfdi;
-		public virtual string InsufficientPrivileges => "当前的方法接口或类，只对商业授权用户开放，权限不足，感谢支持。如果需要商业授权，联系QQ200962190，微信：13516702732，Email:hsl200909@163.com";
+		public virtual string AuthorizationFailed => "系统授权失败，需要使用激活码授权，谢谢支持。设备激活数：" + Authorization.iahsduiwikaskfhishfdi + " 如果有任何的疑问，" + Contact;
+		public virtual string InsufficientPrivileges => "当前的方法接口或类，只对商业授权用户开放，权限不足，感谢支持。如果需要商业授权，" + Contact;
+		public virtual string DeveloperPrivileges => "当前会话的权限不足，无法调用本服务接口，请将当前会话的权限设置为开发者权限。";
 		public virtual string ConnectedFailed => "连接失败：";
 		public virtual string ConnectedSuccess => "连接成功！";
 		public virtual string ConnectTimeout => "连接 {0} 失败，超时时间为 {1}";
@@ -53,6 +56,9 @@ namespace HslCommunication.Language
 		public virtual string Send => "发送";
 		public virtual string Receive => "接收";
 		public virtual string CheckDataTimeout => "等待检查数据时，发生了超时，超时时间为：";
+		public virtual string WriteWarning => $"是否真的确认写入操作？{Environment.NewLine}请检查确认当前的情况是否安全！";
+		public virtual string AddressFormatWrong => $"地址解析的过程中发生了异常: ";
+		public virtual string UserCancelOperate => $"用户取消了当前的操作";
 
 		/***********************************************************************************
 		 * 
@@ -239,6 +245,16 @@ namespace HslCommunication.Language
 		public virtual string MelsecErrorC074 => "目标 PLC 不执行请求。需要纠正网络号和 PC 号。";
 
 
+		// 三菱FxLinks错误代码信息
+		public virtual string MelsecFxLinksError02 => "和校验错误，接收数据中的和校验码与从已经接收到的数据中生成的和校验不一致";
+		public virtual string MelsecFxLinksError03 => "通信协议不正常，通信中使用的控制顺序与用参数设定的控制顺序不同。 或是一部分与指定的控制顺序不同。 或是控制顺序中指定的指令不存在。";
+		public virtual string MelsecFxLinksError06 => $"字符A,B,C区中错误{Environment.NewLine}1. 用参数设定的控制顺序不同。{Environment.NewLine}2.指定了对象可编程控制器中不存在的软元件编号。{Environment.NewLine}" +
+			$"3. 在指定字符数目( 5个字符，或7个字符 )中没有指定软元件编号。";
+		public virtual string MelsecFxLinksError07 => "在软元件中写入的数据不是16进制的ASCII码。";
+		public virtual string MelsecFxLinksError0A => "不存在该PC号的站点。";
+		public virtual string MelsecFxLinksError10 => "不存在该PC号的站点。";
+		public virtual string MelsecFxLinksError18 => "不能执行远程RUN/SOP。在可编程控制器的硬件中决定了 RUN 或是 STOP。 (比如使用了RUN/STOP开关等)";
+
 
 
 		/***********************************************************************************
@@ -259,7 +275,7 @@ namespace HslCommunication.Language
 
 		/***********************************************************************************
 		 * 
-		 *    Omron PLC 相关
+		 *    Omron PLC 相关1
 		 * 
 		 ************************************************************************************/
 
@@ -280,7 +296,7 @@ namespace HslCommunication.Language
 
 		/***********************************************************************************
 		 * 
-		 *    AB PLC 相关
+1		 *    AB PLC 相关0
 		 * 
 		 ************************************************************************************/
 
@@ -334,10 +350,18 @@ namespace HslCommunication.Language
 		public virtual string PanasonicMewStatus60 => "参数错误:在指令中包含有无法使用的代码,或者代码没有附带区域指定参数(X, Y, D), 等以外。";
 		public virtual string PanasonicMewStatus61 => "数据错误:触点编号,区域编号,数据代码格式(BCD,hex,等)上溢出, 下溢出以及区域指定错误。";
 		public virtual string PanasonicMewStatus62 => "寄存器错误:过多记录数据在未记录状态下的操作（监控记录、跟踪记录等。)。";
-		public virtual string PanasonicMewStatus63 => "PLC 模式错误:当一条指令发出时，运行模式不能够对指令进行处理。";
+		public virtual string PanasonicMewStatus63 => "PLC模式错误:当一条指令发出时，运行模式不能够对指令进行处理。";
+		public virtual string PanasonicMewStatus64 => "外部记录不良错误: 1.硬件不良。内置 ROM（FROM） /主存储器/SD 存储卡中可能存在异常。\r\n2.ROM 传输时指定内容超出规定容量。\r\n3.发生了读取/写入错误。";
 		public virtual string PanasonicMewStatus65 => "保护错误:在存储保护状态下执行写操作到程序区域或系统寄存器。";
 		public virtual string PanasonicMewStatus66 => "地址错误:地址（程序地址、绝对地址等）数据编码形式（BCD、hex 等）、上溢、下溢或指定范围错误。";
-		public virtual string PanasonicMewStatus67 => "丢失数据错误:要读的数据不存在。（读取没有写入注释寄存区的数据。。";
+		public virtual string PanasonicMewStatus67 => "丢失数据错误:要读的数据不存在。（读取没有写入注释寄存区的数据。";
+		public virtual string PanasonicMewStatus68 => "RUN中改写不可错误: 想要编辑在 RUN 中不能改写的指令语（ED,SUB,RET,INT,IRET,SSTP,STPE）。控制单元中未写入任何内容。";
+		public virtual string PanasonicMewStatus71 => "排他控制错误: 执行了不能与处理中的指令同时处理的指令。";
+		public virtual string PanasonicMewStatus78 => "无SD卡错误: 未安装 SD 卡。";
+		public virtual string PanasonicMewStatus80 => "担保数据异常错误: 担保数据（CRC 代码）异常。";
+		public virtual string PanasonicMewStatus81 => "无有效数据错误: 不存在有效的数据。";
+		public virtual string PanasonicMewStatus90 => "记录跟踪中错误: 记录跟踪过程中，执行了不能处理的指令。";
+		public virtual string PanasonicMewStatus92 => "不支持SD卡错误: 未使用 Panasonic 生产的业务用 SD 卡。";
 
 		// MC 协议相关的内容
 		public virtual string PanasonicMc4031 => "地址超范围（起始设备＋写入点数）";
@@ -441,6 +465,57 @@ namespace HslCommunication.Language
 		public virtual string DLTErrorInfoBit7             => "保留";
 		public virtual string DLTErrorWriteReadCheckFailed => "校验写入之后和之前的数据是否一致失败";
 
+		public virtual string DLT1997ErrorInfoBit0         => "非法数据";
+		public virtual string DLT1997ErrorInfoBit1         => "数据标识错误";
+		public virtual string DLT1997ErrorInfoBit2         => "密码错";
+		public virtual string DLT1997ErrorInfoBit4         => "年时区数超出范围";
+		public virtual string DLT1997ErrorInfoBit5         => "日时段数超出范围";
+		public virtual string DLT1997ErrorInfoBit6         => "费率数超范围";
+
+
+		/***********************************************************************************
+		 * 
+		 *   DLT698 相关
+		 * 
+		 ************************************************************************************/
+		public virtual string DLT698Error01 => "硬件失效";
+		public virtual string DLT698Error02 => "暂时失效";
+		public virtual string DLT698Error03 => "拒绝读写";
+		public virtual string DLT698Error04 => "对象未定义";
+		public virtual string DLT698Error05 => "对象接口类不符合";
+		public virtual string DLT698Error06 => "对象不存在";
+		public virtual string DLT698Error07 => "类型不匹配";
+		public virtual string DLT698Error08 => "越界";
+		public virtual string DLT698Error09 => "数据块不可用";
+		public virtual string DLT698Error10 => "分帧传输已取消";
+		public virtual string DLT698Error11 => "不处于分帧传输状态";
+		public virtual string DLT698Error12 => "块写取消";
+		public virtual string DLT698Error13 => "不存在块写状态";
+		public virtual string DLT698Error14 => "数据块序号无效";
+		public virtual string DLT698Error15 => "密码错/未授权";
+		public virtual string DLT698Error16 => "通信速率不能更改";
+		public virtual string DLT698Error17 => "年时区数超";
+		public virtual string DLT698Error18 => "日时段数超";
+		public virtual string DLT698Error19 => "费率数超";
+		public virtual string DLT698Error20 => "安全认证不匹配";
+		public virtual string DLT698Error21 => "重复充值";
+		public virtual string DLT698Error22 => "ESAM 验证失败";
+		public virtual string DLT698Error23 => "安全认证失败";
+		public virtual string DLT698Error24 => "客户编号不匹配";
+		public virtual string DLT698Error25 => "充值次数错误";
+		public virtual string DLT698Error26 => "购电超囤积";
+		public virtual string DLT698Error27 => "地址异常";
+		public virtual string DLT698Error28 => "对称解密错误";
+		public virtual string DLT698Error29 => "非对称解密错误";
+		public virtual string DLT698Error30 => "签名错误";
+		public virtual string DLT698Error31 => "电能表挂起";
+		public virtual string DLT698Error32 => "时间标签无效";
+		public virtual string DLT698Error33 => "请求超时";
+		public virtual string DLT698Error34 => "ESAM 的 P1P2 不正确";
+		public virtual string DLT698Error35 => "ESAM 的 LC 错误";
+
+
+
 		/***********************************************************************************
 		 * 
 		 *   Keyence 相关
@@ -538,6 +613,107 @@ namespace HslCommunication.Language
 		public virtual string LsisCnet1332 => "读/写的数据数据类型不匹配";
 		public virtual string LsisCnet1432 => "数据值不能转换为 Hex";
 		public virtual string LsisCnet7132 => "请求值超出了设备支持区域";
+
+
+		/***********************************************************************************
+		 * 
+		 *   YASKAWA
+		 * 
+		 ************************************************************************************/
+		public virtual string YRC1010 => "命令异常";
+		public virtual string YRC1011 => "命令操作数异常";
+		public virtual string YRC1012 => "命令操作数值超出范围";
+		public virtual string YRC1013 => "命令操作数长度异常";
+		public virtual string YRC1020 => "设备文件数过多";
+		public virtual string YRC2010 => "机器人动作中";
+		public virtual string YRC2020 => "示教编程器 HOLD停止中";
+		public virtual string YRC2030 => "再线盒 HOLD停止中";
+		public virtual string YRC2040 => "外部HOLD中";
+		public virtual string YRC2050 => "命令HOLD中";
+		public virtual string YRC2060 => "错误报警发生中";
+		public virtual string YRC2070 => "伺服ON中";
+		public virtual string YRC2080 => "模式不同";
+		public virtual string YRC2090 => "通过其他功能他访问文件中";
+		public virtual string YRC2100 => "远程命令没有设定";
+		public virtual string YRC2110 => "此数据不能访问";
+		public virtual string YRC2120 => "此数据无法读取";
+		public virtual string YRC2130 => "编辑中";
+		public virtual string YRC2150 => "坐标变换功能执行中";
+		public virtual string YRC3010 => "请接入伺服电源";
+		public virtual string YRC3040 => "请核对原点位置";
+		public virtual string YRC3050 => "请进行位置确认";
+		public virtual string YRC3070 => "未生成当前值";
+		public virtual string YRC3220 => "面板锁 模式 ／循环禁止信号收到信息";
+		public virtual string YRC3230 => "面板锁，开始禁止信号收到信息";
+		public virtual string YRC3350 => "用户坐标无法示教";
+		public virtual string YRC3360 => "用户坐标文件被破坏";
+		public virtual string YRC3370 => "控制轴组不同";
+		public virtual string YRC3380 => "基座轴数据不同";
+		public virtual string YRC3390 => "相对JOB不可变换（ CVTRJ 时）";
+		public virtual string YRC3400 => "禁止调用主程序（ 参数）";
+		public virtual string YRC3410 => "禁止调用主程序（动作中亮灯）";
+		public virtual string YRC3420 => "禁止调用主程序（示教）";
+		public virtual string YRC3430 => "机器人间的校验不能定义";
+		public virtual string YRC3450 => "伺服电源不能接通";
+		public virtual string YRC3460 => "不能设定坐标系";
+		public virtual string YRC4010 => "存储容量不足（程序登录存储）";
+		public virtual string YRC4012 => "存储容量不足（变位机登录存储）";
+		public virtual string YRC4020 => "禁止程序编辑";
+		public virtual string YRC4030 => "存在相同名称的程序";
+		public virtual string YRC4040 => "没有指定的程序";
+		public virtual string YRC4060 => "请设定执行程序";
+		public virtual string YRC4120 => "位置数据被破坏";
+		public virtual string YRC4130 => "不存在位置数据";
+		public virtual string YRC4140 => "位置变量类型不同";
+		public virtual string YRC4150 => "非主程序的程序END 命令";
+		public virtual string YRC4170 => "命令数据被破坏";
+		public virtual string YRC4190 => "程序名中有不合适的文字";
+		public virtual string YRC4200 => "标签名中有不合适的文字";
+		public virtual string YRC4230 => "本系统中有不能使用的命令";
+		public virtual string YRC4420 => "变换的程序有步骤";
+		public virtual string YRC4430 => "此程序已变换过";
+		public virtual string YRC4480 => "请示教用户坐标";
+		public virtual string YRC4490 => "相対JOB／独立控制功能未获得许可";
+		public virtual string YRC5110 => "语法错误（ 命令的语法）";
+		public virtual string YRC5120 => "变位机数据异常";
+		public virtual string YRC5130 => "没有NOP 或者END 命令";
+		public virtual string YRC5170 => "格式错误（与写法相反）";
+		public virtual string YRC5180 => "数据数不合适";
+		public virtual string YRC5200 => "超出数据范围";
+		public virtual string YRC5310 => "语法错误（命令以外）";
+		public virtual string YRC5340 => "模拟命令指定有错误";
+		public virtual string YRC5370 => "条件数据记录有错误";
+		public virtual string YRC5390 => "程序数据记录有错误";
+		public virtual string YRC5430 => "系统不一致";
+		public virtual string YRC5480 => "焊接功能类型不一样";
+
+
+
+		/***********************************************************************************
+		 * 
+		 *   Vigor
+		 * 
+		 ************************************************************************************/
+		public virtual string Vigor02 => "通訊 SUM Check Error";
+		public virtual string Vigor04 => "資料 Byte 數或元件數目為 0";
+		public virtual string Vigor06 => "資料位址超出範圍";
+		public virtual string Vigor08 => "ASCII 轉換錯誤";
+		public virtual string Vigor31 => "無此命令";
+
+
+		/***********************************************************************************
+		 * 
+		 *   YASKAWA
+		 * 
+		 ************************************************************************************/
+		public virtual string Memobus01 => "SFC异常";
+		public virtual string Memobus02 => "引用编号异常";
+		public virtual string Memobus03 => "数据数异常";
+		public virtual string Memobus40 => "寄存器种类错误";
+		public virtual string Memobus41 => "数据类型错误";
+		public virtual string Memobus42 => "本站寄存器种类错误";
+
+
 
 #pragma warning restore CS1591 // 缺少对公共可见类型或成员的 XML 注释
 	}

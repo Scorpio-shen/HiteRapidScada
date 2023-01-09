@@ -296,24 +296,14 @@ namespace HslCommunication.Core
 			{
 				if (disposing)
 				{
-					// TODO: 释放托管状态(托管对象)。
 				}
 
-				// TODO: 释放未托管的资源(未托管的对象)并在以下内容中替代终结器。
-				// TODO: 将大型字段设置为 null。
 				m_WritersLock.Close(); m_WritersLock = null;
 				m_ReadersLock.Close(); m_ReadersLock = null;
 				disposedValue = true;
 			}
 		}
 
-		// TODO: 仅当以上 Dispose(bool disposing) 拥有用于释放未托管资源的代码时才替代终结器。
-		// ~HslReadWriteLock() {
-		//   // 请勿更改此代码。将清理代码放入以上 Dispose(bool disposing) 中。
-		//   Dispose(false);
-		// }
-
-		// 添加此代码以正确实现可处置模式。
 		/// <summary>
 		/// 释放资源
 		/// </summary>
@@ -321,7 +311,6 @@ namespace HslCommunication.Core
 		{
 			// 请勿更改此代码。将清理代码放入以上 Dispose(bool disposing) 中。
 			Dispose(true);
-			// TODO: 如果在以上内容中替代了终结器，则取消注释以下行。
 			// GC.SuppressFinalize(this);
 		}
 		#endregion
@@ -549,11 +538,9 @@ namespace HslCommunication.Core
 			{
 				if (disposing)
 				{
-					// TODO: 释放托管状态(托管对象)。
+					//  释放托管状态(托管对象)。
 				}
 
-				// TODO: 释放未托管的资源(未托管的对象)并在以下内容中替代终结器。
-				// TODO: 将大型字段设置为 null。
 #if NET35 || NET20
 				m_waiterLock.Close();
 #else
@@ -564,19 +551,11 @@ namespace HslCommunication.Core
 			}
 		}
 
-		// TODO: 仅当以上 Dispose(bool disposing) 拥有用于释放未托管资源的代码时才替代终结器。
-		// ~SimpleHybirdLock() {
-		//   // 请勿更改此代码。将清理代码放入以上 Dispose(bool disposing) 中。
-		//   Dispose(false);
-		// }
-
-		// 添加此代码以正确实现可处置模式。
 		/// <inheritdoc cref="IDisposable.Dispose"/>
 		public void Dispose( )
 		{
 			// 请勿更改此代码。将清理代码放入以上 Dispose(bool disposing) 中。
 			Dispose( true );
-			// TODO: 如果在以上内容中替代了终结器，则取消注释以下行。
 			// GC.SuppressFinalize(this);
 		}
 		#endregion
@@ -597,38 +576,48 @@ namespace HslCommunication.Core
 		/// </summary>
 		private readonly Lazy<AutoResetEvent> m_waiterLock = new Lazy<AutoResetEvent>( ( ) => new AutoResetEvent( false ) );
 #endif
-
-
 		/// <summary>
-		/// 获取锁
+		/// 获取锁，可以指定获取锁的超时时间，如果指定的时间没有获取锁，则返回<c>False</c>，反之，返回<c>True</c><br />
+		/// To acquire a lock, you can specify the timeout period for acquiring a lock, return <c>False</c> if the specified time does not acquire a lock, and vice versa, return <c>True</c>
 		/// </summary>
-		public void Enter( )
+		/// <returns>是否正确的获得锁</returns>
+		public bool Enter( )
 		{
 			Interlocked.Increment( ref simpleHybirdLockCount );
-			if (Interlocked.Increment( ref m_waiters ) == 1) return;      // 用户锁可以使用的时候，直接返回，第一次调用时发生
-																		  // 当发生锁竞争时，使用内核同步构造锁
+			if (Interlocked.Increment( ref m_waiters ) == 1) return true;      // 用户锁可以使用的时候，直接返回，第一次调用时发生
+																			   // 当发生锁竞争时，使用内核同步构造锁
 			Interlocked.Increment( ref simpleHybirdLockWaitCount );
 #if NET35 || NET20
-			m_waiterLock.WaitOne();
+			bool enter = m_waiterLock.WaitOne( );
 #else
-			m_waiterLock.Value.WaitOne( );
+			bool enter = m_waiterLock.Value.WaitOne( );
 #endif
+			//if (!enter)  // 如果因为超时未接收到实例，则此处直接减一
+			//{
+			//	Interlocked.Decrement( ref simpleHybirdLockCount );
+			//	Interlocked.Decrement( ref simpleHybirdLockWaitCount );
+			//}
+			return enter;
 		}
 
 		/// <summary>
-		/// 离开锁
+		/// 离开锁<br />
+		/// Leave the lock
 		/// </summary>
-		public void Leave( )
+		/// <returns>如果该操作成功，返回<c>True</c>，反之，返回<c>False</c></returns>
+		public bool Leave( )
 		{
 			Interlocked.Decrement( ref simpleHybirdLockCount );
-			if (Interlocked.Decrement( ref m_waiters ) == 0) return;     // 没有可用的锁的时候
+			if (Interlocked.Decrement( ref m_waiters ) == 0) return true;     // 没有可用的锁的时候
+			bool leave = false;
 
-			Interlocked.Decrement( ref simpleHybirdLockWaitCount );
 #if NET35 || NET20
-			m_waiterLock.Set( );
+			leave = m_waiterLock.Set( );
 #else
-			m_waiterLock.Value.Set( );
+			leave = m_waiterLock.Value.Set( );
 #endif
+			Interlocked.Decrement( ref simpleHybirdLockWaitCount );
+			return leave;
 		}
 
 		/// <summary>
@@ -642,13 +631,14 @@ namespace HslCommunication.Core
 		private static long simpleHybirdLockWaitCount = 0;  // 当前锁的等待的次数，此时已经开始竞争了
 
 		/// <summary>
-		/// 获取当前总的所有进入锁的信息<br />
-		/// Get the current total information of all access locks
+		/// 获取当前HslCommunication组件里正总的所有进入锁的信息<br />
+		/// Gets the information about all incoming locks in the current HslCommunication component
 		/// </summary>
 		public static long SimpleHybirdLockCount => simpleHybirdLockCount;
-		
+
 		/// <summary>
-		/// 当前正在等待的锁的统计信息，此时已经发生了竞争了
+		/// 当前HslCommunication组件里正在等待的锁的统计信息，此时已经发生了竞争了<br />
+		/// Statistics on locks currently waiting in the HslCommunication component are now in contention
 		/// </summary>
 		public static long SimpleHybirdLockWaitCount => simpleHybirdLockWaitCount;
 
@@ -980,22 +970,13 @@ namespace HslCommunication.Core
 			{
 				if (disposing)
 				{
-					// TODO: 释放托管状态(托管对象)。
 				}
 
-				// TODO: 释放未托管的资源(未托管的对象)并在以下内容中替代终结器。
-				// TODO: 将大型字段设置为 null。
 				m_waiterLock.Value.Close( );
 
 				disposedValue = true;
 			}
 		}
-
-		// TODO: 仅当以上 Dispose(bool disposing) 拥有用于释放未托管资源的代码时才替代终结器。
-		// ~SimpleHybirdLock() {
-		//   // 请勿更改此代码。将清理代码放入以上 Dispose(bool disposing) 中。
-		//   Dispose(false);
-		// }
 
 		// 添加此代码以正确实现可处置模式。
 		/// <summary>
@@ -1005,7 +986,6 @@ namespace HslCommunication.Core
 		{
 			// 请勿更改此代码。将清理代码放入以上 Dispose(bool disposing) 中。
 			Dispose( true );
-			// TODO: 如果在以上内容中替代了终结器，则取消注释以下行。
 			// GC.SuppressFinalize(this);
 		}
 	#endregion

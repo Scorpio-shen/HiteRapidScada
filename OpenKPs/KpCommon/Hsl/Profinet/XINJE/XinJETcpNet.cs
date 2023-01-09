@@ -3,6 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HslCommunication.ModBus;
+using HslCommunication.Reflection;
+using HslCommunication.Core.Address;
+#if !NET35 && !NET20
+using System.Threading.Tasks;
+#endif
 
 namespace HslCommunication.Profinet.XINJE
 {
@@ -71,8 +76,57 @@ namespace HslCommunication.Profinet.XINJE
 			return XinJEHelper.PraseXinJEAddress( this.Series, address, modbusCode );
 		}
 
-		#endregion
+		/// <inheritdoc/>
+		[HslMqttApi( "ReadByteArray", "" )]
+		public override OperateResult<byte[]> Read( string address, ushort length ) => XinJEHelper.Read( this, address, length, base.Read );
 
+		/// <inheritdoc/>
+		[HslMqttApi( "WriteByteArray", "" )]
+		public override OperateResult Write( string address, byte[] value ) => XinJEHelper.Write( this, address, value, base.Write );
+
+		/// <inheritdoc/>
+		[HslMqttApi( "WriteInt16", "" )]
+		public override OperateResult Write( string address, short value ) => XinJEHelper.Write( this, address, value, base.Write );
+
+		/// <inheritdoc/>
+		[HslMqttApi( "WriteUInt16", "" )]
+		public override OperateResult Write( string address, ushort value ) => XinJEHelper.Write( this, address, value, base.Write );
+
+		/// <inheritdoc/>
+		[HslMqttApi( "ReadBoolArray", "" )]
+		public override OperateResult<bool[]> ReadBool( string address, ushort length ) => XinJEHelper.ReadBool( this, address, length, base.ReadBool );
+
+		/// <inheritdoc/>
+		[HslMqttApi( "WriteBoolArray", "" )]
+		public override OperateResult Write( string address, bool[] values ) => XinJEHelper.Write( this, address, values, base.Write );
+
+		/// <inheritdoc/>
+		[HslMqttApi( "WriteBool", "" )]
+		public override OperateResult Write( string address, bool value ) => XinJEHelper.Write( this, address, value, base.Write );
+
+		#endregion
+#if !NET35 && !NET20
+		/// <inheritdoc/>
+		public async override Task<OperateResult<byte[]>> ReadAsync( string address, ushort length ) => await XinJEHelper.ReadAsync( this, address, length, base.ReadAsync );
+
+		/// <inheritdoc/>
+		public async override Task<OperateResult> WriteAsync( string address, byte[] value ) => await XinJEHelper.WriteAsync( this, address, value, base.WriteAsync );
+
+		/// <inheritdoc/>
+		public override async Task<OperateResult> WriteAsync( string address, short value ) => await XinJEHelper.WriteAsync( this, address, value, base.WriteAsync );
+
+		/// <inheritdoc/>
+		public override async Task<OperateResult> WriteAsync( string address, ushort value ) => await XinJEHelper.WriteAsync( this, address, value, base.WriteAsync );
+
+		/// <inheritdoc/>
+		public async override Task<OperateResult<bool[]>> ReadBoolAsync( string address, ushort length ) => await XinJEHelper.ReadBoolAsync( this, address, length, base.ReadBoolAsync );
+
+		/// <inheritdoc/>
+		public async override Task<OperateResult> WriteAsync( string address, bool[] values ) => await XinJEHelper.WriteAsync( this, address, values, base.WriteAsync );
+
+		/// <inheritdoc/>
+		public async override Task<OperateResult> WriteAsync( string address, bool value ) => await XinJEHelper.WriteAsync( this, address, value, base.WriteAsync );
+#endif
 		#region Object Override
 
 		/// <inheritdoc/>

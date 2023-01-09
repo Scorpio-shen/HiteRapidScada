@@ -41,13 +41,10 @@ namespace HslCommunication.Profinet.Melsec
 		/// </summary>
 		/// <param name="ipAddress">PLC的Ip地址</param>
 		/// <param name="port">PLC的端口</param>
-		public MelsecA1EAsciiNet( string ipAddress, int port )
+		public MelsecA1EAsciiNet( string ipAddress, int port ) : this( )
 		{
-			WordLength          = 1;
 			IpAddress           = ipAddress;
 			Port                = port;
-			LogMsgFormatBinary  = false;
-			ByteTransform       = new RegularByteTransform( );
 		}
 
 		/// <inheritdoc/>
@@ -269,10 +266,10 @@ namespace HslCommunication.Profinet.Melsec
 			_PLCCommand[ 5] = 0x30;
 			_PLCCommand[ 6] = 0x30;
 			_PLCCommand[ 7] = 0x41;
-			_PLCCommand[ 8] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[0] )[0];
-			_PLCCommand[ 9] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[0] )[1];
-			_PLCCommand[10] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[1] )[0];
-			_PLCCommand[11] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[1] )[1];
+			_PLCCommand[ 8] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[1] )[0];
+			_PLCCommand[ 9] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[1] )[1];
+			_PLCCommand[10] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[0] )[0];
+			_PLCCommand[11] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[0] )[1];
 			_PLCCommand[12] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content2 )[3] )[0];
 			_PLCCommand[13] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content2 )[3] )[1];
 			_PLCCommand[14] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content2 )[2] )[0];
@@ -310,10 +307,10 @@ namespace HslCommunication.Profinet.Melsec
 			_PLCCommand[ 5] = 0x30;
 			_PLCCommand[ 6] = 0x30;
 			_PLCCommand[ 7] = 0x41;
-			_PLCCommand[ 8] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[0] )[0];
-			_PLCCommand[ 9] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[0] )[1];
-			_PLCCommand[10] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[1] )[0];
-			_PLCCommand[11] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[1] )[1];
+			_PLCCommand[ 8] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[1] )[0];
+			_PLCCommand[ 9] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[1] )[1];
+			_PLCCommand[10] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[0] )[0];
+			_PLCCommand[11] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[0] )[1];
 			_PLCCommand[12] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content2 )[3] )[0];
 			_PLCCommand[13] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content2 )[3] )[1];
 			_PLCCommand[14] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content2 )[2] )[0];
@@ -354,10 +351,10 @@ namespace HslCommunication.Profinet.Melsec
 			_PLCCommand[ 5] = 0x30;
 			_PLCCommand[ 6] = 0x30;
 			_PLCCommand[ 7] = 0x41;
-			_PLCCommand[ 8] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[0] )[0];
-			_PLCCommand[ 9] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[0] )[1];
-			_PLCCommand[10] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[1] )[0];
-			_PLCCommand[11] = SoftBasic.BuildAsciiBytesFrom( analysis.Content1.DataCode[1] )[1];
+			_PLCCommand[ 8] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[1] )[0];
+			_PLCCommand[ 9] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[1] )[1];
+			_PLCCommand[10] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[0] )[0];
+			_PLCCommand[11] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content1.DataCode )[0] )[1];
 			_PLCCommand[12] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content2 )[3] )[0];
 			_PLCCommand[13] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content2 )[3] )[1];
 			_PLCCommand[14] = SoftBasic.BuildAsciiBytesFrom( BitConverter.GetBytes( analysis.Content2 )[2] )[0];

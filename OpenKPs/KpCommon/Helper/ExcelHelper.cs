@@ -556,9 +556,10 @@ namespace KpCommon.Helper
         /// <typeparam name="T">数据模型</typeparam>
         /// <param name="excelType">excel扩展名类型</param>
         /// <param name="data">数据集</param>
+        /// <param name="ignoreHeaders">不需要导出的字段</param>
         /// <param name="sheetSize">Excel的单个Sheet的行数，不能超过65535，否则会抛出异常</param>
         /// <returns></returns>
-        public static MemoryStream ToExcel<T>(List<T> data, string excelType = "xls", int sheetSize = 50000)
+        public static MemoryStream ToExcel<T>(List<T> data, string excelType = "xls", int sheetSize = 50000, List<string> ignoreHeaders = null)
         {
 
             IWorkbook wk;
@@ -576,6 +577,14 @@ namespace KpCommon.Helper
             if (data.Count <= 0 || data == null)
             {
                 var headers = GetPropertyByType<T>(true);
+                if(ignoreHeaders?.Count > 0)
+                {
+                    foreach(var ignore in ignoreHeaders)
+                    {
+                        if(headers.ContainsKey(ignore))
+                            headers.Remove(ignore);
+                    }
+                }
                 CreateHeaders(wk, headers, "sheet");
             }
             else
@@ -591,9 +600,11 @@ namespace KpCommon.Helper
                 }
             }
 
-            MemoryStream m = new MemoryStream();
-            wk.Write(m);
-            return m;
+            using (MemoryStream m = new MemoryStream())
+            {
+                wk.Write(m);
+                return m;
+            }
         }
 
         /// <summary>

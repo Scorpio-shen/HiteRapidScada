@@ -7,6 +7,8 @@ using System.Text;
 using HslCommunication.Core.Types;
 using System.Net;
 using HslCommunication.Reflection;
+using System.IO.Ports;
+using HslCommunication.Core.IMessage;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -28,12 +30,8 @@ namespace HslCommunication.Core.Net
 		/// </summary>
 		public NetworkDataServerBase( )
 		{
-			ActiveTimeSpan = TimeSpan.FromHours( 24 );
-			lock_trusted_clients = new SimpleHybirdLock( );
-			ConnectionId = SoftBasic.GetUniqueStringByGuidAndRandom( );
-			lockOnlineClient = new object( );
-			listsOnlineClient = new List<AppSession>( );
-			timerHeart = new System.Threading.Timer( ThreadTimerHeartCheck, null, 2000, 10000 );
+			ConnectionId          = SoftBasic.GetUniqueStringByGuidAndRandom( );
+			serialPort            = new SerialPort( );   // 实例化串口对象
 		}
 
 		#endregion
@@ -72,7 +70,6 @@ namespace HslCommunication.Core.Net
 		/// <exception cref="UnauthorizedAccessException"></exception>
 		/// <exception cref="NotSupportedException"></exception>
 		/// <exception cref="System.Security.SecurityException"></exception>
-		/// <exception cref="System.IO.FileNotFoundException"></exception>
 		public void LoadDataPool( string path )
 		{
 			if (System.IO.File.Exists( path ))
@@ -105,6 +102,13 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.ConnectionId"/>
 		public string ConnectionId { get; set; }
+
+        /// <summary>
+        /// 获取或设置当前的服务器接收串口数据时候，是否强制只接收一次数据，默认为false，适合点对点通信，如果你总线形式的连接，则需要设置 True<br />
+        /// Get or set whether to force the data to be received only once when the current server receives serial port data. The default value is false, 
+		/// which is suitable for point-to-point communication. If you have a bus connection, you need to set True
+        /// </summary>
+        public bool ForceSerialReceiveOnce { get=> this.forceReceiveOnce; set => this.forceReceiveOnce = value; }
 
 		/// <summary>
 		/// 获取或设置当前的服务器是否允许远程客户端进行写入数据操作，默认为<c>True</c><br />
@@ -161,17 +165,22 @@ namespace HslCommunication.Core.Net
 		public event DataSendDelegate OnDataSend;
 
 		/// <summary>
-		/// 获取或设置两次数据交互时的最小时间间隔，默认为24小时。<br />
-		/// Get or set the minimum time interval between two data interactions, the default is 24 hours.
-		/// </summary>
-		public TimeSpan ActiveTimeSpan { get; set; }
-
-		/// <summary>
 		/// 触发一个数据发送的事件信息<br />
 		/// Event information that triggers a data transmission
 		/// </summary>
 		/// <param name="send">数据内容</param>
 		protected void RaiseDataSend( byte[] send ) => OnDataSend?.Invoke( this, send );
+
+		/// <summary>
+		/// 获取串口模式下消息的日志记录方式，可以继承重写。<br />
+		/// Get the logging method of messages in serial mode, which can be inherited and rewritten.
+		/// </summary>
+		/// <param name="data">原始数据</param>
+		/// <returns>消息</returns>
+		protected virtual string GetSerialMessageLogText( byte[] data )
+		{
+			return LogMsgFormatBinary ? SoftBasic.ByteToHexString( data, ' ' ) : SoftBasic.GetAsciiStringRender( data );
+		}
 
 		#endregion
 
@@ -180,220 +189,279 @@ namespace HslCommunication.Core.Net
 		/// <inheritdoc cref="NetworkDeviceBase.WordLength"/>
 		protected ushort WordLength { get; set; } = 1;
 
+		/// <inheritdoc cref="NetworkDoubleBase.LogMsgFormatBinary"/>
+		protected bool LogMsgFormatBinary = true;
+
+		/// <inheritdoc cref="NetworkDeviceBase.GetWordLength(string, int, int)"/>
+		protected virtual ushort GetWordLength( string address, int length, int dataTypeLength )
+		{
+			if (WordLength == 0)
+			{
+				int len = length * dataTypeLength * 2 / 4;
+				return len == 0 ? (ushort)1 : (ushort)len;
+			}
+			return (ushort)(WordLength * length * dataTypeLength);
+		}
+
+		/// <inheritdoc cref="NetworkDoubleBase.GetNewNetMessage"/>
+		protected virtual INetMessage GetNewNetMessage( ) => null;
+
+		/// <inheritdoc cref="NetworkDoubleBase.ReadFromCoreServer(byte[])"/>
+		protected virtual OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive ) => new OperateResult<byte[]>( StringResources.Language.NotSupportedFunction );
+
 		#endregion
 
-		#region Trust Client Filter
+		#region NetworkAuthenticationServerBase Override
 
 		/// <summary>
-		/// 当客户端登录后，在Ip信息的过滤后，然后触发本方法，进行后续的数据接收，处理，并返回相关的数据信息<br />
-		/// When the client logs in, after filtering the IP information, this method is then triggered to perform subsequent data reception, 
-		/// processing, and return related data information
+		/// 从远程Socket异步接收的数据信息
 		/// </summary>
-		/// <param name="socket">网络套接字</param>
-		/// <param name="endPoint">终端节点</param>
-		protected virtual void ThreadPoolLoginAfterClientCheck( Socket socket, IPEndPoint endPoint ) { }
-
-		/// <summary>
-		/// 当接收到了新的请求的时候执行的操作，此处进行账户的安全验证<br />
-		/// The operation performed when a new request is received, and the account security verification is performed here
-		/// </summary>
-		/// <param name="socket">异步对象</param>
-		/// <param name="endPoint">终结点</param>
-		protected override void ThreadPoolLogin( Socket socket, IPEndPoint endPoint )
+		/// <param name="ar">异步接收的对象</param>
+#if NET20 || NET35
+		protected override void SocketAsyncCallBack( IAsyncResult ar )
+#else
+		protected override async void SocketAsyncCallBack( IAsyncResult ar )
+#endif
 		{
-			// 为了提高系统的响应能力，采用异步来实现，即时有数万台设备接入也能应付
-			string ipAddress = endPoint.Address.ToString( );
-
-			if (IsTrustedClientsOnly)
+			if (ar.AsyncState is AppSession session)
 			{
-				// 检查受信任的情况
-				if (!CheckIpAddressTrusted( ipAddress ))
+				try
 				{
-					// 客户端不被信任，退出
-					LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientDisableLogin, endPoint ) );
-					socket.Close( );
-					return;
-				}
-			}
+					int receiveCount = session.WorkSocket.EndReceive( ar );
+					OperateResult<byte[]> read1;
 
-			if (!IsUseAccountCertificate) LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOnlineInfo, endPoint ) );
-			ThreadPoolLoginAfterClientCheck( socket, endPoint );
-		}
+					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
+#if NET20 || NET35
+					read1 = ReceiveByMessage( session.WorkSocket, 5000, GetNewNetMessage( ) );
+#else
+					read1 = await ReceiveByMessageAsync( session.WorkSocket, 5000, GetNewNetMessage( ) );
+#endif
+					if (!read1.IsSuccess) { RemoveClient( session ); return; };
 
+					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{(LogMsgFormatBinary ? SoftBasic.ByteToHexString( read1.Content, ' ' ) : SoftBasic.GetAsciiStringRender( read1.Content ))}" );
 
-		private List<string> TrustedClients = null;              // 受信任的客户端
-		private bool IsTrustedClientsOnly = false;               // 是否启用仅仅受信任的客户端登录
-		private SimpleHybirdLock lock_trusted_clients;           // 受信任的客户端的列表
-
-		/// <summary>
-		/// 设置并启动受信任的客户端登录并读写，如果为null，将关闭对客户端的ip验证<br />
-		/// Set and start the trusted client login and read and write, if it is null, the client's IP verification will be turned off
-		/// </summary>
-		/// <param name="clients">受信任的客户端列表</param>
-		public void SetTrustedIpAddress( List<string> clients )
-		{
-			lock_trusted_clients.Enter( );
-			if (clients != null)
-			{
-				TrustedClients = clients.Select( m =>
-				{
-					System.Net.IPAddress iPAddress = System.Net.IPAddress.Parse( m );
-					return iPAddress.ToString( );
-				} ).ToList( );
-				IsTrustedClientsOnly = true;
-			}
-			else
-			{
-				TrustedClients = new List<string>( );
-				IsTrustedClientsOnly = false;
-			}
-			lock_trusted_clients.Leave( );
-		}
-
-		/// <summary>
-		/// 检查该Ip地址是否是受信任的<br />
-		/// Check if the IP address is trusted
-		/// </summary>
-		/// <param name="ipAddress">Ip地址信息</param>
-		/// <returns>是受信任的返回<c>True</c>，否则返回<c>False</c></returns>
-		private bool CheckIpAddressTrusted( string ipAddress )
-		{
-			if (IsTrustedClientsOnly)
-			{
-				bool result = false;
-				lock_trusted_clients.Enter( );
-				for (int i = 0; i < TrustedClients.Count; i++)
-				{
-					if (TrustedClients[i] == ipAddress)
+					OperateResult<byte[]> read = ReadFromCoreServer( session, read1.Content );
+					if (!read.IsSuccess)
 					{
-						result = true;
-						break;
+						LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {read.Message}" );
+						if (read.Content != null && read.Content.Length > 0) read.IsSuccess = true;
 					}
-				}
-				lock_trusted_clients.Leave( );
-				return result;
-			}
-			else
-			{
-				return false;
-			}
-		}
 
-		/// <summary>
-		/// 获取受信任的客户端列表<br />
-		/// Get a list of trusted clients
-		/// </summary>
-		/// <returns>字符串数据信息</returns>
-		public string[] GetTrustedClients( )
-		{
-			string[] result = new string[0];
-			lock_trusted_clients.Enter( );
-			if (TrustedClients != null)
-			{
-				result = TrustedClients.ToArray( );
+					if (read.IsSuccess)
+					{
+						if (read.Content != null)
+						{
+							session.WorkSocket.Send( read.Content );
+							LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{(LogMsgFormatBinary ? SoftBasic.ByteToHexString( read.Content, ' ' ) : SoftBasic.GetAsciiStringRender( read.Content ))}" );
+						}
+						else
+						{
+							RemoveClient( session );
+							return;
+						}
+
+					}
+					session.UpdateHeartTime( );
+					RaiseDataReceived( session, read1.Content );
+					session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), session );
+				}
+				catch (Exception ex)
+				{
+					RemoveClient( session, $"SocketAsyncCallBack Exception -> {ex.Message}" );
+				}
 			}
-			lock_trusted_clients.Leave( );
-			return result;
 		}
 
 		#endregion
 
-		#region Online Managment
+		#region Serial Support
 
 		/// <summary>
-		/// 获取在线的客户端的数量<br />
-		/// Get the number of clients online
+		/// 获取或设置串口模式下，接收一条数据最短的时间要求，当设备发送的数据非常慢的时候，或是分割发送数据的时候，就需要将本值设置的大一点，默认为20ms<br />
+		/// Get or set the shortest time required to receive a piece of data in serial port mode. 
+		/// When the data sent by the device is very slow, or when the data is divided and sent, you need to set this value to a larger value, the default is 20ms
 		/// </summary>
-		public int OnlineCount => onlineCount;
-
-		/// <summary>
-		/// 获取当前所有在线的客户端信息，包括IP地址和端口号信息<br />
-		/// Get all current online client information, including IP address and port number information
-		/// </summary>
-		public AppSession[] GetOnlineSessions
+		public int SerialReceiveAtleastTime
 		{
-			get 
-			{
-				lock (lockOnlineClient)
+			get => this.receiveAtleastTime;
+			set => this.receiveAtleastTime = value;
+		}
+
+		/// <summary>
+		/// 启动串口的从机服务，使用默认的参数进行初始化串口，9600波特率，8位数据位，无奇偶校验，1位停止位<br />
+		/// Start the slave service of serial, initialize the serial port with default parameters, 9600 baud rate, 8 data bits, no parity, 1 stop bit
+		/// </summary>
+		/// <remarks>
+		/// com支持格式化的方式，例如输入 COM3-9600-8-N-1，COM5-19200-7-E-2，其中奇偶校验的字母可选，N:无校验，O：奇校验，E:偶校验，停止位可选 0, 1, 2, 1.5 四种选项
+		/// </remarks>
+		/// <param name="com">串口信息</param>
+		public void StartSerialSlave( string com )
+		{
+			if (com.Contains( "-" ) || com.Contains( ";" ))
+				StartSerialSlave( sp =>
 				{
-					return listsOnlineClient.ToArray( );
+					sp.IniSerialByFormatString( com );
+				} );
+			else
+				StartSerialSlave( com, 9600 );
+		}
+
+		/// <summary>
+		/// 启动串口的从机服务，使用默认的参数进行初始化串口，8位数据位，无奇偶校验，1位停止位<br />
+		/// Start the slave service of serial, initialize the serial port with default parameters, 8 data bits, no parity, 1 stop bit
+		/// </summary>
+		/// <param name="com">串口信息</param>
+		/// <param name="baudRate">波特率</param>
+		public void StartSerialSlave( string com, int baudRate )
+		{
+			StartSerialSlave( sp =>
+			{
+				sp.PortName = com;
+				sp.BaudRate = baudRate;
+				sp.DataBits = 8;
+				sp.Parity   = Parity.None;
+				sp.StopBits = StopBits.One;
+			} );
+		}
+
+		/// <summary>
+		/// 启动串口的从机服务，使用指定的参数进行初始化串口，指定数据位，指定奇偶校验，指定停止位<br />
+		/// </summary>
+		/// <param name="com">串口信息</param>
+		/// <param name="baudRate">波特率</param>
+		/// <param name="dataBits">数据位</param>
+		/// <param name="parity">奇偶校验</param>
+		/// <param name="stopBits">停止位</param>
+		public void StartSerialSlave( string com, int baudRate, int dataBits, Parity parity, StopBits stopBits )
+		{
+			StartSerialSlave( sp =>
+			{
+				sp.PortName = com;
+				sp.BaudRate = baudRate;
+				sp.DataBits = dataBits;
+				sp.Parity   = parity;
+				sp.StopBits = stopBits;
+			} );
+		}
+
+		/// <summary>
+		/// 启动串口的从机服务，使用自定义的初始化方法初始化串口的参数<br />
+		/// Start the slave service of serial and initialize the parameters of the serial port using a custom initialization method
+		/// </summary>
+		/// <param name="inni">初始化信息的委托</param>
+		public void StartSerialSlave( Action<SerialPort> inni )
+		{
+			if (!serialPort.IsOpen)
+			{
+				inni?.Invoke( serialPort );
+
+				serialPort.ReadBufferSize = 1024;
+				serialPort.ReceivedBytesThreshold = 1;
+				serialPort.Open( );
+				serialPort.DataReceived += SerialPort_DataReceived;
+			}
+		}
+
+		/// <summary>
+		/// 关闭提供从机服务的串口对象<br />
+		/// Close the serial port object that provides slave services
+		/// </summary>
+		public void CloseSerialSlave( )
+		{
+			if (serialPort.IsOpen)
+			{
+				serialPort.Close( );
+			}
+		}
+
+		/// <summary>
+		/// 接收到串口数据的时候触发
+		/// </summary>
+		/// <param name="sender">串口对象</param>
+		/// <param name="e">消息</param>
+		private void SerialPort_DataReceived( object sender, SerialDataReceivedEventArgs e )
+		{
+			if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { return; };
+			int rCount   = 0;
+			int rTick    = 0;
+			byte[] buffer = new byte[2048];
+			DateTime start = DateTime.Now;
+			while (true)
+			{
+				// 在总线模式的server连接下，其他站号不匹配的服务器，不应该响应数据，但是此处会接收所有的读写数据，引发超出buffer的异常报错
+				try
+				{
+					int count = serialPort.Read( buffer, rCount, serialPort.BytesToRead );
+					// 接收不到数据之后，并且达到超时才算真的
+					if (count == 0 && rTick != 0 && (DateTime.Now - start).TotalMilliseconds >= this.receiveAtleastTime) break;
+					rCount += count;
+					rTick++;
 				}
-			}
-		}
-
-		private List<AppSession> listsOnlineClient;
-		private object lockOnlineClient;
-		private int onlineCount = 0;                   // 在线的客户端的数量
-
-		/// <summary>
-		/// 新增一个在线的客户端信息<br />
-		/// Add an online client information
-		/// </summary>
-		/// <param name="session">会话内容</param>
-		protected void AddClient( AppSession session )
-		{
-			lock (lockOnlineClient)
-			{
-				listsOnlineClient.Add( session );
-				onlineCount++;
-			}
-		}
-
-		/// <summary>
-		/// 移除一个在线的客户端信息<br />
-		/// Remove an online client message
-		/// </summary>
-		/// <param name="session">会话内容</param>
-		/// <param name="reason">下线的原因</param>
-		protected void RemoveClient( AppSession session, string reason = "" )
-		{
-			lock (lockOnlineClient)
-			{
-				if (listsOnlineClient.Remove( session ))
+				catch(Exception ex)
 				{
-					LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, session.IpEndPoint ) + " " + reason );
-					session.WorkSocket?.Close( );
-					onlineCount--;
+					// 可能会超出缓存的限制，从而引发异常
+					LogNet?.WriteError( ToString( ), $"SerialPort_DataReceived Error: " + ex.Message );
+					break;
 				}
+
+				// 检查数据是否完整，完整的话，直接进行返回
+				if (forceReceiveOnce && rCount > 0) break;
+				if (CheckSerialReceiveDataComplete( buffer, rCount )) break;
+				System.Threading.Thread.Sleep( 20 );            // 此处做个微小的延时，等待数据接收完成
 			}
-		}
 
-		/// <summary>
-		/// 关闭之后进行的操作
-		/// </summary>
-		protected override void CloseAction( )
-		{
-			base.CloseAction( );
-
-			lock (lockOnlineClient)
+			if (rCount == 0) return;
+			try
 			{
-				for (int i = 0; i < listsOnlineClient.Count; i++)
-				{
-					listsOnlineClient[i]?.WorkSocket?.Close( );
-					LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, listsOnlineClient[i].IpEndPoint ) );
-				}
-				listsOnlineClient.Clear( );
-				onlineCount = 0;
-			}
-		}
+				byte[] receive = buffer.SelectBegin( rCount ); // [{(int)(DateTime.Now - start).TotalMilliseconds} ms]
+				LogNet?.WriteDebug( ToString( ), $"[{GetSerialPort( ).PortName}] {StringResources.Language.Receive}：{GetSerialMessageLogText( receive )}" );
+				OperateResult<byte[]> dealResult = DealWithSerialReceivedData( receive );
 
-		private void ThreadTimerHeartCheck( object obj )
-		{
-			AppSession[] snapshoot = null;
-			lock (lockOnlineClient)
-				snapshoot = listsOnlineClient.ToArray( );
-			if (snapshoot != null && snapshoot.Length > 0)
-			{
-				for (int i = 0; i < snapshoot.Length; i++)
+				if (dealResult.IsSuccess)
 				{
-					if ((DateTime.Now - snapshoot[i].HeartTime) > ActiveTimeSpan)
+					if (dealResult.Content != null)
 					{
-						// 心跳检测超时
-						RemoveClient( snapshoot[i] );
+						this.serialPort.Write( dealResult.Content, 0, dealResult.Content.Length );
+						if (IsStarted) RaiseDataReceived( sender, dealResult.Content );
+						LogNet?.WriteDebug( ToString( ), $"[{GetSerialPort( ).PortName}] {StringResources.Language.Send}：{GetSerialMessageLogText( dealResult.Content )}" );
 					}
 				}
+				else
+				{
+					LogNet?.WriteError( ToString( ), $"[{GetSerialPort( ).PortName}] " + dealResult.Message );
+				}
+			}
+			catch(Exception ex)
+			{
+				LogNet?.WriteException( ToString( ), ex );
 			}
 		}
+
+		/// <summary>
+		/// 检查串口接收的数据是否完成的方法，如果接收完成，则返回<c>True</c>
+		/// </summary>
+		/// <param name="buffer">缓存的数据信息</param>
+		/// <param name="receivedLength">当前已经接收的数据长度信息</param>
+		/// <returns>是否接收完成</returns>
+		protected virtual bool CheckSerialReceiveDataComplete(byte[] buffer, int receivedLength )
+		{
+			return false;
+		}
+
+		/// <summary>
+		/// 处理串口接收数据的功能方法，需要在继承类中进行相关的重写操作
+		/// </summary>
+		/// <param name="data">串口接收到的原始字节数据</param>
+		protected virtual OperateResult<byte[]> DealWithSerialReceivedData( byte[] data )
+		{
+			return ReadFromCoreServer( null, data );
+		}
+
+		/// <summary>
+		/// 获取当前的串口对象信息
+		/// </summary>
+		/// <returns>串口对象</returns>
+		protected SerialPort GetSerialPort( ) => this.serialPort;
 
 		#endregion
 
@@ -407,9 +475,9 @@ namespace HslCommunication.Core.Net
 		{
 			if (disposing)
 			{
-				lock_trusted_clients?.Dispose( );
 				this.OnDataSend = null;
 				this.OnDataReceived = null;
+				this.serialPort?.Dispose( );
 			}
 			base.Dispose( disposing );
 		}
@@ -418,7 +486,13 @@ namespace HslCommunication.Core.Net
 
 		#region Private Member
 
-		private System.Threading.Timer timerHeart;                             // 检查活跃时间的线程
+		/// <summary>
+		/// 接收一次的数据的最少时间，当重写了报文结束的检查代码时，可以适当的将本值设置的大一点。<br />
+		/// The minimum time to receive the data once, when the check code of the end of the message is rewritten, this value can be appropriately set larger.
+		/// </summary>
+		private int receiveAtleastTime = 20;
+		private SerialPort serialPort;                                         // 核心的串口对象
+		private bool forceReceiveOnce = false;                                 // 强制接收一次数据及完成
 
 		#endregion
 
@@ -476,27 +550,13 @@ namespace HslCommunication.Core.Net
 		#region Customer Read Write
 
 		/// <inheritdoc cref="IReadWriteNet.ReadCustomer{T}(string)"/>
-		public OperateResult<T> ReadCustomer<T>( string address ) where T : IDataTransfer, new()
-		{
-			OperateResult<T> result = new OperateResult<T>( );
-			T Content = new T( );
-			OperateResult<byte[]> read = Read( address, Content.ReadCount );
-			if (read.IsSuccess)
-			{
-				Content.ParseSource( read.Content );
-				result.Content = Content;
-				result.IsSuccess = true;
-			}
-			else
-			{
-				result.ErrorCode = read.ErrorCode;
-				result.Message = read.Message;
-			}
-			return result;
-		}
+		public OperateResult<T> ReadCustomer<T>( string address ) where T : IDataTransfer, new() => ReadWriteNetHelper.ReadCustomer<T>( this, address );
+
+		/// <inheritdoc cref="IReadWriteNet.ReadCustomer{T}(string, T)"/>
+		public OperateResult<T> ReadCustomer<T>( string address, T obj ) where T : IDataTransfer, new() => ReadWriteNetHelper.ReadCustomer( this, address, obj );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteCustomer{T}(string, T)"/>
-		public OperateResult WriteCustomer<T>( string address, T data ) where T : IDataTransfer, new() => Write( address, data.ToSource( ) );
+		public OperateResult WriteCustomer<T>( string address, T data ) where T : IDataTransfer, new() => ReadWriteNetHelper.WriteCustomer( this, address, data );
 
 		#endregion
 
@@ -508,6 +568,9 @@ namespace HslCommunication.Core.Net
 		/// <inheritdoc cref="IReadWriteNet.Write{T}(T)"/>
 		public virtual OperateResult Write<T>( T data ) where T : class, new() => HslReflectionHelper.Write<T>( data, this );
 
+		/// <inheritdoc cref="IReadWriteNet.ReadStruct{T}(string, ushort)"/>
+		public virtual OperateResult<T> ReadStruct<T>( string address, ushort length ) where T : class, new() => ReadWriteNetHelper.ReadStruct<T>( this, address, length, this.ByteTransform );
+
 		#endregion
 
 		#region Read Support
@@ -518,7 +581,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt16(string, ushort)"/>
 		[HslMqttApi( "ReadInt16Array", "" )]
-		public virtual OperateResult<short[]> ReadInt16( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength) ), m => ByteTransform.TransInt16( m, 0, length ) );
+		public virtual OperateResult<short[]> ReadInt16( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 1 ) ), m => ByteTransform.TransInt16( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt16(string)"/>
 		[HslMqttApi( "ReadUInt16", "" )]
@@ -526,7 +589,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt16(string, ushort)"/>
 		[HslMqttApi( "ReadUInt16Array", "" )]
-		public virtual OperateResult<ushort[]> ReadUInt16( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength) ), m => ByteTransform.TransUInt16( m, 0, length ) );
+		public virtual OperateResult<ushort[]> ReadUInt16( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 1 ) ), m => ByteTransform.TransUInt16( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt32(string)"/>
 		[HslMqttApi( "ReadInt32", "" )]
@@ -534,7 +597,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt32(string, ushort)"/>
 		[HslMqttApi( "ReadInt32Array", "" )]
-		public virtual OperateResult<int[]> ReadInt32( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransInt32( m, 0, length ) );
+		public virtual OperateResult<int[]> ReadInt32( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransInt32( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32(string)"/>
 		[HslMqttApi( "ReadUInt32", "" )]
@@ -542,7 +605,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32(string, ushort)"/>
 		[HslMqttApi( "ReadUInt32Array", "" )]
-		public virtual OperateResult<uint[]> ReadUInt32( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransUInt32( m, 0, length ) );
+		public virtual OperateResult<uint[]> ReadUInt32( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransUInt32( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloat(string)"/>
 		[HslMqttApi( "ReadFloat", "" )]
@@ -550,7 +613,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloat(string, ushort)"/>
 		[HslMqttApi( "ReadFloatArray", "" )]
-		public virtual OperateResult<float[]> ReadFloat( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransSingle( m, 0, length ) );
+		public virtual OperateResult<float[]> ReadFloat( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransSingle( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64(string)"/>
 		[HslMqttApi( "ReadInt64", "" )]
@@ -558,7 +621,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64(string, ushort)"/>
 		[HslMqttApi( "ReadInt64Array", "" )]
-		public virtual OperateResult<long[]> ReadInt64( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransInt64( m, 0, length ) );
+		public virtual OperateResult<long[]> ReadInt64( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransInt64( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64(string)"/>
 		[HslMqttApi( "ReadUInt64", "" )]
@@ -566,7 +629,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64(string, ushort)"/>
 		[HslMqttApi( "ReadUInt64Array", "" )]
-		public virtual OperateResult<ulong[]> ReadUInt64( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransUInt64( m, 0, length ) );
+		public virtual OperateResult<ulong[]> ReadUInt64( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransUInt64( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDouble(string)"/>
 		[HslMqttApi( "ReadDouble", "" )]
@@ -574,11 +637,11 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDouble(string, ushort)"/>
 		[HslMqttApi( "ReadDoubleArray", "" )]
-		public virtual OperateResult<double[]> ReadDouble( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransDouble( m, 0, length ) );
+		public virtual OperateResult<double[]> ReadDouble( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransDouble( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadString(string, ushort)"/>
 		[HslMqttApi( "ReadString", "" )]
-		public OperateResult<string> ReadString( string address, ushort length ) => ReadString( address, length, Encoding.ASCII );
+		public virtual OperateResult<string> ReadString( string address, ushort length ) => ReadString( address, length, Encoding.ASCII );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadString(string, ushort, Encoding)"/>
 		public virtual OperateResult<string> ReadString( string address, ushort length, Encoding encoding ) => ByteTransformHelper.GetResultFromBytes( Read( address, length ), m => ByteTransform.TransString( m, 0, m.Length, encoding ) );
@@ -609,7 +672,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, int)"/>
 		[HslMqttApi( "WriteInt32", "" )]
-		public OperateResult Write( string address, int value ) => Write( address, new int[] { value } );
+		public virtual OperateResult Write( string address, int value ) => Write( address, new int[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, uint[])"/>
 		[HslMqttApi( "WriteUInt32Array", "" )]
@@ -617,7 +680,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, uint)"/>
 		[HslMqttApi( "WriteUInt32", "" )]
-		public OperateResult Write( string address, uint value ) => Write( address, new uint[] { value } );
+		public virtual OperateResult Write( string address, uint value ) => Write( address, new uint[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, float[])"/>
 		[HslMqttApi( "WriteFloatArray", "" )]
@@ -625,7 +688,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, float)"/>
 		[HslMqttApi( "WriteFloat", "" )]
-		public OperateResult Write( string address, float value ) => Write( address, new float[] { value } );
+		public virtual OperateResult Write( string address, float value ) => Write( address, new float[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, long[])"/>
 		[HslMqttApi( "WriteInt64Array", "" )]
@@ -633,7 +696,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, long)"/>
 		[HslMqttApi( "WriteInt64", "" )]
-		public OperateResult Write( string address, long value ) => Write( address, new long[] { value } );
+		public virtual OperateResult Write( string address, long value ) => Write( address, new long[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, ulong[])"/>
 		[HslMqttApi( "WriteUInt64Array", "" )]
@@ -641,7 +704,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, ulong)"/>
 		[HslMqttApi( "WriteUInt64", "" )]
-		public OperateResult Write( string address, ulong value ) => Write( address, new ulong[] { value } );
+		public virtual OperateResult Write( string address, ulong value ) => Write( address, new ulong[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, double[])"/>
 		[HslMqttApi( "WriteDoubleArray", "" )]
@@ -649,7 +712,7 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, double)"/>
 		[HslMqttApi( "WriteDouble", "" )]
-		public OperateResult Write( string address, double value ) => Write( address, new double[] { value } );
+		public virtual OperateResult Write( string address, double value ) => Write( address, new double[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, string)"/>
 		[HslMqttApi( "WriteString", "" )]
@@ -662,7 +725,7 @@ namespace HslCommunication.Core.Net
 		public virtual OperateResult Write( string address, string value, Encoding encoding )
 		{
 			byte[] temp = ByteTransform.TransByte( value, encoding );
-			if (WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
+			if (this.WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
 			return Write( address, temp );
 		}
 
@@ -670,7 +733,7 @@ namespace HslCommunication.Core.Net
 		public virtual OperateResult Write( string address, string value, int length, Encoding encoding )
 		{
 			byte[] temp = ByteTransform.TransByte( value, encoding );
-			if (WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
+			if (this.WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
 			temp = SoftBasic.ArrayExpandToLength( temp, length );
 			return Write( address, temp );
 		}
@@ -763,28 +826,14 @@ namespace HslCommunication.Core.Net
 
 		#region Async Customer Read Write
 #if !NET35 && !NET20
-		/// <inheritdoc cref="IReadWriteNet.WriteCustomerAsync{T}(string, T)"/>
-		public async Task<OperateResult<T>> ReadCustomerAsync<T>( string address ) where T : IDataTransfer, new()
-		{
-			OperateResult<T> result = new OperateResult<T>( );
-			T Content = new T( );
-			OperateResult<byte[]> read = await ReadAsync( address, Content.ReadCount );
-			if (read.IsSuccess)
-			{
-				Content.ParseSource( read.Content );
-				result.Content = Content;
-				result.IsSuccess = true;
-			}
-			else
-			{
-				result.ErrorCode = read.ErrorCode;
-				result.Message = read.Message;
-			}
-			return result;
-		}
+		/// <inheritdoc cref="IReadWriteNet.ReadCustomerAsync{T}(string)"/>
+		public async Task<OperateResult<T>> ReadCustomerAsync<T>( string address ) where T : IDataTransfer, new() => await ReadWriteNetHelper.ReadCustomerAsync<T>( this, address );
+
+		/// <inheritdoc cref="IReadWriteNet.ReadCustomerAsync{T}(string, T)"/>
+		public async Task<OperateResult<T>> ReadCustomerAsync<T>( string address, T obj ) where T : IDataTransfer, new() => await ReadWriteNetHelper.ReadCustomerAsync( this, address, obj );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteCustomerAsync{T}(string, T)"/>
-		public async Task<OperateResult> WriteCustomerAsync<T>( string address, T data ) where T : IDataTransfer, new() => await WriteAsync( address, data.ToSource( ) );
+		public async Task<OperateResult> WriteCustomerAsync<T>( string address, T data ) where T : IDataTransfer, new() => await ReadWriteNetHelper.WriteCustomerAsync( this, address, data );
 #endif
 		#endregion
 
@@ -795,6 +844,10 @@ namespace HslCommunication.Core.Net
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync{T}(T)"/>
 		public virtual async Task<OperateResult> WriteAsync<T>( T data ) where T : class, new() => await HslReflectionHelper.WriteAsync<T>( data, this );
+
+		/// <inheritdoc cref="IReadWriteNet.ReadStruct{T}(string, ushort)"/>
+		public virtual async Task<OperateResult<T>> ReadStructAsync<T>( string address, ushort length ) where T : class, new() => await ReadWriteNetHelper.ReadStructAsync<T>( this, address, length, this.ByteTransform );
+
 #endif
 		#endregion
 
@@ -804,52 +857,52 @@ namespace HslCommunication.Core.Net
 		public async Task<OperateResult<short>> ReadInt16Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadInt16Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt16Async(string, ushort)"/>
-		public virtual async Task<OperateResult<short[]>> ReadInt16Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength) ), m => ByteTransform.TransInt16( m, 0, length ) );
+		public virtual async Task<OperateResult<short[]>> ReadInt16Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 1 ) ), m => ByteTransform.TransInt16( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt16Async(string)"/>
 		public async Task<OperateResult<ushort>> ReadUInt16Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadUInt16Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt16Async(string, ushort)"/>
-		public virtual async Task<OperateResult<ushort[]>> ReadUInt16Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength) ), m => ByteTransform.TransUInt16( m, 0, length ) );
+		public virtual async Task<OperateResult<ushort[]>> ReadUInt16Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 1 ) ), m => ByteTransform.TransUInt16( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt32Async(string)"/>
 		public async Task<OperateResult<int>> ReadInt32Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadInt32Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt32Async(string, ushort)"/>
-		public virtual async Task<OperateResult<int[]>> ReadInt32Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransInt32( m, 0, length ) );
+		public virtual async Task<OperateResult<int[]>> ReadInt32Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransInt32( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32Async(string)"/>
 		public async Task<OperateResult<uint>> ReadUInt32Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadUInt32Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32Async(string, ushort)"/>
-		public virtual async Task<OperateResult<uint[]>> ReadUInt32Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransUInt32( m, 0, length ) );
+		public virtual async Task<OperateResult<uint[]>> ReadUInt32Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransUInt32( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloatAsync(string)"/>
 		public async Task<OperateResult<float>> ReadFloatAsync( string address ) => ByteTransformHelper.GetResultFromArray( await ReadFloatAsync( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloatAsync(string, ushort)"/>
-		public virtual async Task<OperateResult<float[]>> ReadFloatAsync( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransSingle( m, 0, length ) );
+		public virtual async Task<OperateResult<float[]>> ReadFloatAsync( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransSingle( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64Async(string)"/>
 		public async Task<OperateResult<long>> ReadInt64Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadInt64Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64Async(string, ushort)"/>
-		public virtual async Task<OperateResult<long[]>> ReadInt64Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransInt64( m, 0, length ) );
+		public virtual async Task<OperateResult<long[]>> ReadInt64Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransInt64( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64Async(string)"/>
 		public async Task<OperateResult<ulong>> ReadUInt64Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadUInt64Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64Async(string, ushort)"/>
-		public virtual async Task<OperateResult<ulong[]>> ReadUInt64Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransUInt64( m, 0, length ) );
+		public virtual async Task<OperateResult<ulong[]>> ReadUInt64Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransUInt64( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDoubleAsync(string)"/>
 		public async Task<OperateResult<double>> ReadDoubleAsync( string address ) => ByteTransformHelper.GetResultFromArray( await ReadDoubleAsync( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDoubleAsync(string, ushort)"/>
-		public virtual async Task<OperateResult<double[]>> ReadDoubleAsync( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransDouble( m, 0, length ) );
+		public virtual async Task<OperateResult<double[]>> ReadDoubleAsync( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransDouble( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadStringAsync(string, ushort)"/>
-		public async Task<OperateResult<string>> ReadStringAsync( string address, ushort length ) => await ReadStringAsync( address, length, Encoding.ASCII );
+		public virtual async Task<OperateResult<string>> ReadStringAsync( string address, ushort length ) => await ReadStringAsync( address, length, Encoding.ASCII );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadStringAsync(string, ushort, Encoding)"/>
 		public virtual async Task<OperateResult<string>> ReadStringAsync( string address, ushort length, Encoding encoding ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, length ), m => ByteTransform.TransString( m, 0, m.Length, encoding ) );
@@ -874,37 +927,37 @@ namespace HslCommunication.Core.Net
 		public virtual async Task<OperateResult> WriteAsync( string address, int[] values ) => await WriteAsync( address, ByteTransform.TransByte( values ) );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, int)"/>
-		public async Task<OperateResult> WriteAsync( string address, int value ) => await WriteAsync( address, new int[] { value } );
+		public virtual async Task<OperateResult> WriteAsync( string address, int value ) => await WriteAsync( address, new int[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, uint[])"/>
 		public virtual async Task<OperateResult> WriteAsync( string address, uint[] values ) => await WriteAsync( address, ByteTransform.TransByte( values ) );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, uint)"/>
-		public async Task<OperateResult> WriteAsync( string address, uint value ) => await WriteAsync( address, new uint[] { value } );
+		public virtual async Task<OperateResult> WriteAsync( string address, uint value ) => await WriteAsync( address, new uint[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, float[])"/>
 		public virtual async Task<OperateResult> WriteAsync( string address, float[] values ) => await WriteAsync( address, ByteTransform.TransByte( values ) );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, float)"/>
-		public async Task<OperateResult> WriteAsync( string address, float value ) => await WriteAsync( address, new float[] { value } );
+		public virtual async Task<OperateResult> WriteAsync( string address, float value ) => await WriteAsync( address, new float[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, long[])"/>
 		public virtual async Task<OperateResult> WriteAsync( string address, long[] values ) => await WriteAsync( address, ByteTransform.TransByte( values ) );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, long)"/>
-		public async Task<OperateResult> WriteAsync( string address, long value ) => await WriteAsync( address, new long[] { value } );
+		public virtual async Task<OperateResult> WriteAsync( string address, long value ) => await WriteAsync( address, new long[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, ulong[])"/>
 		public virtual async Task<OperateResult> WriteAsync( string address, ulong[] values ) => await WriteAsync( address, ByteTransform.TransByte( values ) );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, ulong)"/>
-		public async Task<OperateResult> WriteAsync( string address, ulong value ) => await WriteAsync( address, new ulong[] { value } );
+		public virtual async Task<OperateResult> WriteAsync( string address, ulong value ) => await WriteAsync( address, new ulong[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, double[])"/>
 		public virtual async Task<OperateResult> WriteAsync( string address, double[] values ) => await WriteAsync( address, ByteTransform.TransByte( values ) );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, double)"/>
-		public async Task<OperateResult> WriteAsync( string address, double value ) => await WriteAsync( address, new double[] { value } );
+		public virtual async Task<OperateResult> WriteAsync( string address, double value ) => await WriteAsync( address, new double[] { value } );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, string)" />
 		public virtual async Task<OperateResult> WriteAsync( string address, string value ) => await WriteAsync( address, value, Encoding.ASCII );
@@ -913,7 +966,7 @@ namespace HslCommunication.Core.Net
 		public virtual async Task<OperateResult> WriteAsync( string address, string value, Encoding encoding )
 		{
 			byte[] temp = ByteTransform.TransByte( value, encoding );
-			if (WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
+			if (this.WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
 			return await WriteAsync( address, temp );
 		}
 
@@ -924,11 +977,10 @@ namespace HslCommunication.Core.Net
 		public virtual async Task<OperateResult> WriteAsync( string address, string value, int length, Encoding encoding )
 		{
 			byte[] temp = ByteTransform.TransByte( value, encoding );
-			if (WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
+			if (this.WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
 			temp = SoftBasic.ArrayExpandToLength( temp, length );
 			return await WriteAsync( address, temp );
 		}
-
 #endif
 		#endregion
 

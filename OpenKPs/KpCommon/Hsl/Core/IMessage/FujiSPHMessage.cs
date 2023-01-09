@@ -8,7 +8,7 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// 富士SPH协议的报文消息
 	/// </summary>
-	public class FujiSPHMessage : INetMessage
+	public class FujiSPHMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 20;
@@ -20,19 +20,5 @@ namespace HslCommunication.Core.IMessage
 			return BitConverter.ToUInt16( HeadBytes, 18 );
 		}
 
-		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token ) => true;
-
-		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => 0;
-
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 	}
 }

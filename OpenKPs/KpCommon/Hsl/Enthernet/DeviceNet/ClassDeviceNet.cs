@@ -151,7 +151,6 @@ namespace HslCommunication.Enthernet
 
 
                         byte[] receive =ms.ToArray( );
-                        ms.Dispose( );
 
                         lock_list.Enter( );
                         stateone.ReceiveTime = DateTime.Now;

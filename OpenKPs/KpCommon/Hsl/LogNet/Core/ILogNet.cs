@@ -48,6 +48,26 @@ namespace HslCommunication.LogNet
 		bool ConsoleOutput { get; set; }
 
 		/// <summary>
+		/// 获取或设置是否记录线程ID的数据信息，默认为 <c>True</c>，表示记录，否则，需要设置为 <c>False</c><br />
+		/// Get or set whether to record the data information of the thread ID, the default is <c>True</c>, which means record, otherwise, it needs to be set to <c>False</c><br />
+		/// </summary>
+		bool LogThreadID { get; set; }
+
+		/// <summary>
+		/// 获取或设置在记录文件日志的时候，是否记录不可见字符STX(也即是ASCII字符集的0x02)。默认为 <c>True</c>, 也即是记录这个字符，在日志分析的时候，可以更加方便的分析。<br />
+		/// Gets or sets whether to record the invisible character STX (that is, 0x02 of the ASCII character set) when recording the file log. 
+		/// The default is <c>True</c>, that is, this character is recorded, which can be analyzed more conveniently during log analysis.
+		/// </summary>
+		bool LogStxAsciiCode { get; set; }
+
+		/// <summary>
+		/// 获取或设置当前日志时间的小时偏差信息，用来解决某些情况下时区设置异常导致记录时间一直不正确的问题，默认为 0，也就是不处理。可以为正数，也可以为负数。<br />
+		/// Obtain or set the hourly deviation information of the current log time to solve the problem that the recording time has been incorrect due to abnormal time zone setting in some cases, 
+		/// and the default is 0, that is, it is not processed. Can be positive or negative.
+		/// </summary>
+		int HourDeviation { get; set; }
+
+		/// <summary>
 		/// 存储之前引发的事件，允许额外的操作，比如打印控制台，存储数据库等等<br />
 		/// Store previously raised events, allowing additional operations, such as print console, store database, etc.
 		/// </summary>

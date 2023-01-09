@@ -12,6 +12,9 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Security.Cryptography;
 using System.Drawing;
 using System.Reflection;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace HslCommunication.BasicFramework
@@ -333,7 +336,7 @@ namespace HslCommunication.BasicFramework
 					{
 						tmp[tmp.Length - data.Length + i] = data[i];
 					}
-
+					
 					array = tmp;
 				}
 			}
@@ -546,7 +549,7 @@ namespace HslCommunication.BasicFramework
 
 		#endregion
 
-		#region JSON Data Get
+		#region JSON XML Data Get
 
 		/// <summary>
 		/// 一个泛型方法，提供json对象的数据读取<br />
@@ -593,6 +596,49 @@ namespace HslCommunication.BasicFramework
 			{
 				json.Add( property, new JValue( value ) );
 			}
+		}
+
+		/// <summary>
+		/// 一个泛型的方法，提供XML对象的数据读取为实际的数据，支持BCL的基础类型。<br />
+		/// A generic method that provides data for XML objects to be read as actual data, supporting the underlying types of BCL.
+		/// </summary>
+		/// <typeparam name="T">类型对象</typeparam>
+		/// <param name="element">元素信息</param>
+		/// <param name="name">属性的名称</param>
+		/// <param name="defaultValue">默认值信息</param>
+		/// <returns>解析后的值</returns>
+		/// <exception cref="Exception">解析失败的异常</exception>
+		public static T GetXmlValue<T>(XElement element, string name, T defaultValue)
+		{
+			if (element.Attribute(name) == null) return defaultValue;
+			Type type = typeof(T);
+			if (type == typeof(bool)) return (T)(object)bool.Parse(element.Attribute(name).Value);
+			if (type == typeof(bool[])) return (T)(object)element.Attribute(name).Value.ToStringArray<bool>();
+			if (type == typeof(byte)) return (T)(object)byte.Parse(element.Attribute(name).Value);
+			if (type == typeof(byte[])) return (T)(object)element.Attribute(name).Value.ToHexBytes();
+			if (type == typeof(sbyte)) return (T)(object)sbyte.Parse(element.Attribute(name).Value);
+			if (type == typeof(sbyte[])) return (T)(object)element.Attribute(name).Value.ToStringArray<sbyte>();
+			if (type == typeof(short)) return (T)(object)short.Parse(element.Attribute(name).Value);
+			if (type == typeof(short[])) return (T)(object)element.Attribute(name).Value.ToStringArray<short>();
+			if (type == typeof(ushort)) return (T)(object)ushort.Parse(element.Attribute(name).Value);
+			if (type == typeof(ushort[])) return (T)(object)element.Attribute(name).Value.ToStringArray<ushort>();
+			if (type == typeof(int)) return (T)(object)int.Parse(element.Attribute(name).Value);
+			if (type == typeof(int[])) return (T)(object)element.Attribute(name).Value.ToStringArray<int>();
+			if (type == typeof(uint)) return (T)(object)uint.Parse(element.Attribute(name).Value);
+			if (type == typeof(uint[])) return (T)(object)element.Attribute(name).Value.ToStringArray<uint>();
+			if (type == typeof(long)) return (T)(object)long.Parse(element.Attribute(name).Value);
+			if (type == typeof(long[])) return (T)(object)element.Attribute(name).Value.ToStringArray<long>();
+			if (type == typeof(ulong)) return (T)(object)ulong.Parse(element.Attribute(name).Value);
+			if (type == typeof(ulong[])) return (T)(object)element.Attribute(name).Value.ToStringArray<ulong>();
+			if (type == typeof(float)) return (T)(object)float.Parse(element.Attribute(name).Value);
+			if (type == typeof(float[])) return (T)(object)element.Attribute(name).Value.ToStringArray<float>();
+			if (type == typeof(double)) return (T)(object)double.Parse(element.Attribute(name).Value);
+			if (type == typeof(double[])) return (T)(object)element.Attribute(name).Value.ToStringArray<double>();
+			if (type == typeof(DateTime)) return (T)(object)DateTime.Parse(element.Attribute(name).Value);
+			if (type == typeof(DateTime[])) return (T)(object)element.Attribute(name).Value.ToStringArray<DateTime>();
+            if (type == typeof(string)) return (T)(object)element.Attribute(name).Value;
+            if (type == typeof(string[])) return (T)(object)element.Attribute(name).Value.ToStringArray<string>();
+            throw new Exception($"not supported type:{type.Name}");
 		}
 
 		#endregion
@@ -691,21 +737,22 @@ namespace HslCommunication.BasicFramework
 		/// Byte data into a string of 16 binary representations
 		/// </summary>
 		/// <param name="InBytes">字节数组</param>
-		/// <param name="segment">分割符</param>
-		/// <param name="newLineCount">每隔指定数量的时候进行换行</param>
+		/// <param name="segment">分割符，如果设置为0，则没有分隔符信息</param>
+		/// <param name="newLineCount">每隔指定数量的时候进行换行，如果小于等于0，则不进行分行显示</param>
+		/// <param name="format">格式信息，默认为{0:X2}</param>
 		/// <returns>返回的字符串</returns>
 		/// <example>
 		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\BasicFramework\SoftBasicExample.cs" region="ByteToHexStringExample2" title="ByteToHexString示例" />
 		/// </example>
-		public static string ByteToHexString( byte[] InBytes, char segment, int newLineCount )
+		public static string ByteToHexString( byte[] InBytes, char segment, int newLineCount, string format = "{0:X2}" )
 		{
 			if (InBytes == null) return string.Empty;
 			StringBuilder sb = new StringBuilder( );
 			long tick = 0;
 			foreach (byte InByte in InBytes)
 			{
-				if (segment == 0) sb.Append( string.Format( "{0:X2}", InByte ) );
-				else sb.Append( string.Format( "{0:X2}{1}", InByte, segment ) );
+				if (segment == 0) sb.Append( string.Format( format, InByte ) );
+				else sb.Append( string.Format( format + "{1}", InByte, segment ) );
 
 				tick++;
 				if (newLineCount > 0 && tick >= newLineCount)
@@ -801,6 +848,9 @@ namespace HslCommunication.BasicFramework
 		/// 将byte数组按照双字节进行反转，如果为单数的情况，则自动补齐<br />
 		/// Reverses the byte array by double byte, or if the singular is the case, automatically
 		/// </summary>
+		/// <remarks>
+		/// 例如传入的字节数据是 01 02 03 04, 那么反转后就是 02 01 04 03
+		/// </remarks>
 		/// <param name="inBytes">输入的字节信息</param>
 		/// <returns>反转后的数据</returns>
 		/// <example>
@@ -828,8 +878,8 @@ namespace HslCommunication.BasicFramework
 		#region Byte[] and AsciiByte[] transform
 
 		/// <summary>
-		/// 将字节数组显示为ASCII格式的字符串，当遇到0x20以下的不可见字符时，使用十六进制的数据显示<br />
-		/// Display the byte array as a string in ASCII format, and use hexadecimal data display when encountering invisible characters below 0x20
+		/// 将字节数组显示为ASCII格式的字符串，当遇到0x20以下及0x7E以上的不可见字符时，使用十六进制的数据显示<br />
+		/// Display the byte array as a string in ASCII format, when encountering invisible characters below 0x20 and above 0x7E, use hexadecimal data to display<br />
 		/// </summary>
 		/// <param name="content">字节数组信息</param>
 		/// <returns>ASCII格式的字符串信息</returns>
@@ -839,7 +889,7 @@ namespace HslCommunication.BasicFramework
 			StringBuilder sb = new StringBuilder( );
 			for (int i = 0; i < content.Length; i++)
 			{
-				if(content[i] < 0x20)
+				if(content[i] < 0x20 || content[i] > 0x7E)
 				{
 					sb.Append( $"\\{content[i]:X2}" );
 				}
@@ -849,6 +899,20 @@ namespace HslCommunication.BasicFramework
 				}
 			}
 			return sb.ToString( );
+		}
+
+		/// <summary>
+		/// 从显示的ASCII格式的字符串，转为原始字节数组，如果遇到 \00 这种表示原始字节的内容，则直接进行转换操作，遇到 \r 直接转换 0x0D, \n 直接转换 0x0A<br />
+		/// Convert from the displayed string in ASCII format to the original byte array. If you encounter \00, which represents the original byte content,
+		/// the conversion operation is performed directly. When encountering \r, it is directly converted to 0x0D, and \n is directly converted to 0x0A.
+		/// </summary>
+		/// <param name="render">等待转换的字符串</param>
+		/// <returns>原始字节数组</returns>
+		public static byte[] GetFromAsciiStringRender( string render )
+		{
+			if (string.IsNullOrEmpty( render )) return new byte[0];
+			MatchEvaluator matchEvaluator = new MatchEvaluator( m => string.Format( "{0}", (char)Convert.ToByte( m.Value.Substring( 1 ), 16 ) ) );
+			return Encoding.ASCII.GetBytes( Regex.Replace( render.Replace( "\\r", "\r" ).Replace( "\\n", "\n" ), @"\\[0-9A-Fa-f]{2}", matchEvaluator ) );
 		}
 
 		/// <summary>
@@ -994,25 +1058,42 @@ namespace HslCommunication.BasicFramework
 		}
 
 		/// <summary>
+		/// 将bool数组转换为字符串进行显示，true被转为1，false转换为0<br />
+		/// Convert the bool array to a string for display, true is converted to 1, false is converted to 0
+		/// </summary>
+		/// <param name="array">bool数组</param>
+		/// <returns>转换后的字符串</returns>
+		public static string BoolArrayToString( bool[] array )
+		{
+			if ( array == null ) return string.Empty;
+			StringBuilder sb = new StringBuilder( );
+			for (int i = 0; i < array.Length; i++)
+			{
+				sb.Append( array[i] ? "1" : "0" );
+			}
+			return sb.ToString();
+		}
+
+		/// <summary>
 		/// 从Byte数组中提取位数组，length代表位数<br />
 		/// Extracts a bit array from a byte array, length represents the number of digits
 		/// </summary>
-		/// <param name="InBytes">原先的字节数组</param>
+		/// <param name="inBytes">原先的字节数组</param>
 		/// <param name="length">想要转换的长度，如果超出自动会缩小到数组最大长度</param>
 		/// <returns>转换后的bool数组</returns>
 		/// <example>
 		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\BasicFramework\SoftBasicExample.cs" region="ByteToBoolArray" title="ByteToBoolArray示例" />
 		/// </example> 
-		public static bool[] ByteToBoolArray( byte[] InBytes, int length )
+		public static bool[] ByteToBoolArray( byte[] inBytes, int length )
 		{
-			if (InBytes == null) return null;
+			if (inBytes == null) return null;
 
-			if (length > InBytes.Length * 8) length = InBytes.Length * 8;
+			if (length > inBytes.Length * 8) length = inBytes.Length * 8;
 			bool[] buffer = new bool[length];
 
 			for (int i = 0; i < length; i++)
 			{
-				buffer[i] = BoolOnByteIndex( InBytes[i / 8], i % 8 );
+				buffer[i] = BoolOnByteIndex( inBytes[i / 8], i % 8 );
 			}
 
 			return buffer;
@@ -1230,6 +1311,297 @@ namespace HslCommunication.BasicFramework
 
 		#endregion
 
+		#region Url Encode Decode
+
+		// 以下代码来自于微软自身的开源库
+
+		private static int HexToInt( char h )
+		{
+			return (h >= '0' && h <= '9') ? h - '0' :
+			(h >= 'a' && h <= 'f') ? h - 'a' + 10 :
+			(h >= 'A' && h <= 'F') ? h - 'A' + 10 :
+			-1;
+		}
+
+		private static string ValidateString( string input, bool skipUtf16Validation )
+		{
+			if (skipUtf16Validation || String.IsNullOrEmpty( input ))
+			{
+				return input;
+			}
+
+			// locate the first surrogate character
+			int idxOfFirstSurrogate = -1;
+			for (int i = 0; i < input.Length; i++)
+			{
+				if (Char.IsSurrogate( input[i] ))
+				{
+					idxOfFirstSurrogate = i;
+					break;
+				}
+			}
+
+			// fast case: no surrogates = return input string
+			if (idxOfFirstSurrogate < 0)
+			{
+				return input;
+			}
+
+			// slow case: surrogates exist, so we need to validate them
+			char[] chars = input.ToCharArray( );
+			for (int i = idxOfFirstSurrogate; i < chars.Length; i++)
+			{
+				char thisChar = chars[i];
+
+				// If this character is a low surrogate, then it was not preceded by
+				// a high surrogate, so we'll replace it.
+				if (Char.IsLowSurrogate( thisChar ))
+				{
+					chars[i] = '\uFFFD';
+					continue;
+				}
+
+				if (Char.IsHighSurrogate( thisChar ))
+				{
+					// If this character is a high surrogate and it is followed by a
+					// low surrogate, allow both to remain.
+					if (i + 1 < chars.Length && Char.IsLowSurrogate( chars[i + 1] ))
+					{
+						i++; // skip the low surrogate also
+						continue;
+					}
+
+					// If this character is a high surrogate and it is not followed
+					// by a low surrogate, replace it.
+					chars[i] = '\uFFFD';
+					continue;
+				}
+
+				// Otherwise, this is a non-surrogate character and just move to the
+				// next character.
+			}
+			return new String( chars );
+		}
+
+		private static bool ValidateUrlEncodingParameters( byte[] bytes, int offset, int count )
+		{
+			if (bytes == null && count == 0)
+				return false;
+			if (bytes == null)
+			{
+				throw new ArgumentNullException( "bytes" );
+			}
+			if (offset < 0 || offset > bytes.Length)
+			{
+				throw new ArgumentOutOfRangeException( "offset" );
+			}
+			if (count < 0 || offset + count > bytes.Length)
+			{
+				throw new ArgumentOutOfRangeException( "count" );
+			}
+
+			return true;
+		}
+
+		private static bool IsUrlSafeChar( char ch )
+		{
+			if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9'))
+				return true;
+
+			switch (ch)
+			{
+				case '-':
+				case '_':
+				case '.':
+				case '!':
+				case '*':
+				case '(':
+				case ')':
+					return true;
+			}
+
+			return false;
+		}
+
+		private static string UrlEncodeSpaces( string str )
+		{
+			if (str != null && str.IndexOf( ' ' ) >= 0)
+				str = str.Replace( " ", "%20" );
+			return str;
+		}
+
+		private static char IntToHex( int n )
+		{
+			Debug.Assert( n < 0x10 );
+
+			if (n <= 9)
+				return (char)(n + (int)'0');
+			else
+				return (char)(n - 10 + (int)'A');
+		}
+
+		private static byte[] UrlEncodeToBytes( byte[] bytes )
+		{
+			int offset = 0;
+			int count = bytes.Length;
+			if (!ValidateUrlEncodingParameters( bytes, offset, count ))
+			{
+				return null;
+			}
+
+			int cSpaces = 0;
+			int cUnsafe = 0;
+
+			// count them first
+			for (int i = 0; i < count; i++)
+			{
+				char ch = (char)bytes[offset + i];
+
+				if (ch == ' ')
+					cSpaces++;
+				else if (!IsUrlSafeChar( ch ))
+					cUnsafe++;
+			}
+
+			// nothing to expand?
+			if (cSpaces == 0 && cUnsafe == 0)
+			{
+				// DevDiv 912606: respect "offset" and "count"
+				if (0 == offset && bytes.Length == count)
+				{
+					return bytes;
+				}
+				else
+				{
+					var subarray = new byte[count];
+					Buffer.BlockCopy( bytes, offset, subarray, 0, count );
+					return subarray;
+				}
+			}
+
+			// expand not 'safe' characters into %XX, spaces to +s
+			byte[] expandedBytes = new byte[count + cUnsafe * 2];
+			int pos = 0;
+
+			for (int i = 0; i < count; i++)
+			{
+				byte b = bytes[offset + i];
+				char ch = (char)b;
+
+				if (IsUrlSafeChar( ch ))
+				{
+					expandedBytes[pos++] = b;
+				}
+				else if (ch == ' ')
+				{
+					expandedBytes[pos++] = (byte)'+';
+				}
+				else
+				{
+					expandedBytes[pos++] = (byte)'%';
+					expandedBytes[pos++] = (byte)IntToHex( (b >> 4) & 0xf );
+					expandedBytes[pos++] = (byte)IntToHex( b & 0x0f );
+				}
+			}
+
+			return expandedBytes;
+		}
+
+		private static byte[] UrlEncode( byte[] bytes, bool alwaysCreateNewReturnValue )
+		{
+			byte[] encoded = UrlEncodeToBytes( bytes );
+
+			return (alwaysCreateNewReturnValue && (encoded != null) && (encoded == bytes))
+				? (byte[])encoded.Clone( )
+				: encoded;
+		}
+
+		/// <summary>
+		/// 将字符串编码为URL可以识别的字符串，中文会被编码为%开头的数据，例如 中文 转义为 %2F%E4%B8%AD%E6%96%87 <br />
+		/// Encoding a string as a URL-recognizable string Chinese encoded as data that begins with %, such as 中文 escaped as %2F%E4%B8%AD%E6%96%87
+		/// </summary>
+		/// <param name="str">等待转换的字符串数据</param>
+		/// <param name="e">编码信息，一般为 UTF8 </param>
+		/// <returns>编码之后的结果</returns>
+		public static string UrlEncode( string str, Encoding e )
+		{
+			if (str == null)
+				return null;
+			byte[] bytes = e.GetBytes( str );
+
+			return Encoding.ASCII.GetString( UrlEncode( bytes, true ) );
+		}
+
+		/// <summary>
+		/// 将url的编码解码为真实的字符串，例如 %2F%E4%B8%AD%E6%96%87 解码为 中文<br />
+		/// Decode the encoding of url as a real string, for example %2F%E4%B8%AD%E6%96%87 to 中文
+		/// </summary>
+		/// <param name="value">等待转换的值</param>
+		/// <param name="encoding">编码信息，一般为 UTF8</param>
+		/// <returns>解码之后的结果</returns>
+		public static string UrlDecode( string value, Encoding encoding )
+		{
+			int count = value.Length;
+			UrlDecoder helper = new UrlDecoder( count, encoding );
+
+			// go through the string's chars collapsing %XX and %uXXXX and
+			// appending each char as char, with exception of %XX constructs
+			// that are appended as bytes
+
+			for (int pos = 0; pos < count; pos++)
+			{
+				char ch = value[pos];
+
+				if (ch == '+')
+				{
+					ch = ' ';
+				}
+				else if (ch == '%' && pos < count - 2)
+				{
+					if (value[pos + 1] == 'u' && pos < count - 5)
+					{
+						int h1 = HexToInt( value[pos + 2] );
+						int h2 = HexToInt( value[pos + 3] );
+						int h3 = HexToInt( value[pos + 4] );
+						int h4 = HexToInt( value[pos + 5] );
+
+						if (h1 >= 0 && h2 >= 0 && h3 >= 0 && h4 >= 0)
+						{   // valid 4 hex chars
+							ch = (char)((h1 << 12) | (h2 << 8) | (h3 << 4) | h4);
+							pos += 5;
+
+							// only add as char
+							helper.AddChar( ch );
+							continue;
+						}
+					}
+					else
+					{
+						int h1 = HexToInt( value[pos + 1] );
+						int h2 = HexToInt( value[pos + 2] );
+
+						if (h1 >= 0 && h2 >= 0)
+						{     // valid 2 hex chars
+							byte b = (byte)((h1 << 4) | h2);
+							pos += 2;
+
+							// don't add as char
+							helper.AddByte( b );
+							continue;
+						}
+					}
+				}
+
+				if ((ch & 0xFF80) == 0)
+					helper.AddByte( (byte)ch ); // 7 bit have to go as bytes because of Unicode
+				else
+					helper.AddChar( ch );
+			}
+			return ValidateString( helper.GetString( ), true );
+		}
+
+		#endregion
+
 		#region Basic Framework
 
 		/// <summary>
@@ -1239,7 +1611,7 @@ namespace HslCommunication.BasicFramework
 		/// <remarks>
 		/// 当你要显示本组件框架的版本号的时候，就可以用这个属性来显示
 		/// </remarks>
-		public static SystemVersion FrameworkVersion => new SystemVersion( "10.1.2" );
+		public static SystemVersion FrameworkVersion => new SystemVersion( "11.3.1" );
 
 		#endregion
 
@@ -1289,11 +1661,81 @@ namespace HslCommunication.BasicFramework
 		/// </example>
 		public static string GetUniqueStringByGuidAndRandom( )
 		{
-			Random random = new Random( );
-			return Guid.NewGuid( ).ToString( "N" ) + random.Next( 1000, 10000 );
+			return Guid.NewGuid( ).ToString( "N" ) + HslHelper.HslRandom.Next( 1000, 10000 );
 		}
 
 		#endregion
+
 	}
 
+	class UrlDecoder
+	{
+		private int _bufferSize;
+
+		// Accumulate characters in a special array
+		private int _numChars;
+		private char[] _charBuffer;
+
+		// Accumulate bytes for decoding into characters in a special array
+		private int _numBytes;
+		private byte[] _byteBuffer;
+
+		// Encoding to convert chars to bytes
+		private Encoding _encoding;
+
+		private void FlushBytes( )
+		{
+			if (_numBytes > 0)
+			{
+				_numChars += _encoding.GetChars( _byteBuffer, 0, _numBytes, _charBuffer, _numChars );
+				_numBytes = 0;
+			}
+		}
+
+		internal UrlDecoder( int bufferSize, Encoding encoding )
+		{
+			_bufferSize = bufferSize;
+			_encoding = encoding;
+
+			_charBuffer = new char[bufferSize];
+			// byte buffer created on demand
+		}
+
+		internal void AddChar( char ch )
+		{
+			if (_numBytes > 0)
+				FlushBytes( );
+
+			_charBuffer[_numChars++] = ch;
+		}
+
+		internal void AddByte( byte b )
+		{
+			// if there are no pending bytes treat 7 bit bytes as characters
+			// this optimization is temp disable as it doesn't work for some encodings
+			/*
+							if (_numBytes == 0 && ((b & 0x80) == 0)) {
+								AddChar((char)b);
+							}
+							else
+			*/
+			{
+				if (_byteBuffer == null)
+					_byteBuffer = new byte[_bufferSize];
+
+				_byteBuffer[_numBytes++] = b;
+			}
+		}
+
+		internal string GetString( )
+		{
+			if (_numBytes > 0)
+				FlushBytes( );
+
+			if (_numChars > 0)
+				return new string( _charBuffer, 0, _numChars );
+			else
+				return string.Empty;
+		}
+	}
 }

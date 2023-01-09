@@ -204,67 +204,16 @@ namespace HslCommunication.Profinet.Siemens
 		#region NetServer Override
 
 		/// <inheritdoc/>
-		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
+		protected override INetMessage GetNewNetMessage( ) => new FetchWriteMessage( );
+
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			// 开始接收数据信息
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-			try
-			{
-				socket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), appSession );
-				AddClient( appSession );
-			}
-			catch
-			{
-				socket.Close( );
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-			}
-		}
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
-		{
-			if (ar.AsyncState is AppSession session)
-			{
-				try
-				{
-					int receiveCount = session.WorkSocket.EndReceive( ar );
-#if NET20 || NET35
-					OperateResult<byte[]> read1 = ReceiveByMessage( session.WorkSocket, 5000, new FetchWriteMessage( ) );
-#else
-					OperateResult<byte[]> read1 = await ReceiveByMessageAsync( session.WorkSocket, 5000, new FetchWriteMessage( ) );
-#endif
-					if (!read1.IsSuccess) { RemoveClient( session ); return; };
+			byte[] back = null;
+			if      (receive[5] == 0x03) back = WriteByMessage( receive );    // 写入数据
+			else if (receive[5] == 0x05) back = ReadByMessage( receive );    // 读取数据
 
-					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{read1.Content.ToHexString( ' ' )}" );
-
-					byte[] receive = read1.Content;
-					byte[] back = null;
-					if      (receive[5] == 0x03) back = WriteByMessage( receive );    // 写入数据
-					else if (receive[5] == 0x05) back = ReadByMessage(  receive );    // 读取数据
-					else
-					{
-						RemoveClient( session );
-						return;
-					}
-
-					session.WorkSocket.Send( back );
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{back.ToHexString( ' ' )}" );
-
-					session.HeartTime = DateTime.Now;
-					RaiseDataReceived( session, receive );
-					session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), session );
-				}
-				catch
-				{
-					RemoveClient( session );
-				}
-			}
+			return OperateResult.CreateSuccessResult( back );
 		}
 
 		private SoftBuffer GetBufferFromCommand( byte[] command )

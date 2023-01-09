@@ -28,9 +28,9 @@ namespace HslCommunication.Profinet.Melsec.Helper
 		{
 			MemoryStream ms = new MemoryStream( );
 			if (plc.Format != 3)
-				ms.WriteByte( 0x05 );                                           // STX
+				ms.WriteByte( AsciiControl.ENQ );                           // STX
 			else
-				ms.WriteByte( 0x02 );
+				ms.WriteByte( AsciiControl.STX );
 			if (plc.Format == 2)
 			{
 				ms.WriteByte( 0x30 );                                       // 格式二的块编号
@@ -49,7 +49,7 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			ms.Write( mcCommand, 0, mcCommand.Length );
 			if (plc.Format == 3)
 			{
-				ms.WriteByte( 0x03 );
+				ms.WriteByte( AsciiControl.ETX );
 			}
 			// 计算和校验
 			if (plc.SumCheck)
@@ -65,8 +65,8 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			}
 			if (plc.Format == 4)
 			{
-				ms.WriteByte( 0x0D );    // CR
-				ms.WriteByte( 0x0A );    // LF
+				ms.WriteByte( AsciiControl.CR );    // CR
+				ms.WriteByte( AsciiControl.LF );    // LF
 			}
 			byte[] buffer = ms.ToArray( );
 			ms.Dispose( );
@@ -100,12 +100,12 @@ namespace HslCommunication.Profinet.Melsec.Helper
 				// 结果验证
 				if (plc.Format == 1 || plc.Format == 2 || plc.Format == 4)
 				{
-					if (response[0] == 0x15)
+					if (response[0] == AsciiControl.NAK)
 					{
 						int errorCode = Convert.ToInt32( Encoding.ASCII.GetString( response, start, 4 ), 16 );
 						return new OperateResult<byte[]>( errorCode, MelsecHelper.GetErrorDescription( errorCode ) );
 					}
-					if (response[0] != 0x02)
+					if (response[0] != AsciiControl.STX)
 						return new OperateResult<byte[]>( response[0], "Read Faild:" + SoftBasic.GetAsciiStringRender( response ) );
 				}
 				else if (plc.Format == 3)
@@ -123,7 +123,7 @@ namespace HslCommunication.Profinet.Melsec.Helper
 				int end = -1;
 				for (int i = start; i < response.Length; i++)
 				{
-					if (response[i] == 0x03)
+					if (response[i] == AsciiControl.ETX)
 					{
 						end = i;
 						break;
@@ -146,17 +146,17 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			// 结果验证
 			if (plc.Format == 1 || plc.Format == 2 )
 			{
-				if (response[0] == 0x15)
+				if (response[0] == AsciiControl.NAK)
 				{
 					int errorCode = Convert.ToInt32( Encoding.ASCII.GetString( response, start, 4 ), 16 );
 					return new OperateResult<byte[]>( errorCode, MelsecHelper.GetErrorDescription( errorCode ) );
 				}
-				if (response[0] != 0x06)
+				if (response[0] != AsciiControl.ACK)
 					return new OperateResult<byte[]>( response[0], "Write Faild:" + SoftBasic.GetAsciiStringRender( response ) );
 			}
 			else if (plc.Format == 3)
 			{
-				if (response[0] != 0x02)
+				if (response[0] != AsciiControl.STX)
 					return new OperateResult<byte[]>( response[0], "Write Faild:" + SoftBasic.GetAsciiStringRender( response ) );
 				string ending = Encoding.ASCII.GetString( response, 11, 4 );
 				if (ending == "QNAK")
@@ -169,12 +169,12 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			}
 			else if (plc.Format == 4)
 			{
-				if (response[0] == 0x15)
+				if (response[0] == AsciiControl.NAK)
 				{
 					int errorCode = Convert.ToInt32( Encoding.ASCII.GetString( response, start, 4 ), 16 );
 					return new OperateResult<byte[]>( errorCode, MelsecHelper.GetErrorDescription( errorCode ) );
 				}
-				if (response[0] != 0x02)
+				if (response[0] != AsciiControl.ACK)
 					return new OperateResult<byte[]>( response[0], "Write Faild:" + SoftBasic.GetAsciiStringRender( response ) );
 			}
 			return OperateResult.CreateSuccessResult( );
@@ -196,19 +196,35 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			OperateResult<McAddressData> addressResult = McAddressData.ParseMelsecFrom( address, length );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( addressResult );
 
-			// 解析指令
-			byte[] command = McAsciiHelper.BuildAsciiReadMcCoreCommand( addressResult.Content, false );
+			List<byte> bytesContent = new List<byte>( );
+			ushort alreadyFinished = 0;
+			while (alreadyFinished < length)
+			{
+				ushort readLength = (ushort)Math.Min( length - alreadyFinished, McHelper.GetReadWordLength( McType.MCAscii ) );
+				addressResult.Content.Length = readLength;
 
-			// 核心交互
-			OperateResult<byte[]> read = plc.ReadFromCoreServer( PackCommand( plc, command, stat ) );
-			if (!read.IsSuccess) return read;
+				// 解析指令
+				byte[] command = McAsciiHelper.BuildAsciiReadMcCoreCommand( addressResult.Content, false );
 
-			// 结果验证
-			OperateResult<byte[]> check = ExtraReadActualResponse( plc, read.Content );
-			if (!check.IsSuccess) return check;
+				// 核心交互
+				var read = plc.ReadFromCoreServer( PackCommand( plc, command, stat ) );
+				if (!read.IsSuccess) return read;
 
+				// 结果验证
+				OperateResult<byte[]> check = ExtraReadActualResponse( plc, read.Content );
+				if (!check.IsSuccess) return check;
+
+				bytesContent.AddRange( MelsecHelper.TransAsciiByteArrayToByteArray( check.Content ) );
+				alreadyFinished += readLength;
+
+				// 字的话就是正常的偏移位置，如果是位的话，就转到位的数据
+				if (addressResult.Content.McDataType.DataType == 0)
+					addressResult.Content.AddressStart += readLength;
+				else
+					addressResult.Content.AddressStart += readLength * 16;
+			}
 			// 提取结果
-			return OperateResult.CreateSuccessResult( MelsecHelper.TransAsciiByteArrayToByteArray( check.Content ) );
+			return OperateResult.CreateSuccessResult( bytesContent.ToArray( ) );
 		}
 
 #if !NET20 && !NET35
@@ -220,19 +236,35 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			OperateResult<McAddressData> addressResult = McAddressData.ParseMelsecFrom( address, length );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( addressResult );
 
-			// 解析指令
-			byte[] command = McAsciiHelper.BuildAsciiReadMcCoreCommand( addressResult.Content, false );
+			List<byte> bytesContent = new List<byte>( );
+			ushort alreadyFinished = 0;
+			while (alreadyFinished < length)
+			{
+				ushort readLength = (ushort)Math.Min( length - alreadyFinished, McHelper.GetReadWordLength( McType.MCAscii ) );
+				addressResult.Content.Length = readLength;
 
-			// 核心交互
-			OperateResult<byte[]> read = await plc.ReadFromCoreServerAsync( PackCommand( plc, command, stat ) );
-			if (!read.IsSuccess) return read;
+				// 解析指令
+				byte[] command = McAsciiHelper.BuildAsciiReadMcCoreCommand( addressResult.Content, false );
 
-			// 结果验证
-			OperateResult<byte[]> check = ExtraReadActualResponse( plc, read.Content );
-			if (!check.IsSuccess) return check;
+				// 核心交互
+				var read = await plc.ReadFromCoreServerAsync( PackCommand( plc, command, stat ) );
+				if (!read.IsSuccess) return read;
 
+				// 结果验证
+				OperateResult<byte[]> check = ExtraReadActualResponse( plc, read.Content );
+				if (!check.IsSuccess) return check;
+
+				bytesContent.AddRange( MelsecHelper.TransAsciiByteArrayToByteArray( check.Content ) );
+				alreadyFinished += readLength;
+
+				// 字的话就是正常的偏移位置，如果是位的话，就转到位的数据
+				if (addressResult.Content.McDataType.DataType == 0)
+					addressResult.Content.AddressStart += readLength;
+				else
+					addressResult.Content.AddressStart += readLength * 16;
+			}
 			// 提取结果
-			return OperateResult.CreateSuccessResult( MelsecHelper.TransAsciiByteArrayToByteArray( check.Content ) );
+			return OperateResult.CreateSuccessResult( bytesContent.ToArray( ) );
 		}
 #endif
 
@@ -295,19 +327,32 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			OperateResult<McAddressData> addressResult = McAddressData.ParseMelsecFrom( address, length );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( addressResult );
 
-			// 解析指令
-			byte[] command = McAsciiHelper.BuildAsciiReadMcCoreCommand( addressResult.Content, true );
+			List<bool> boolContent = new List<bool>( );
+			ushort alreadyFinished = 0;
+			while (alreadyFinished < length)
+			{
+				ushort readLength = (ushort)Math.Min( length - alreadyFinished, McHelper.GetReadBoolLength( McType.MCAscii ) );
+				addressResult.Content.Length = readLength;
 
-			// 核心交互
-			OperateResult<byte[]> read = plc.ReadFromCoreServer( PackCommand( plc, command, stat ) );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
+				// 获取指令
+				byte[] command = McAsciiHelper.BuildAsciiReadMcCoreCommand( addressResult.Content, true );
 
-			// 结果验证
-			OperateResult<byte[]> check = ExtraReadActualResponse( plc, read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( check );
+				// 核心交互
+				var read = plc.ReadFromCoreServer( PackCommand( plc, command, stat ) );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
 
-			// 提取结果
-			return OperateResult.CreateSuccessResult( check.Content.Select( m => m == 0x31 ).ToArray( ) );
+				// 结果验证
+				OperateResult<byte[]> check = ExtraReadActualResponse( plc, read.Content );
+				if (!check.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( check );
+
+				// 提取结果
+				boolContent.AddRange( check.Content.Select( m => m == 0x31 ).ToArray( ) );
+				alreadyFinished += readLength;
+
+				addressResult.Content.AddressStart += readLength;
+			}
+
+			return OperateResult.CreateSuccessResult( boolContent.ToArray( ) );
 		}
 
 #if !NET20 && !NET35
@@ -319,19 +364,32 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			OperateResult<McAddressData> addressResult = McAddressData.ParseMelsecFrom( address, length );
 			if (!addressResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( addressResult );
 
-			// 解析指令
-			byte[] command = McAsciiHelper.BuildAsciiReadMcCoreCommand( addressResult.Content, true );
+			List<bool> boolContent = new List<bool>( );
+			ushort alreadyFinished = 0;
+			while (alreadyFinished < length)
+			{
+				ushort readLength = (ushort)Math.Min( length - alreadyFinished, McHelper.GetReadBoolLength( McType.MCAscii ) );
+				addressResult.Content.Length = readLength;
 
-			// 核心交互
-			OperateResult<byte[]> read = await plc.ReadFromCoreServerAsync( PackCommand( plc, command, stat ) );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
+				// 获取指令
+				byte[] command = McAsciiHelper.BuildAsciiReadMcCoreCommand( addressResult.Content, true );
 
-			// 结果验证
-			OperateResult<byte[]> check = ExtraReadActualResponse( plc, read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( check );
+				// 核心交互
+				var read = await plc.ReadFromCoreServerAsync( PackCommand( plc, command, stat ) );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
 
-			// 提取结果
-			return OperateResult.CreateSuccessResult( check.Content.Select( m => m == 0x31 ).ToArray( ) );
+				// 结果验证
+				OperateResult<byte[]> check = ExtraReadActualResponse( plc, read.Content );
+				if (!check.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( check );
+
+				// 提取结果
+				boolContent.AddRange( check.Content.Select( m => m == 0x31 ).ToArray( ) );
+				alreadyFinished += readLength;
+
+				addressResult.Content.AddressStart += readLength;
+			}
+
+			return OperateResult.CreateSuccessResult( boolContent.ToArray( ) );
 		}
 #endif
 		/// <summary>

@@ -1,8 +1,12 @@
 ﻿using HslCommunication.ModBus;
+using HslCommunication.Reflection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+#if !NET35 && !NET20
+using System.Threading.Tasks;
+#endif
 
 namespace HslCommunication.Profinet.Inovance
 {
@@ -26,7 +30,11 @@ namespace HslCommunication.Profinet.Inovance
 		/// <summary>
 		/// 实例化一个默认的对象
 		/// </summary>
-		public InovanceSerialOverTcp( ) : base( ) { Series = InovanceSeries.AM; }
+		public InovanceSerialOverTcp( ) : base( ) 
+		{ 
+			this.Series     = InovanceSeries.AM;
+			this.DataFormat = Core.DataFormat.CDAB;
+		}
 
 		/// <summary>
 		/// 通过指定站号，ip地址，端口号来实例化一个新的对象
@@ -36,7 +44,8 @@ namespace HslCommunication.Profinet.Inovance
 		/// <param name="station">站号信息</param>
 		public InovanceSerialOverTcp( string ipAddress, int port = 502, byte station = 0x01 ) : base( ipAddress, port, station )
 		{
-			Series = InovanceSeries.AM;
+			this.Series      = InovanceSeries.AM;
+			this.DataFormat  = Core.DataFormat.CDAB;
 		}
 
 		/// <summary>
@@ -49,7 +58,9 @@ namespace HslCommunication.Profinet.Inovance
 		/// <param name="station">站号信息</param>
 		public InovanceSerialOverTcp( InovanceSeries series, string ipAddress, int port = 502, byte station = 0x01 ) : base( ipAddress, port, station )
 		{
-			Series = series;
+			this.Series       = series;
+			this.Series       = InovanceSeries.AM;
+			this.DataFormat   = Core.DataFormat.CDAB;
 		}
 
 		#endregion
@@ -71,6 +82,17 @@ namespace HslCommunication.Profinet.Inovance
 			return InovanceHelper.PraseInovanceAddress( this.Series, address, modbusCode );
 		}
 
+		#endregion
+
+		#region Read Write Byte
+
+		/// <inheritdoc cref="InovanceHelper.ReadByte(IModbus, string)"/>
+		[HslMqttApi( "ReadByte", "" )]
+		public OperateResult<byte> ReadByte( string address ) => InovanceHelper.ReadByte( this, address );
+#if !NET35 && !NET20
+		/// <inheritdoc cref="InovanceHelper.ReadByte(IModbus, string)"/>
+		public async Task<OperateResult<byte>> ReadByteAsync( string address ) => await InovanceHelper.ReadByteAsync( this, address );
+#endif
 		#endregion
 
 		#region Object Override

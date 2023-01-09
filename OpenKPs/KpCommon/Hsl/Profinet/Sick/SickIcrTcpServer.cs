@@ -53,10 +53,7 @@ namespace HslCommunication.Profinet.Sick
 		protected override void ThreadPoolLogin( Socket socket, IPEndPoint endPoint )
 		{
 			// 开始接收数据信息
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.IpAddress = endPoint.Address.ToString( );
-			appSession.WorkSocket = socket;
+			AppSession appSession = new AppSession( socket );
 			try
 			{
 				socket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), appSession );
@@ -133,26 +130,22 @@ namespace HslCommunication.Profinet.Sick
 		public void AddConnectBarcodeScan( string ipAddress, int port )
 		{
 			IPEndPoint endPoint = new IPEndPoint( IPAddress.Parse( ipAddress ), port );
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.IpAddress = endPoint.Address.ToString( );
-
-			System.Threading.ThreadPool.QueueUserWorkItem( new System.Threading.WaitCallback( ConnectBarcodeScan ), appSession );
+			System.Threading.ThreadPool.QueueUserWorkItem( new System.Threading.WaitCallback( ConnectBarcodeScan ), endPoint );
 		}
 
 		private void ConnectBarcodeScan(object obj )
 		{
-			if (obj is AppSession session)
+			if (obj is IPEndPoint endPoint)
 			{
-				OperateResult<Socket> connect = CreateSocketAndConnect( session.IpEndPoint, 5000 );
+				OperateResult<Socket> connect = CreateSocketAndConnect( endPoint, 5000 );
 				if (!connect.IsSuccess)
 				{
 					System.Threading.Thread.Sleep( 1000 );
-					System.Threading.ThreadPool.QueueUserWorkItem( new System.Threading.WaitCallback( ConnectBarcodeScan ), session );
+					System.Threading.ThreadPool.QueueUserWorkItem( new System.Threading.WaitCallback( ConnectBarcodeScan ), endPoint );
 				}
 				else
 				{
-					session.WorkSocket = connect.Content;
+					AppSession session = new AppSession( connect.Content );
 					try
 					{
 						session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( InitiativeSocketAsyncCallBack ), session );

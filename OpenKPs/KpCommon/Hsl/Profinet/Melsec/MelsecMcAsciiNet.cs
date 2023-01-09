@@ -70,13 +70,13 @@ namespace HslCommunication.Profinet.Melsec
 		public virtual OperateResult<McAddressData> McAnalysisAddress( string address, ushort length ) => McAddressData.ParseMelsecFrom( address, length );
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command )
+		public override byte[] PackCommandWithHeader( byte[] command )
 		{
 			return McAsciiHelper.PackMcCommand( command, this.NetworkNumber, this.NetworkStationNumber );
 		}
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
 		{
 			OperateResult check = McAsciiHelper.CheckResponseContent( response );
 			if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
@@ -91,7 +91,7 @@ namespace HslCommunication.Profinet.Melsec
 
 		#region Read Write Override
 
-		/// <inheritdoc/>
+		/// <inheritdoc cref="McHelper.Read(IReadWriteMc, string, ushort)"/>
 		[HslMqttApi( "ReadByteArray", "" )]
 		public override OperateResult<byte[]> Read( string address, ushort length ) => McHelper.Read( this, address, length );
 
@@ -103,7 +103,7 @@ namespace HslCommunication.Profinet.Melsec
 
 		#region Async Read Write Override
 #if !NET35 && !NET20
-		/// <inheritdoc/>
+		/// <inheritdoc cref="McHelper.Read(IReadWriteMc, string, ushort)"/>
 		public override async Task<OperateResult<byte[]>> ReadAsync( string address, ushort length ) => await McHelper.ReadAsync( this, address, length );
 
 		/// <inheritdoc/>
@@ -144,7 +144,11 @@ namespace HslCommunication.Profinet.Melsec
 
 		#region Bool Operate Support
 
-		/// <inheritdoc/>
+		/// <inheritdoc cref="McHelper.ReadBool(IReadWriteMc, string)"/>
+		[HslMqttApi( "ReadBool", "" )]
+		public override OperateResult<bool> ReadBool( string address ) => base.ReadBool( address );
+
+		/// <inheritdoc cref="McHelper.ReadBool(IReadWriteMc, string, ushort)"/>
 		[HslMqttApi( "ReadBoolArray", "" )]
 		public override OperateResult<bool[]> ReadBool( string address, ushort length ) => McHelper.ReadBool( this, address, length );
 
@@ -156,7 +160,11 @@ namespace HslCommunication.Profinet.Melsec
 
 		#region Async Bool Operate Support
 #if !NET35 && !NET20
-		/// <inheritdoc/>
+
+		/// <inheritdoc cref="McHelper.ReadBool(IReadWriteMc, string)"/>
+		public override async Task<OperateResult<bool>> ReadBoolAsync( string address ) => await base.ReadBoolAsync( address );
+
+		/// <inheritdoc cref="McHelper.ReadBool(IReadWriteMc, string, ushort)"/>
 		public override async Task<OperateResult<bool[]>> ReadBoolAsync( string address, ushort length ) => await McHelper.ReadBoolAsync( this, address, length );
 
 		/// <inheritdoc/>

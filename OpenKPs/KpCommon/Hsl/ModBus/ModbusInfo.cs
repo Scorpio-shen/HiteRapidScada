@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using HslCommunication.BasicFramework;
@@ -253,7 +254,10 @@ namespace HslCommunication.ModBus
 				byte[] data = SoftBasic.BoolArrayToByte( values );
 				byte[] content = new byte[7 + data.Length];
 				content[0] = (byte)mAddress.Station;
-				content[1] = (byte)mAddress.Function;
+				if (mAddress.WriteFunction < 0)
+					content[1] = (byte)mAddress.Function;
+				else
+					content[1] = (byte)mAddress.WriteFunction;
 				content[2] = BitConverter.GetBytes( mAddress.Address )[1];
 				content[3] = BitConverter.GetBytes( mAddress.Address )[0];
 				content[4] = (byte)(values.Length / 256);
@@ -279,7 +283,10 @@ namespace HslCommunication.ModBus
 		{
 			byte[] content = new byte[6];
 			content[0] = (byte)mAddress.Station;
-			content[1] = (byte)mAddress.Function;
+			if (mAddress.WriteFunction < 0)
+				content[1] = (byte)mAddress.Function;
+			else
+				content[1] = (byte)mAddress.WriteFunction;
 			content[2] = BitConverter.GetBytes( mAddress.Address )[1];
 			content[3] = BitConverter.GetBytes( mAddress.Address )[0];
 			if (value)
@@ -416,7 +423,10 @@ namespace HslCommunication.ModBus
 		{
 			byte[] content = new byte[7 + values.Length];
 			content[0] = (byte)mAddress.Station;
-			content[1] = (byte)mAddress.Function;
+			if (mAddress.WriteFunction < 0)
+				content[1] = (byte)mAddress.Function;
+			else
+				content[1] = (byte)mAddress.WriteFunction;
 			content[2] = BitConverter.GetBytes( mAddress.Address )[1];
 			content[3] = BitConverter.GetBytes( mAddress.Address )[0];
 			content[4] = (byte)(values.Length / 2 / 256);
@@ -461,7 +471,10 @@ namespace HslCommunication.ModBus
 		{
 			byte[] content = new byte[6];
 			content[0] = (byte)mAddress.Station;
-			content[1] = (byte)mAddress.Function;
+			if (mAddress.WriteFunction < 0)
+				content[1] = (byte)mAddress.Function;
+			else
+				content[1] = (byte)mAddress.WriteFunction;
 			content[2] = BitConverter.GetBytes( mAddress.Address )[1];
 			content[3] = BitConverter.GetBytes( mAddress.Address )[0];
 			content[4] = BitConverter.GetBytes( value )[1];
@@ -481,7 +494,10 @@ namespace HslCommunication.ModBus
 		{
 			byte[] content = new byte[6];
 			content[0] = (byte)mAddress.Station;
-			content[1] = (byte)mAddress.Function;
+			if (mAddress.WriteFunction < 0)
+				content[1] = (byte)mAddress.Function;
+			else
+				content[1] = (byte)mAddress.WriteFunction;
 			content[2] = BitConverter.GetBytes( mAddress.Address )[1];
 			content[3] = BitConverter.GetBytes( mAddress.Address )[0];
 			content[4] = BitConverter.GetBytes( value )[1];
@@ -646,6 +662,70 @@ namespace HslCommunication.ModBus
 				case ModbusInfo.FunctionCodeReadWriteException:       return StringResources.Language.ModbusTcpFunctionCodeReadWriteException;
 				default:                                              return StringResources.Language.UnknownError;
 			}
+		}
+
+		/// <inheritdoc cref="SerialBase.CheckReceiveDataComplete(MemoryStream)"/>
+		public static bool CheckRtuReceiveDataComplete( byte[] response )
+		{
+			if (response.Length > 2)
+			{
+				if (response[1] == ModbusInfo.WriteOneRegister ||
+					response[1] == ModbusInfo.WriteRegister ||
+					response[1] == ModbusInfo.WriteCoil ||
+					response[1] == ModbusInfo.WriteOneCoil)
+					return response.Length >= (6 + 2);
+				else if (
+					response[1] == ModbusInfo.ReadCoil ||
+					response[1] == ModbusInfo.ReadDiscrete ||
+					response[1] == ModbusInfo.ReadRegister ||
+					response[1] == ModbusInfo.ReadInputRegister)
+					return response.Length >= (response[2] + 3 + 2);
+				else if (response[1] == ModbusInfo.WriteMaskRegister)
+					return response.Length >= (8 + 2);
+				else if (response[1] > 0x80)
+					return response.Length >= 5;
+			}
+			return false;
+		}
+
+		/// <inheritdoc cref="SerialBase.CheckReceiveDataComplete(MemoryStream)"/>
+		public static bool CheckServerRtuReceiveDataComplete( byte[] receive )
+		{
+			if (receive.Length > 2)
+			{
+				if (receive[1] == ModbusInfo.WriteRegister ||
+					receive[1] == ModbusInfo.WriteCoil
+					)
+					return receive.Length > 8 ? (receive.Length >= (receive[6] + 7 + 2)) : false;
+				else if (
+					receive[1] == ModbusInfo.ReadCoil ||
+					receive[1] == ModbusInfo.ReadDiscrete ||
+					receive[1] == ModbusInfo.ReadRegister ||
+					receive[1] == ModbusInfo.ReadInputRegister ||
+					receive[1] == ModbusInfo.WriteOneRegister ||
+					receive[1] == ModbusInfo.WriteOneCoil)
+					return receive.Length >= 8;
+				else if (receive[1] == ModbusInfo.WriteMaskRegister)
+					return receive.Length >= (8 + 2);
+			}
+			return false;
+		}
+
+		/// <inheritdoc cref="SerialBase.CheckReceiveDataComplete(MemoryStream)"/>
+		public static bool CheckAsciiReceiveDataComplete( byte[] modbusAscii )
+		{
+			return CheckAsciiReceiveDataComplete( modbusAscii, modbusAscii.Length );
+		}
+
+		/// <inheritdoc cref="SerialBase.CheckReceiveDataComplete(MemoryStream)"/>
+		public static bool CheckAsciiReceiveDataComplete( byte[] modbusAscii, int length )
+		{
+			if (length > 5)
+				return modbusAscii[0] == 0x3A &&
+					modbusAscii[length - 2] == 0x0D &&
+					modbusAscii[length - 1] == 0x0A;
+			else
+				return false;
 		}
 
 		#endregion

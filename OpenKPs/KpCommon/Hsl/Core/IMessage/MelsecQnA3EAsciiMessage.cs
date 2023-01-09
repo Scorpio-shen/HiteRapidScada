@@ -10,7 +10,7 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// 基于MC协议的Qna兼容3E帧协议的ASCII通讯消息机制
 	/// </summary>
-	public class MelsecQnA3EAsciiMessage : INetMessage
+	public class MelsecQnA3EAsciiMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 18;
@@ -27,7 +27,7 @@ namespace HslCommunication.Core.IMessage
 		}
 
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token )
+		public override bool CheckHeadBytesLegal( byte[] token )
 		{
 			if (HeadBytes == null) return false;
 
@@ -37,16 +37,5 @@ namespace HslCommunication.Core.IMessage
 				return false;
 		}
 
-		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => 0;
-
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 	}
 }

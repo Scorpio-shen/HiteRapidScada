@@ -201,10 +201,9 @@ namespace HslCommunication.Enthernet
 			ConnectFailedCount = 0;
 			try
 			{
-				session.IpEndPoint = (IPEndPoint)socket.RemoteEndPoint;
+				session.UpdateSocket( socket );
 				session.LoginAlias = ClientAlias;
-				session.WorkSocket = socket;
-				session.HeartTime = DateTime.Now;
+				session.UpdateHeartTime( );
 				IsClientStart = true;
 
 				session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( ReceiveCallback ), session );
@@ -290,7 +289,7 @@ namespace HslCommunication.Enthernet
 					DateTime dt = new DateTime( BitConverter.ToInt64( content, 0 ) );
 					ServerTime = new DateTime( BitConverter.ToInt64( content, 8 ) );
 					DelayTime = (int)(DateTime.Now - dt).TotalMilliseconds;
-					this.session.HeartTime = DateTime.Now;
+					this.session.UpdateHeartTime( );
 					// MessageAlerts?.Invoke("心跳时间：" + DateTime.Now.ToString());
 				}
 				else if (protocol == HslProtocol.ProtocolClientQuit)
@@ -351,7 +350,7 @@ namespace HslCommunication.Enthernet
 					DateTime dt = new DateTime( BitConverter.ToInt64( content, 0 ) );
 					ServerTime = new DateTime( BitConverter.ToInt64( content, 8 ) );
 					DelayTime = (int)(DateTime.Now - dt).TotalMilliseconds;
-					this.session.HeartTime = DateTime.Now;
+					this.session.UpdateHeartTime( );
 					// MessageAlerts?.Invoke("心跳时间：" + DateTime.Now.ToString());
 				}
 				else if (protocol == HslProtocol.ProtocolClientQuit)

@@ -15,10 +15,10 @@ namespace HslCommunication.LogNet
 		#region LogNetBase Override
 
 		/// <inheritdoc/>
-		protected override void OnWriteCompleted( )
+		protected override void OnWriteCompleted( bool createNewLogFile )
 		{
-			// 如果配置最大的文件数量，就进行删除操作，需要注意的是提高删除的速度
-			if (controlFileQuantity > 1)
+			// 如果配置最大的文件数量，就进行删除操作，当文件有新建的时候，才进行删除，效率非常高
+			if (createNewLogFile && controlFileQuantity > 1)
 			{
 				try
 				{
@@ -35,7 +35,6 @@ namespace HslCommunication.LogNet
 						{
 							return m.CreationTime.CompareTo( n.CreationTime );
 						} ) );
-
 
 						for (int i = 0; i < fileInfos.Count - controlFileQuantity; i++)
 						{

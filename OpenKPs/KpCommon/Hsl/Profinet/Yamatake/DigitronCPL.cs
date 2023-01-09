@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using HslCommunication.Serial;
 using HslCommunication.Core;
+using System.IO;
 #if !NET20 && !NET35
 using System.Threading.Tasks;
 #endif
@@ -22,9 +23,11 @@ namespace HslCommunication.Profinet.Yamatake
 		/// </summary>
 		public DigitronCPL( )
 		{
-			Station       = 1;
-			WordLength    = 1;
-			ByteTransform = new RegularByteTransform( );
+			this.Station               = 1;
+			this.WordLength            = 1;
+			this.ByteTransform         = new RegularByteTransform( );
+			this.LogMsgFormatBinary    = false;
+			this.ReceiveEmptyDataCount = 5;
 		}
 
 		#endregion
@@ -35,6 +38,14 @@ namespace HslCommunication.Profinet.Yamatake
 		/// 获取或设置当前的站号信息
 		/// </summary>
 		public byte Station { get; set; }
+
+		/// <inheritdoc/>
+		protected override bool CheckReceiveDataComplete( MemoryStream ms )
+		{
+			byte[] buffer = ms.ToArray( );
+			if (buffer.Length > 5) return buffer[buffer.Length - 2] == 0x0D && buffer[buffer.Length - 1] == 0x0A;
+			return base.CheckReceiveDataComplete( ms );
+		}
 
 		#endregion
 

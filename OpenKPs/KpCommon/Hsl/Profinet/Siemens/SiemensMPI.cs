@@ -70,17 +70,17 @@ namespace HslCommunication.Profinet.Siemens
 			while (true)
 			{
 				// 令牌帧接收
-				OperateResult<byte[]> receiveResult = SPReceived( sP_ReadData, true );
+				OperateResult<byte[]> receiveResult = SPReceived( pipeSerial.GetPipe( ), true );
 				if (!receiveResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( receiveResult );
 
 				if (receiveResult.Content[0] == 0xDC && receiveResult.Content[1] == 0x02 && receiveResult.Content[2] == 0x02)
 				{
-					OperateResult sendResult = SPSend( sP_ReadData, new byte[] { 0xDC, 0x00, 0x00 } );
+					OperateResult sendResult = SPSend( pipeSerial.GetPipe( ), new byte[] { 0xDC, 0x00, 0x00 } );
 					if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
 				}
 				else if (receiveResult.Content[0] == 0xDC && receiveResult.Content[1] == 0x00 && receiveResult.Content[2] == 0x02)
 				{
-					OperateResult sendResult = SPSend( sP_ReadData, new byte[] { 0xDC, 0x02, 0x00 } );
+					OperateResult sendResult = SPSend( pipeSerial.GetPipe( ), new byte[] { 0xDC, 0x02, 0x00 } );
 					if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
 
 					return OperateResult.CreateSuccessResult( );
@@ -108,21 +108,21 @@ namespace HslCommunication.Profinet.Siemens
 			if (IsClearCacheBeforeRead) ClearSerialCache( );
 
 			// 第一次发送
-			OperateResult sendResult = SPSend( sP_ReadData, command.Content );
+			OperateResult sendResult = SPSend( pipeSerial.GetPipe( ), command.Content );
 			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
 
 			// 第一次接收
-			OperateResult<byte[]> receiveResult = SPReceived( sP_ReadData, true );
+			OperateResult<byte[]> receiveResult = SPReceived( pipeSerial.GetPipe( ), true );
 			if (!receiveResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( receiveResult );
 			if (receiveResult.Content[14] != 0xE5) return new OperateResult<byte[]>( "PLC Receive Check Failed:" + SoftBasic.ByteToHexString( receiveResult.Content ) );
 
 			// 第二次接收
-			receiveResult = SPReceived( sP_ReadData, true );
+			receiveResult = SPReceived( pipeSerial.GetPipe( ), true );
 			if (!receiveResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( receiveResult );
 			if (receiveResult.Content[19] != 0x00) return new OperateResult<byte[]>( "PLC Receive Check Failed:" + receiveResult.Content[19] );
 
 			// 确认信息
-			sendResult = SPSend( sP_ReadData, readConfirm );
+			sendResult = SPSend( pipeSerial.GetPipe( ), readConfirm );
 			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
 
 			// 数据提取
@@ -148,21 +148,21 @@ namespace HslCommunication.Profinet.Siemens
 			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
 
 			// 第一次发送
-			OperateResult sendResult = SPSend( sP_ReadData, command.Content );
+			OperateResult sendResult = SPSend( pipeSerial.GetPipe( ), command.Content );
 			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( sendResult );
 
 			// 第一次接收
-			OperateResult<byte[]> receiveResult = SPReceived( sP_ReadData, true );
+			OperateResult<byte[]> receiveResult = SPReceived( pipeSerial.GetPipe( ), true );
 			if (!receiveResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( receiveResult );
 			if (receiveResult.Content[14] != 0xE5) return new OperateResult<bool[]>( "PLC Receive Check Failed:" + SoftBasic.ByteToHexString( receiveResult.Content ) );
 
 			// 第二次接收
-			receiveResult = SPReceived( sP_ReadData, true );
+			receiveResult = SPReceived( pipeSerial.GetPipe( ), true );
 			if (!receiveResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( receiveResult );
 			if (receiveResult.Content[19] != 0x00) return new OperateResult<bool[]>( "PLC Receive Check Failed:" + receiveResult.Content[19] );
 
 			// 确认信息
-			sendResult = SPSend( sP_ReadData, readConfirm );
+			sendResult = SPSend( pipeSerial.GetPipe( ), readConfirm );
 			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( sendResult );
 
 			// 数据提取
@@ -191,21 +191,21 @@ namespace HslCommunication.Profinet.Siemens
 			if (IsClearCacheBeforeRead) ClearSerialCache( );
 
 			// 第一次发送
-			OperateResult sendResult = SPSend( sP_ReadData, command.Content );
+			OperateResult sendResult = SPSend( pipeSerial.GetPipe( ), command.Content );
 			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
 
 			// 第一次接收
-			OperateResult<byte[]> receiveResult = SPReceived( sP_ReadData, true );
+			OperateResult<byte[]> receiveResult = SPReceived( pipeSerial.GetPipe( ), true );
 			if (!receiveResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( receiveResult );
 			if (receiveResult.Content[14] != 0xE5) return new OperateResult<byte[]>( "PLC Receive Check Failed:" + SoftBasic.ByteToHexString( receiveResult.Content ) );
 
 			// 第二次接收
-			receiveResult = SPReceived( sP_ReadData, true );
+			receiveResult = SPReceived( pipeSerial.GetPipe( ), true );
 			if (!receiveResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( receiveResult );
 			if (receiveResult.Content[25] != 0xFF) return new OperateResult<byte[]>( "PLC Receive Check Failed:" + receiveResult.Content[25] );
 
 			// 确认信息
-			sendResult = SPSend( sP_ReadData, writeConfirm );
+			sendResult = SPSend( pipeSerial.GetPipe( ), writeConfirm );
 			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
 
 			// 数据提取

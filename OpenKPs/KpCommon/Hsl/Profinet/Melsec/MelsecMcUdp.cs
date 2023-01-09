@@ -67,13 +67,13 @@ namespace HslCommunication.Profinet.Melsec
 		public virtual OperateResult<McAddressData> McAnalysisAddress( string address, ushort length ) => McAddressData.ParseMelsecFrom( address, length );
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command )
+		public override byte[] PackCommandWithHeader( byte[] command )
 		{
 			return McBinaryHelper.PackMcCommand( command, this.NetworkNumber, this.NetworkStationNumber );
 		}
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
 		{
 			OperateResult check = McBinaryHelper.CheckResponseContentHelper( response );
 			if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
@@ -88,7 +88,7 @@ namespace HslCommunication.Profinet.Melsec
 
 		#region Read Write Support
 
-		/// <inheritdoc/>
+		/// <inheritdoc cref="McHelper.Read(IReadWriteMc, string, ushort)"/>
 		[HslMqttApi( "ReadByteArray", "" )]
 		public override OperateResult<byte[]> Read( string address, ushort length ) => McHelper.Read( this, address, length );
 
@@ -118,7 +118,11 @@ namespace HslCommunication.Profinet.Melsec
 
 		#region Bool Operate Support
 
-		/// <inheritdoc/>
+		/// <inheritdoc cref="McHelper.ReadBool(IReadWriteMc, string)"/>
+		[HslMqttApi( "ReadBool", "" )]
+		public override OperateResult<bool> ReadBool( string address ) => base.ReadBool( address );
+
+		/// <inheritdoc cref="McHelper.ReadBool(IReadWriteMc, string, ushort)"/>
 		[HslMqttApi( "ReadBoolArray", "" )]
 		public override OperateResult<bool[]> ReadBool( string address, ushort length ) => McHelper.ReadBool( this, address, length );
 

@@ -49,19 +49,19 @@ namespace HslCommunication.Robot.KUKA
 		/// <inheritdoc/>
 		public override OperateResult<byte[]> ReadFromCoreServer( Socket socket, byte[] send, bool hasResponseData = true, bool usePackHeader = true )
 		{
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Send + " : " + (LogMsgFormatBinary ? send.ToHexString( ' ' ) : Encoding.ASCII.GetString( send )) );
+			LogNet?.WriteDebug( ToString( ), StringResources.Language.Send + " : " + (LogMsgFormatBinary ? send.ToHexString( ' ' ) : SoftBasic.GetAsciiStringRender( send )) );
 
 			// send
 			OperateResult sendResult = Send( socket, send );
 			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
 
-			if (receiveTimeOut < 0) return OperateResult.CreateSuccessResult( new byte[0] );
+			if (this.ReceiveTimeOut < 0) return OperateResult.CreateSuccessResult( new byte[0] );
 
 			// receive msg
-			OperateResult<byte[]> resultReceive = Receive( socket, -1, receiveTimeOut );
+			OperateResult<byte[]> resultReceive = Receive( socket, -1, this.ReceiveTimeOut );
 			if (!resultReceive.IsSuccess) return resultReceive;
 
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + (LogMsgFormatBinary ? resultReceive.Content.ToHexString( ' ' ) : Encoding.ASCII.GetString( resultReceive.Content )) );
+			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + (LogMsgFormatBinary ? resultReceive.Content.ToHexString( ' ' ) : SoftBasic.GetAsciiStringRender( resultReceive.Content )) );
 
 			// Success
 			return OperateResult.CreateSuccessResult( resultReceive.Content );
@@ -71,19 +71,19 @@ namespace HslCommunication.Robot.KUKA
 		public async override Task<OperateResult<byte[]>> ReadFromCoreServerAsync( Socket socket, byte[] send, bool hasResponseData = true, bool usePackHeader = true )
 		{
 			byte[] sendValue = usePackHeader ? PackCommandWithHeader( send ) : send;
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Send + " : " + (LogMsgFormatBinary ? sendValue.ToHexString( ' ' ) : Encoding.ASCII.GetString( sendValue )) );
+			LogNet?.WriteDebug( ToString( ), StringResources.Language.Send + " : " + (LogMsgFormatBinary ? sendValue.ToHexString( ' ' ) : SoftBasic.GetAsciiStringRender( sendValue )) );
 
 			// send
 			OperateResult sendResult = await SendAsync( socket, sendValue );
 			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
 
-			if (receiveTimeOut < 0) return OperateResult.CreateSuccessResult( new byte[0] );
+			if (this.ReceiveTimeOut < 0) return OperateResult.CreateSuccessResult( new byte[0] );
 
 			// receive msg
-			OperateResult<byte[]> resultReceive = await ReceiveAsync( socket, -1, receiveTimeOut );
+			OperateResult<byte[]> resultReceive = await ReceiveAsync( socket, -1, this.ReceiveTimeOut );
 			if (!resultReceive.IsSuccess) return resultReceive;
 
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + (LogMsgFormatBinary ? resultReceive.Content.ToHexString( ' ' ) : Encoding.ASCII.GetString( resultReceive.Content )) );
+			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + (LogMsgFormatBinary ? resultReceive.Content.ToHexString( ' ' ) : SoftBasic.GetAsciiStringRender( resultReceive.Content )) );
 
 			// extra check
 			return UnpackResponseContent( sendValue, resultReceive.Content );

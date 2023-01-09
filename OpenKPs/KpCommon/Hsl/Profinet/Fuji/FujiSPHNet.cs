@@ -606,8 +606,9 @@ namespace HslCommunication.Profinet.Fuji
 		/// <returns>构建成功的读取报文命令</returns>
 		public static OperateResult<List<byte[]>> BuildReadCommand( byte connectionId, FujiSPHAddress address, ushort length )
 		{
+			// Up to 486 bytes (234 words) of data can be read or written at a time
 			List<byte[]> array = new List<byte[]>( );
-			int[] splits = SoftBasic.SplitIntegerToArray( length, 240 );
+			int[] splits = SoftBasic.SplitIntegerToArray( length, 230 );
 			for (int i = 0; i < splits.Length; i++)
 			{
 				byte[] buffer = new byte[6];

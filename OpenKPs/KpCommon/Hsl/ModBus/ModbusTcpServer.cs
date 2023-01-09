@@ -11,6 +11,7 @@ using HslCommunication.Core.Address;
 using HslCommunication.BasicFramework;
 using HslCommunication.Reflection;
 using System.IO.Ports;
+using HslCommunication.ModBus;
 #if !NET20 && !NET35
 using System.Threading.Tasks;
 #endif
@@ -18,12 +19,21 @@ using System.Threading.Tasks;
 namespace HslCommunication.ModBus
 {
 	/// <summary>
-	/// <b>[商业授权]</b> Modbus的虚拟服务器，同时支持Tcp和Rtu的机制，支持线圈，离散输入，寄存器和输入寄存器的读写操作，同时支持掩码写入功能，可以用来当做系统的数据交换池<br />
+	/// <b>[商业授权]</b> Modbus的虚拟服务器，同时支持Tcp，Rtu，Ascii的机制，支持线圈，离散输入，寄存器和输入寄存器的读写操作，同时支持掩码写入功能，可以用来当做系统的数据交换池<br />
 	/// <b>[Authorization]</b> Modbus virtual server supports Tcp and Rtu mechanisms at the same time, supports read and write operations of coils, discrete inputs, r
 	/// egisters and input registers, and supports mask write function, which can be used as a system data exchange pool
 	/// </summary>
 	/// <remarks>
-	/// 可以基于本类实现一个功能复杂的modbus服务器，支持Modbus-Tcp，启动串口后，还支持Modbus-Rtu和Modbus-ASCII，会根据报文进行动态的适配。
+	/// 可以基于本类实现一个功能复杂的modbus服务器，支持Modbus-Tcp，启动串口后，还支持Modbus-Rtu和Modbus-ASCII，会根据报文进行动态的适配。<br />
+	/// 线圈，功能码对应01，05，15<br />
+	/// 离散输入，功能码对应02，服务器写入离散输入的地址使用 x=2;100<br />
+	/// 寄存器，功能码对应03，06，16<br />
+	/// 输入寄存器，功能码对应04，输入寄存器在服务器写入使用地址 x=4;100<br />
+	/// 掩码写入，功能码对应22，可以对字寄存器进行位操作<br />
+	/// 特别说明1: <see cref="StationDataIsolation"/> 属性如果设置为 True 的话，则服务器为每一个站号（0-255）都创建一个数据区，客户端使用站号作为区分可以写入不同的数据区，服务器也可以读取不同数据区的数据，例如 s=2;100<br />
+	/// 特别说明2: 如果多个modbus server使用485总线连接，那么属性 <see cref="NetworkDataServerBase.ForceSerialReceiveOnce"/> 需要设置为 <c>True</c>
+	/// </remarks>
+	/// <example>
 	/// <list type="number">
 	/// <item>线圈，功能码对应01，05，15</item>
 	/// <item>离散输入，功能码对应02</item>
@@ -31,8 +41,6 @@ namespace HslCommunication.ModBus
 	/// <item>输入寄存器，功能码对应04，输入寄存器在服务器端可以实现读写的操作</item>
 	/// <item>掩码写入，功能码对应22，可以对字寄存器进行位操作</item>
 	/// </list>
-	/// </remarks>
-	/// <example>
 	/// 读写的地址格式为富文本地址，具体请参照下面的示例代码。
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Modbus\ModbusTcpServer.cs" region="ModbusTcpServerExample" title="ModbusTcpServer示例" />
 	/// </example>
@@ -45,20 +53,12 @@ namespace HslCommunication.ModBus
 		/// </summary>
 		public ModbusTcpServer( )
 		{
-			// 四个数据池初始化，线圈，输入线圈，寄存器，只读寄存器
-			coilBuffer               = new SoftBuffer( DataPoolLength );
-			inputBuffer              = new SoftBuffer( DataPoolLength );
-			registerBuffer           = new SoftBuffer( DataPoolLength * 2 );
-			inputRegisterBuffer      = new SoftBuffer( DataPoolLength * 2 );
-
-			registerBuffer.IsBoolReverseByWord      = true;
-			inputRegisterBuffer.IsBoolReverseByWord = true;
+			this.dictModbusDataPool  = new ModbusDataDict( );
 
 			subscriptions            = new List<ModBusMonitorAddress>( );
 			subcriptionHybirdLock    = new SimpleHybirdLock( );
 			ByteTransform            = new ReverseWordTransform( );
 			WordLength               = 1;
-			serialPort               = new SerialPort( );
 		}
 
 		#endregion
@@ -80,7 +80,7 @@ namespace HslCommunication.ModBus
 		}
 
 		/// <inheritdoc cref="ModbusTcpNet.Station"/>
-		public int Station
+		public byte Station
 		{
 			get { return station; }
 			set { station = value; }
@@ -96,142 +96,110 @@ namespace HslCommunication.ModBus
 		/// </remarks>
 		public bool UseModbusRtuOverTcp { get; set; }
 
+		/// <summary>
+		/// 获取或设置两次请求直接的延时时间，单位毫秒，默认是0，不发生延时，设置为20的话，可以有效防止有客户端疯狂进行请求而导致服务器的CPU占用率上升。<br />
+		/// Get or set the direct delay time of two requests, in milliseconds, the default is 0, no delay occurs, if it is set to 20, 
+		/// it can effectively prevent the client from making crazy requests and causing the server's CPU usage to increase.
+		/// </summary>
+		public int RequestDelayTime { get; set; }
+
+		/// <summary>
+		/// 获取或设置是否启动站点数据隔离功能，默认为 <c>False</c>，也即虚拟服务器模拟一个站点服务器，客户端使用正确的站号才能通信。
+		/// 当设置为 <c>True</c> 时，虚拟服务器模式256个站点，无论客户端使用的什么站点，都能读取或是写入对应站点里去。服务器同时也可以访问任意站点自身的数据。<br />
+		/// Get or set whether to enable the site data isolation function, the default is <c>False</c>, that is, the virtual server simulates a site server, and the client can communicate with the correct site number.
+		/// When set to<c> True</c>, 256 sites in virtual server mode, no matter what site the client uses, can read or write to the corresponding site.The server can also access any site's own data.
+		/// </summary>
+		/// <remarks>
+		/// 当启动站号隔离之后，服务器访问自身的站号2的数据，地址写为 s=2;100
+		/// </remarks>
+		public bool StationDataIsolation
+		{
+			get => this.stationDataIsolation;
+			set
+			{
+				this.stationDataIsolation = value;
+				this.dictModbusDataPool.Set( value );
+			}
+		}
+
 		#endregion
 
 		#region Data Persistence
 
-		/// <inheritdoc/>
+			/// <inheritdoc/>
 		protected override byte[] SaveToBytes( )
 		{
-			byte[] buffer = new byte[DataPoolLength * 6];
-			Array.Copy( coilBuffer.GetBytes( ),           0, buffer, DataPoolLength * 0,  DataPoolLength );
-			Array.Copy( inputBuffer.GetBytes( ),          0, buffer, DataPoolLength * 1,  DataPoolLength );
-			Array.Copy( registerBuffer.GetBytes( ),       0, buffer, DataPoolLength * 2,  DataPoolLength * 2 );
-			Array.Copy( inputRegisterBuffer.GetBytes( ),  0, buffer, DataPoolLength * 4,  DataPoolLength * 2 );
-			return buffer;
+			return dictModbusDataPool.GetModbusPool( station ).SaveToBytes( );
 		}
 
 		/// <inheritdoc/>
 		protected override void LoadFromBytes( byte[] content )
 		{
-			if (content.Length < DataPoolLength * 6) throw new Exception( "File is not correct" );
-
-			coilBuffer.SetBytes(          content, DataPoolLength * 0, 0, DataPoolLength );
-			inputBuffer.SetBytes(         content, DataPoolLength * 1, 0, DataPoolLength );
-			registerBuffer.SetBytes(      content, DataPoolLength * 2, 0, DataPoolLength * 2 );
-			inputRegisterBuffer.SetBytes( content, DataPoolLength * 4, 0, DataPoolLength * 2 );
+			dictModbusDataPool.GetModbusPool( station ).LoadFromBytes( content, 0 );
 		}
 
 		#endregion
 
 		#region Coil Read Write
 		
-		/// <summary>
-		/// 读取地址的线圈的通断情况
-		/// </summary>
-		/// <param name="address">起始地址，示例："100"</param>
-		/// <returns><c>True</c>或是<c>False</c></returns>
-		/// <exception cref="IndexOutOfRangeException"></exception>
+		/// <inheritdoc cref="ModbusDataPool.ReadCoil(string)"/>
 		public bool ReadCoil( string address )
 		{
-			ushort add = ushort.Parse( address );
-			return coilBuffer.GetByte( add ) != 0x00;
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station ); 
+			return dictModbusDataPool.GetModbusPool( station ).ReadCoil( address );
 		}
 
-		/// <summary>
-		/// 批量读取地址的线圈的通断情况
-		/// </summary>
-		/// <param name="address">起始地址，示例："100"</param>
-		/// <param name="length">读取长度</param>
-		/// <returns><c>True</c>或是<c>False</c></returns>
-		/// <exception cref="IndexOutOfRangeException"></exception>
+		/// <inheritdoc cref="ModbusDataPool.ReadCoil(string, ushort)"/>
 		public bool[] ReadCoil( string address, ushort length )
 		{
-			ushort add = ushort.Parse( address );
-			return coilBuffer.GetBytes( add, length ).Select( m => m != 0x00 ).ToArray( );
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			return dictModbusDataPool.GetModbusPool( station ).ReadCoil( address, length );
 		}
 
-		/// <summary>
-		/// 写入线圈的通断值
-		/// </summary>
-		/// <param name="address">起始地址，示例："100"</param>
-		/// <param name="data">是否通断</param>
-		/// <returns><c>True</c>或是<c>False</c></returns>
-		/// <exception cref="IndexOutOfRangeException"></exception>
+		/// <inheritdoc cref="ModbusDataPool.WriteCoil(string, bool)"/>
 		public void WriteCoil( string address, bool data )
 		{
-			ushort add = ushort.Parse( address );
-			coilBuffer.SetValue( (byte)(data ? 0x01 : 0x00), add );
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			dictModbusDataPool.GetModbusPool( station ).WriteCoil( address, data );
 		}
 
-		/// <summary>
-		/// 写入线圈数组的通断值
-		/// </summary>
-		/// <param name="address">起始地址，示例："100"</param>
-		/// <param name="data">是否通断</param>
-		/// <returns><c>True</c>或是<c>False</c></returns>
-		/// <exception cref="IndexOutOfRangeException"></exception>
+		/// <inheritdoc cref="ModbusDataPool.WriteCoil(string, bool[])"/>
 		public void WriteCoil( string address, bool[] data )
 		{
-			if (data == null) return;
-
-			ushort add = ushort.Parse( address );
-			coilBuffer.SetBytes( data.Select( m => (byte)(m ? 0x01 : 0x00) ).ToArray( ), add );
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			dictModbusDataPool.GetModbusPool( station ).WriteCoil( address, data );
 		}
 
 		#endregion
 
 		#region Discrete Read Write
 
-		/// <summary>
-		/// 读取地址的离散线圈的通断情况
-		/// </summary>
-		/// <param name="address">起始地址，示例："100"</param>
-		/// <returns><c>True</c>或是<c>False</c></returns>
-		/// <exception cref="IndexOutOfRangeException"></exception>
+		/// <inheritdoc cref="ModbusDataPool.ReadDiscrete(string)"/>
 		public bool ReadDiscrete( string address )
 		{
-			ushort add = ushort.Parse( address );
-			return inputBuffer.GetByte( add ) != 0x00;
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			return dictModbusDataPool.GetModbusPool( station ).ReadDiscrete( address );
 		}
 
-		/// <summary>
-		/// 批量读取地址的离散线圈的通断情况
-		/// </summary>
-		/// <param name="address">起始地址，示例："100"</param>
-		/// <param name="length">读取长度</param>
-		/// <returns><c>True</c>或是<c>False</c></returns>
-		/// <exception cref="IndexOutOfRangeException"></exception>
+		/// <inheritdoc cref="ModbusDataPool.ReadDiscrete(string, ushort)"/>
 		public bool[] ReadDiscrete( string address, ushort length )
 		{
-			ushort add = ushort.Parse( address );
-			return inputBuffer.GetBytes( add, length ).Select( m => m != 0x00 ).ToArray( );
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			return dictModbusDataPool.GetModbusPool( station ).ReadDiscrete( address, length );
 		}
 
-		/// <summary>
-		/// 写入离散线圈的通断值
-		/// </summary>
-		/// <param name="address">起始地址，示例："100"</param>
-		/// <param name="data">是否通断</param>
-		/// <exception cref="IndexOutOfRangeException"></exception>
+		/// <inheritdoc cref="ModbusDataPool.WriteDiscrete(string, bool)"/>
 		public void WriteDiscrete( string address, bool data )
 		{
-			ushort add = ushort.Parse( address );
-			inputBuffer.SetValue( (byte)(data ? 0x01 : 0x00), add );
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			dictModbusDataPool.GetModbusPool( station ).WriteDiscrete( address, data );
 		}
 
-		/// <summary>
-		/// 写入离散线圈数组的通断值
-		/// </summary>
-		/// <param name="address">起始地址，示例："100"</param>
-		/// <param name="data">是否通断</param>
-		/// <exception cref="IndexOutOfRangeException"></exception>
+		/// <inheritdoc cref="ModbusDataPool.WriteDiscrete(string, bool[])"/>
 		public void WriteDiscrete( string address, bool[] data )
 		{
-			if (data == null) return;
-
-			ushort add = ushort.Parse( address );
-			inputBuffer.SetBytes( data.Select( m => (byte)(m ? 0x01 : 0x00) ).ToArray( ), add );
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			dictModbusDataPool.GetModbusPool( station ).WriteDiscrete( address, data );
 		}
 
 		#endregion
@@ -242,117 +210,32 @@ namespace HslCommunication.ModBus
 		[HslMqttApi( "ReadByteArray", "" )]
 		public override OperateResult<byte[]> Read( string address, ushort length )
 		{
-			OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, (byte)Station, true, ModbusInfo.ReadRegister );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-
-			if(analysis.Content.Function == ModbusInfo.ReadRegister)
-				return OperateResult.CreateSuccessResult( registerBuffer.GetBytes( analysis.Content.Address * 2, length * 2 ) );
-			else if(analysis.Content.Function == ModbusInfo.ReadInputRegister)
-				return OperateResult.CreateSuccessResult( inputRegisterBuffer.GetBytes( analysis.Content.Address * 2, length * 2 ) );
-			else
-				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			return dictModbusDataPool.GetModbusPool( station ).Read( address, length );
 		}
 
 		/// <inheritdoc cref="ModbusTcpNet.Write(string, byte[])"/>
 		[HslMqttApi( "WriteByteArray", "" )]
 		public override OperateResult Write( string address, byte[] value )
 		{
-			OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, (byte)Station, true, ModbusInfo.ReadRegister );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-
-			if (analysis.Content.Function == ModbusInfo.ReadRegister)
-			{
-				registerBuffer.SetBytes( value, analysis.Content.Address * 2 );
-				return OperateResult.CreateSuccessResult( );
-			}
-			else if (analysis.Content.Function == ModbusInfo.ReadInputRegister)
-			{
-				inputRegisterBuffer.SetBytes( value, analysis.Content.Address * 2 );
-				return OperateResult.CreateSuccessResult( );
-			}
-			else
-			{
-				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
-			}
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			return dictModbusDataPool.GetModbusPool( station ).Write( address, value );
 		}
 
 		/// <inheritdoc cref="ModbusTcpNet.ReadBool(string, ushort)"/>
 		[HslMqttApi( "ReadBoolArray", "" )]
 		public override OperateResult<bool[]> ReadBool( string address, ushort length )
 		{
-			OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, (byte)Station, true, ModbusInfo.ReadCoil );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
-
-			if (analysis.Content.Function == ModbusInfo.ReadCoil)
-				return OperateResult.CreateSuccessResult( coilBuffer.GetBytes( analysis.Content.Address, length ).Select( m => m != 0x00 ).ToArray( ) );
-			else if (analysis.Content.Function == ModbusInfo.ReadDiscrete)
-				return OperateResult.CreateSuccessResult( inputBuffer.GetBytes( analysis.Content.Address, length ).Select( m => m != 0x00 ).ToArray( ) );
-			else
-				return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType );
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			return dictModbusDataPool.GetModbusPool( station ).ReadBool( address, length );
 		}
 
 		/// <inheritdoc cref="ModbusTcpNet.Write(string, bool[])"/>
 		[HslMqttApi( "WriteBoolArray", "" )]
 		public override OperateResult Write( string address, bool[] value )
 		{
-			OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, (byte)Station, true, ModbusInfo.ReadCoil );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-
-			if (analysis.Content.Function == ModbusInfo.ReadCoil)
-			{
-				coilBuffer.SetBytes( value.Select( m => (byte)(m ? 0x01 : 0x00) ).ToArray( ), analysis.Content.Address );
-				return OperateResult.CreateSuccessResult( );
-			}
-			else if (analysis.Content.Function == ModbusInfo.ReadDiscrete)
-			{
-				inputBuffer.SetBytes( value.Select( m => (byte)(m ? 0x01 : 0x00) ).ToArray( ), analysis.Content.Address );
-				return OperateResult.CreateSuccessResult( );
-			}
-			else
-			{
-				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
-			}
-		}
-
-		/// <inheritdoc cref="ModbusTcpNet.Write(string, bool)"/>
-		[HslMqttApi( "WriteBool", "" )]
-		public override OperateResult Write( string address, bool value )
-		{
-			if (address.IndexOf( '.' ) < 0)
-			{
-				return base.Write( address, value );
-			}
-			else
-			{
-				try
-				{
-					int bitIndex = Convert.ToInt32( address.Substring( address.IndexOf( '.' ) + 1 ) );
-					address = address.Substring( 0, address.IndexOf( '.' ) );
-
-					OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, (byte)Station, true, ModbusInfo.ReadRegister );
-					if (!analysis.IsSuccess) return analysis;
-
-					bitIndex = analysis.Content.Address * 16 + bitIndex;
-					if (analysis.Content.Function == ModbusInfo.ReadRegister)
-					{
-						registerBuffer.SetBool( value, bitIndex );
-						return OperateResult.CreateSuccessResult( );
-					}
-					else if (analysis.Content.Function == ModbusInfo.ReadInputRegister)
-					{
-						inputRegisterBuffer.SetBool( value, bitIndex );
-						return OperateResult.CreateSuccessResult( );
-					}
-					else
-					{
-						return new OperateResult( StringResources.Language.NotSupportedDataType );
-					}
-				}
-				catch(Exception ex)
-				{
-					return new OperateResult( ex.Message );
-				}
-			}
+			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.station );
+			return dictModbusDataPool.GetModbusPool( station ).Write( address, value );
 		}
 
 		/// <summary>
@@ -368,99 +251,34 @@ namespace HslCommunication.ModBus
 		#region NetServer Override
 
 		/// <inheritdoc/>
-		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
-		{
-			// 开始接收数据信息
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
+		protected override INetMessage GetNewNetMessage( ) => UseModbusRtuOverTcp ? null : new ModbusTcpMessage( );
 
-			if (socket.BeginReceiveResult( SocketAsyncCallBack, appSession ).IsSuccess)
-				AddClient( appSession );
-			else
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-
-		}
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			if (ar.AsyncState is AppSession session)
+			if (RequestDelayTime > 0) System.Threading.Thread.Sleep( RequestDelayTime );
+
+			if (UseModbusRtuOverTcp)
 			{
-				if (!session.WorkSocket.EndReceiveResult( ar ).IsSuccess) { RemoveClient( session ); return; }
+				if (!Serial.SoftCRC16.CheckCRC16( receive )) return new OperateResult<byte[]>( "CRC Check Failed " );
+				byte[] modbusCore = receive.RemoveLast( 2 );
+				// 指令长度验证错误，关闭网络连接
+				if (!CheckModbusMessageLegal( modbusCore )) return new OperateResult<byte[]>( "Modbus rtu message check failed " );
+				if (!StationDataIsolation && station != modbusCore[0]) return new OperateResult<byte[]>( "Station not match Modbus-rtu " );
+				// 需要回发消息
+				return OperateResult.CreateSuccessResult( ModbusInfo.PackCommandToRtu( ReadFromModbusCore( modbusCore ) ) );
+			}
+			else
+			{
+				if (!CheckModbusMessageLegal( receive.RemoveBegin( 6 ) )) return new OperateResult<byte[]>( "Modbus message check failed" );
+				ushort id = (ushort)(receive[0] * 256 + receive[1]);
+				if (!StationDataIsolation && station != receive[6]) return new OperateResult<byte[]>( "Station not match Modbus-tcp " );
 
-				if (!UseModbusRtuOverTcp)
-				{
-#if NET20 || NET35
-					OperateResult<byte[]> read1 = ReceiveByMessage( session.WorkSocket, 2000, new ModbusTcpMessage( ) );
-#else
-					OperateResult<byte[]> read1 = await ReceiveByMessageAsync( session.WorkSocket, 2000, new ModbusTcpMessage( ) );
-#endif
-					if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-					if (!CheckModbusMessageLegal( read1.Content.RemoveBegin( 6 ) )) { RemoveClient( session ); return; }
-
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{read1.Content.ToHexString( ' ' )}" );
-
-					ushort id = (ushort)(read1.Content[0] * 256 + read1.Content[1]);
-					byte[] back = ModbusInfo.PackCommandToTcp( ReadFromModbusCore( read1.Content.RemoveBegin( 6 ) ), id );
-
-					if (back == null) { RemoveClient( session ); return; }
-					if (!Send( session.WorkSocket, back ).IsSuccess) { RemoveClient( session ); return; }
-
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{back.ToHexString( ' ' )}" );
-					RaiseDataReceived( session, read1.Content );
-				}
-				else
-				{
-#if NET20 || NET35
-					OperateResult<byte[]> read1 = ReceiveByMessage( session.WorkSocket, 2000, null );
-#else
-					OperateResult<byte[]> read1 = await ReceiveByMessageAsync( session.WorkSocket, 2000, null );
-#endif
-					if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-					byte[] receive = read1.Content;
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Rtu {StringResources.Language.Receive}：{receive.ToHexString( ' ' )}" );
-
-					if (Serial.SoftCRC16.CheckCRC16( receive ))
-					{
-						byte[] modbusCore = receive.RemoveLast( 2 );
-
-						// 指令长度验证错误，关闭网络连接
-						if (!CheckModbusMessageLegal( modbusCore )) { RemoveClient( session ); return; }
-
-						// 验证站号是否一致
-						if (station >= 0 && station != modbusCore[0])
-						{
-							LogNet?.WriteError( ToString( ), $"[{session.IpEndPoint}] Station not match Modbus-rtu : {receive.ToHexString( ' ' )}" );
-							RemoveClient( session ); return;
-						}
-
-						// 需要回发消息
-						byte[] back = ModbusInfo.PackCommandToRtu( ReadFromModbusCore( modbusCore ) );
-						if (!Send( session.WorkSocket, back ).IsSuccess) { RemoveClient( session ); return; }
-
-						LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Rtu {StringResources.Language.Send}：{back.ToHexString( ' ' )}" );
-						if (IsStarted) RaiseDataReceived( session, receive );
-					}
-					else
-					{
-						LogNet?.WriteWarn( $"[{session.IpEndPoint}] CRC Check Failed : {receive.ToHexString( ' ' )}" );
-					}
-				}
-
-				session.HeartTime = DateTime.Now;
-				if (!session.WorkSocket.BeginReceiveResult( SocketAsyncCallBack, session ).IsSuccess) RemoveClient( session );
+				byte[] back = ModbusInfo.PackCommandToTcp( ReadFromModbusCore( receive.RemoveBegin( 6 ) ), id );
+				return OperateResult.CreateSuccessResult( back );
 			}
 		}
-
+		
 #endregion
 
 #region Function Process Center
@@ -496,7 +314,7 @@ namespace HslCommunication.ModBus
 			try
 			{
 				ushort address = ByteTransform.TransUInt16( modbus, 2 );
-				ushort length = ByteTransform.TransUInt16( modbus, 4 );
+				ushort length  = ByteTransform.TransUInt16( modbus, 4 );
 
 				// 越界检测
 				if ((address + length) > ushort.MaxValue + 1) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeOverBound );
@@ -504,7 +322,7 @@ namespace HslCommunication.ModBus
 				// 地址长度检测
 				if (length > 2040) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeQuantityOver );
 
-				bool[] read = ReadBool( addressHead + address.ToString( ), length ).Content;
+				bool[] read = dictModbusDataPool.GetModbusPool( modbus[0] ).ReadBool( addressHead + address.ToString( ), length ).Content;
 				return CreateReadBack( modbus, SoftBasic.BoolArrayToByte( read ) );
 			}
 			catch (Exception ex)
@@ -519,7 +337,7 @@ namespace HslCommunication.ModBus
 			try
 			{
 				ushort address = ByteTransform.TransUInt16( modbus, 2 );
-				ushort length = ByteTransform.TransUInt16( modbus, 4 );
+				ushort length  = ByteTransform.TransUInt16( modbus, 4 );
 
 				// 越界检测
 				if ((address + length) > ushort.MaxValue + 1) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeOverBound );
@@ -527,7 +345,7 @@ namespace HslCommunication.ModBus
 				// 地址长度检测
 				if (length > 127) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeQuantityOver );
 
-				byte[] buffer = Read( addressHead + address.ToString( ), length ).Content;
+				byte[] buffer = dictModbusDataPool.GetModbusPool( modbus[0] ).Read( addressHead + address.ToString( ), length ).Content;
 				return CreateReadBack( modbus, buffer );
 			}
 			catch (Exception ex)
@@ -546,8 +364,8 @@ namespace HslCommunication.ModBus
 
 				ushort address = ByteTransform.TransUInt16( modbus, 2 );
 
-				if      (modbus[4] == 0xFF && modbus[5] == 0x00) Write( address.ToString( ), true );
-				else if (modbus[4] == 0x00 && modbus[5] == 0x00) Write( address.ToString( ), false );
+				if      (modbus[4] == 0xFF && modbus[5] == 0x00) dictModbusDataPool.GetModbusPool( modbus[0] ).Write( address.ToString( ), new bool[] { true } );
+				else if (modbus[4] == 0x00 && modbus[5] == 0x00) dictModbusDataPool.GetModbusPool( modbus[0] ).Write( address.ToString( ), new bool[] { false } );
 
 				return CreateWriteBack( modbus );
 			}
@@ -568,7 +386,7 @@ namespace HslCommunication.ModBus
 				ushort address = ByteTransform.TransUInt16( modbus, 2 );
 				short ValueOld = ReadInt16( address.ToString( ) ).Content;
 
-				Write( address.ToString( ), modbus[4], modbus[5] );
+				dictModbusDataPool.GetModbusPool( modbus[0] ).Write( address.ToString( ), new byte[] { modbus[4], modbus[5] } );
 				short ValueNew = ReadInt16( address.ToString( ) ).Content;
 
 				OnRegisterBeforWrite( address, ValueOld, ValueNew );
@@ -589,13 +407,13 @@ namespace HslCommunication.ModBus
 				if (!this.EnableWrite) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeReadWriteException );
 
 				ushort address = ByteTransform.TransUInt16( modbus, 2 );
-				ushort length = ByteTransform.TransUInt16( modbus, 4 );
+				ushort length  = ByteTransform.TransUInt16( modbus, 4 );
 
 				if ((address + length) > ushort.MaxValue + 1) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeOverBound );
 
 				if (length > 2040) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeQuantityOver );
 
-				Write( address.ToString( ), modbus.RemoveBegin( 7 ).ToBoolArray( length ) );
+				dictModbusDataPool.GetModbusPool( modbus[0] ).Write( address.ToString( ), modbus.RemoveBegin( 7 ).ToBoolArray( length ) );
 				return CreateWriteBack( modbus );
 			}
 			catch (Exception ex)
@@ -613,19 +431,21 @@ namespace HslCommunication.ModBus
 				if (!this.EnableWrite) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeReadWriteException );
 
 				ushort address = ByteTransform.TransUInt16( modbus, 2 );
-				ushort length = ByteTransform.TransUInt16( modbus, 4 );
+				ushort length  = ByteTransform.TransUInt16( modbus, 4 );
 
 				if ((address + length) > ushort.MaxValue + 1) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeOverBound );
 
 				if (length > 127) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeQuantityOver );
 
+				byte[] oldValue = dictModbusDataPool.GetModbusPool( modbus[0] ).Read( address.ToString( ), length ).Content;
+				dictModbusDataPool.GetModbusPool( modbus[0] ).Write( address.ToString( ), modbus.RemoveBegin( 7 ) );
+
 				// 为了使服务器的数据订阅更加的准确，决定将设计改为等待所有的数据写入完成后，再统一触发订阅，2018年3月4日 20:56:47
 				MonitorAddress[] addresses = new MonitorAddress[length];
 				for (ushort i = 0; i < length; i++)
 				{
-					short ValueOld = ReadInt16( (address + i).ToString( ) ).Content;
-					Write( (address + i).ToString( ), modbus[2 * i + 7], modbus[2 * i + 8] );
-					short ValueNew = ReadInt16( (address + i).ToString( ) ).Content;
+					short ValueOld = ByteTransform.TransInt16( oldValue, i * 2);
+					short ValueNew = ByteTransform.TransInt16( modbus, i * 2 + 7 );
 
 					// 触发写入请求
 					addresses[i] = new MonitorAddress( )
@@ -659,12 +479,12 @@ namespace HslCommunication.ModBus
 				if (!this.EnableWrite) return CreateExceptionBack( modbus, ModbusInfo.FunctionCodeReadWriteException );
 
 				ushort address = ByteTransform.TransUInt16( modbus, 2 );
-				int and_Mask = ByteTransform.TransUInt16( modbus, 4 );
-				int or_Mask = ByteTransform.TransUInt16( modbus, 6 );
+				int and_Mask   = ByteTransform.TransUInt16( modbus, 4 );
+				int or_Mask    = ByteTransform.TransUInt16( modbus, 6 );
 
-				int ValueOld = ReadInt16( address.ToString( ) ).Content;
+				int ValueOld = ReadInt16( $"s={modbus[0]};" + address.ToString( ) ).Content;
 				short ValueNew = (short)((ValueOld & and_Mask) | or_Mask);
-				Write( address.ToString( ), ValueNew );
+				Write( $"s={modbus[0]};" + address.ToString( ), ValueNew );
 
 				// 触发写入请求
 				MonitorAddress addresses = new MonitorAddress( )
@@ -750,7 +570,7 @@ namespace HslCommunication.ModBus
 
 		/// <summary>
 		/// 检测当前的Modbus接收的指定是否是合法的<br />
-		/// Check if the current Modbus received designation is valid
+		/// Check if the current Modbus datad designation is valid
 		/// </summary>
 		/// <param name="buffer">缓存数据</param>
 		/// <returns>是否合格</returns>
@@ -801,151 +621,83 @@ namespace HslCommunication.ModBus
 			return buffer;
 		}
 
-#endregion
+		#endregion
 
-#region Serial Support
+		#region Serial Support
 
-		private SerialPort serialPort;            // 核心的串口对象
-
-		/// <summary>
-		/// 启动modbus-rtu的从机服务，使用默认的参数进行初始化串口，9600波特率，8位数据位，无奇偶校验，1位停止位<br />
-		/// Start the slave service of modbus-rtu, initialize the serial port with default parameters, 9600 baud rate, 8 data bits, no parity, 1 stop bit
-		/// </summary>
-		/// <param name="com">串口信息</param>
-		public void StartModbusRtu( string com ) => StartModbusRtu( com, 9600 );
-
-		/// <summary>
-		/// 启动modbus-rtu的从机服务，使用默认的参数进行初始化串口，8位数据位，无奇偶校验，1位停止位<br />
-		/// Start the slave service of modbus-rtu, initialize the serial port with default parameters, 8 data bits, no parity, 1 stop bit
-		/// </summary>
-		/// <param name="com">串口信息</param>
-		/// <param name="baudRate">波特率</param>
-		public void StartModbusRtu( string com, int baudRate )
+		/// <inheritdoc/>
+		protected override bool CheckSerialReceiveDataComplete( byte[] buffer, int dataLength )
 		{
-			StartModbusRtu( sp =>
+			if (dataLength > 5)
 			{
-				sp.PortName = com;
-				sp.BaudRate = baudRate;
-				sp.DataBits = 8;
-				sp.Parity = Parity.None;
-				sp.StopBits = StopBits.One;
-			} );
+				if (ModbusInfo.CheckAsciiReceiveDataComplete( buffer, dataLength )) return true;
+				if (ModbusInfo.CheckServerRtuReceiveDataComplete( buffer.SelectBegin( dataLength ) )) return true;
+			}
+			return false;
 		}
 
-		/// <summary>
-		/// 启动modbus-rtu的从机服务，使用自定义的初始化方法初始化串口的参数<br />
-		/// Start the slave service of modbus-rtu and initialize the parameters of the serial port using a custom initialization method
-		/// </summary>
-		/// <param name="inni">初始化信息的委托</param>
-		public void StartModbusRtu( Action<SerialPort> inni )
+		/// <inheritdoc/>
+		protected override string GetSerialMessageLogText( byte[] data )
 		{
-			if (!serialPort.IsOpen)
+			if (data[0] != 0x3A)
 			{
-				inni?.Invoke( serialPort );
-
-				serialPort.ReadBufferSize = 1024;
-				serialPort.ReceivedBytesThreshold = 1;
-				serialPort.Open( );
-				serialPort.DataReceived += SerialPort_DataReceived;
+				return $"[Rtu] {data.ToHexString( ' ' )}";
+			}
+			else
+			{
+				return $"[Ascii] {SoftBasic.GetAsciiStringRender( data )}";
 			}
 		}
 
-		/// <summary>
-		/// 关闭modbus-rtu的串口对象<br />
-		/// Close the serial port object of modbus-rtu
-		/// </summary>
-		public void CloseModbusRtu( )
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> DealWithSerialReceivedData( byte[] data )
 		{
-			if (serialPort.IsOpen)
-			{
-				serialPort.Close( );
-			}
-		}
+			if (data.Length < 3) return new OperateResult<byte[]>( $"Uknown Data：{data.ToHexString( ' ' )}" );
 
-		/// <summary>
-		/// 接收到串口数据的时候触发
-		/// </summary>
-		/// <param name="sender">串口对象</param>
-		/// <param name="e">消息</param>
-		private void SerialPort_DataReceived( object sender, SerialDataReceivedEventArgs e )
-		{
-			int rCount = 0;
-			byte[] buffer = new byte[1024];
-			while (true)
+			if (data[0] != 0x3A)
 			{
-				System.Threading.Thread.Sleep( 20 );            // 此处做个微小的延时，等待数据接收完成
-				int count = serialPort.Read( buffer, rCount, serialPort.BytesToRead );
-				rCount += count;
-				if(count == 0) break;
-			}
-
-			if (rCount == 0) return;
-			byte[] receive = buffer.SelectBegin( rCount );
-			if (receive.Length < 3)
-			{
-				LogNet?.WriteError( ToString( ), $"[{serialPort.PortName}] Uknown Data：{receive.ToHexString( ' ' )}" );
-				return;
-			}
-
-			if (receive[0] != 0x3A)
-			{
-				LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] Rtu {StringResources.Language.Receive}：{receive.ToHexString( ' ' )}" );
-
-				if (Serial.SoftCRC16.CheckCRC16( receive ))
+				if (Serial.SoftCRC16.CheckCRC16( data ))
 				{
-					byte[] modbusCore = receive.RemoveLast( 2 );
+					byte[] modbusCore = data.RemoveLast( 2 );
 
 					// 指令长度验证错误，关闭网络连接
-					if (!CheckModbusMessageLegal( modbusCore )) return;
+					if (!CheckModbusMessageLegal( modbusCore )) return new OperateResult<byte[]>( $"Unlegal Data：{data.ToHexString( ' ' )}" );
 
 					// 验证站号是否一致
-					if (station >= 0 && station != modbusCore[0])
+					if ( !StationDataIsolation && station != modbusCore[0])
 					{
-						LogNet?.WriteError( ToString( ), $"[{serialPort.PortName}] Station not match Modbus-rtu : {receive.ToHexString( ' ' )}" );
-						return;
+						return new OperateResult<byte[]>( $"Station not match Modbus-rtu : {data.ToHexString( ' ' )}" );
 					}
 
 					// 需要回发消息
 					byte[] back = ModbusInfo.PackCommandToRtu( ReadFromModbusCore( modbusCore ) );
 
-					serialPort.Write( back, 0, back.Length );
-
-					LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] Rtu {StringResources.Language.Send}：{back.ToHexString( ' ' )}" );
-					if (IsStarted) RaiseDataReceived( sender, receive );
+					return OperateResult.CreateSuccessResult( back );
 				}
 				else
 				{
-					LogNet?.WriteWarn( $"[{serialPort.PortName}] CRC Check Failed : {receive.ToHexString( ' ' )}" );
+					return new OperateResult<byte[]>( $"CRC Check Failed : {data.ToHexString( ' ' )}" );
 				}
 			}
 			else
 			{
-				LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] Ascii {StringResources.Language.Receive}：{SoftBasic.GetAsciiStringRender( receive )}" );
+				OperateResult<byte[]> ascii = ModbusInfo.TransAsciiPackCommandToCore( data );
+				if (!ascii.IsSuccess) return ascii;
 
-				OperateResult<byte[]> ascii = ModbusInfo.TransAsciiPackCommandToCore( receive );
-				if (!ascii.IsSuccess)
-				{
-					LogNet?.WriteError( ToString( ), ascii.Message );
-					return;
-				}
 				byte[] modbusCore = ascii.Content;
 				// 指令长度验证错误，关闭网络连接
-				if (!CheckModbusMessageLegal( modbusCore )) return;
+				if (!CheckModbusMessageLegal( modbusCore )) return new OperateResult<byte[]>( $"Unlegal Data：{data.ToHexString( ' ' )}" );
 
 				// 验证站号是否一致
-				if (station >= 0 && station != modbusCore[0])
+				if (!StationDataIsolation && station != modbusCore[0])
 				{
-					LogNet?.WriteError( ToString( ), $"[{serialPort.PortName}] Station not match Modbus-Ascii : {SoftBasic.GetAsciiStringRender( receive )}" );
-					return;
+					return new OperateResult<byte[]>( $"Station not match Modbus-Ascii : {SoftBasic.GetAsciiStringRender( data )}" );
 				}
 
 				// 需要回发消息
 				byte[] back = ModbusInfo.TransModbusCoreToAsciiPackCommand( ReadFromModbusCore( modbusCore ) );
 
-				serialPort.Write( back, 0, back.Length );
-
-				LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] Ascii {StringResources.Language.Send}：{SoftBasic.GetAsciiStringRender( back )}" );
-				if (IsStarted) RaiseDataReceived( sender, receive );
+				return OperateResult.CreateSuccessResult( back );
 			}
 		}
 
@@ -960,26 +712,19 @@ namespace HslCommunication.ModBus
 			{
 				subcriptionHybirdLock?.Dispose( );
 				subscriptions?.Clear( );
-				coilBuffer?.Dispose( );
-				inputBuffer?.Dispose( );
-				registerBuffer?.Dispose( );
-				inputRegisterBuffer?.Dispose( );
-				serialPort?.Dispose( );
+				dictModbusDataPool?.Dispose( );
+				GC.Collect( );
 			}
 			base.Dispose( disposing );
 		}
 
-#endregion
+		#endregion
 
-#region Private Member
+		#region Private Member
 
-		private SoftBuffer coilBuffer;                // 线圈的数据池
-		private SoftBuffer inputBuffer;               // 离散输入的数据池
-		private SoftBuffer registerBuffer;            // 寄存器的数据池
-		private SoftBuffer inputRegisterBuffer;       // 输入寄存器的数据池
-
-		private const int DataPoolLength = 65536;     // 数据的长度
-		private int station = 1;                      // 服务器的站号数据，对于tcp无效，对于rtu来说，如果小于0，则忽略站号信息
+		private ModbusDataDict dictModbusDataPool;
+		private byte station = 1;                                          // 服务器的站号数据，对于tcp无效，对于rtu来说，如果小于0，则忽略站号信息
+		private bool stationDataIsolation = false;                         // 各站点的数据是否进行隔离
 
 		#endregion
 
@@ -1175,4 +920,371 @@ namespace HslCommunication.ModBus
 
 #endregion
 	}
+}
+
+internal class ModbusDataDict : IDisposable
+{
+	public ModbusDataDict( )
+	{
+		dictModbusDataPool = new Dictionary<int, ModbusDataPool>( );
+		dictModbusDataPool.Add( 0, new ModbusDataPool( 0 ) );
+	}
+
+	public void Set( bool stationDataIsolation )
+	{
+		if (this.stationDataIsolation != stationDataIsolation)
+		{
+			this.stationDataIsolation = stationDataIsolation;
+			if (this.stationDataIsolation)
+			{
+				dictModbusDataPool = new Dictionary<int, ModbusDataPool>( );
+				for (int i = 0; i < 255; i++)
+				{
+					dictModbusDataPool.Add( i, new ModbusDataPool( (byte)i ) );
+				}
+			}
+			else
+			{
+				dictModbusDataPool = new Dictionary<int, ModbusDataPool>( );
+				dictModbusDataPool.Add( 0, new ModbusDataPool( 0 ) );
+			}
+		}
+	}
+
+	public ModbusDataPool GetModbusPool( byte station )
+	{
+		if (this.stationDataIsolation)
+		{
+			return dictModbusDataPool[station];
+		}
+		else
+		{
+			return dictModbusDataPool.FirstOrDefault( ).Value;
+		}
+	}
+
+	#region IDisposable Support
+
+	/// <inheritdoc/>
+	public void Dispose( )
+	{
+		foreach (var dataPool in dictModbusDataPool.Values)
+		{
+			dataPool.Dispose( );
+		}
+		dictModbusDataPool.Clear( );
+	}
+
+	#endregion
+
+
+
+	private Dictionary<int, ModbusDataPool> dictModbusDataPool;
+	private bool stationDataIsolation = false;
+}
+
+
+internal class ModbusDataPool : IDisposable
+{
+	public ModbusDataPool( byte station )
+	{
+		this.coilBuffer               = new SoftBuffer( DataPoolLength );
+		this.inputBuffer              = new SoftBuffer( DataPoolLength );
+		this.registerBuffer           = new SoftBuffer( DataPoolLength * 2 );
+		this.inputRegisterBuffer      = new SoftBuffer( DataPoolLength * 2 );
+
+		this.registerBuffer.IsBoolReverseByWord      = true;
+		this.inputRegisterBuffer.IsBoolReverseByWord = true;
+		this.station = station;
+	}
+
+
+	public OperateResult<byte[]> Read( string address, ushort length )
+	{
+		OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, station, true, ModbusInfo.ReadRegister );
+		if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+
+		if (analysis.Content.Function == ModbusInfo.ReadRegister)
+			return OperateResult.CreateSuccessResult( registerBuffer.GetBytes( analysis.Content.Address * 2, length * 2 ) );
+		else if (analysis.Content.Function == ModbusInfo.ReadInputRegister)
+			return OperateResult.CreateSuccessResult( inputRegisterBuffer.GetBytes( analysis.Content.Address * 2, length * 2 ) );
+		else
+			return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+	}
+
+	public OperateResult Write( string address, byte[] value )
+	{
+		OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, station, true, ModbusInfo.ReadRegister );
+		if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+
+		if (analysis.Content.Function == ModbusInfo.ReadRegister || analysis.Content.Function == ModbusInfo.WriteOneRegister || analysis.Content.Function == ModbusInfo.WriteRegister)
+		{
+			registerBuffer.SetBytes( value, analysis.Content.Address * 2 );
+			return OperateResult.CreateSuccessResult( );
+		}
+		else if (analysis.Content.Function == ModbusInfo.ReadInputRegister)
+		{
+			inputRegisterBuffer.SetBytes( value, analysis.Content.Address * 2 );
+			return OperateResult.CreateSuccessResult( );
+		}
+		else
+		{
+			return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+		}
+	}
+
+	public OperateResult<bool[]> ReadBool( string address, ushort length )
+	{
+		if (address.IndexOf( '.' ) < 0)
+		{
+			OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, station, true, ModbusInfo.ReadCoil );
+			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
+
+			if (analysis.Content.Function == ModbusInfo.ReadCoil || analysis.Content.Function == ModbusInfo.WriteOneCoil || analysis.Content.Function == ModbusInfo.WriteCoil)
+				return OperateResult.CreateSuccessResult( coilBuffer.GetBytes( analysis.Content.Address, length ).Select( m => m != 0x00 ).ToArray( ) );
+			else if (analysis.Content.Function == ModbusInfo.ReadDiscrete)
+				return OperateResult.CreateSuccessResult( inputBuffer.GetBytes( analysis.Content.Address, length ).Select( m => m != 0x00 ).ToArray( ) );
+			else
+				return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType );
+		}
+		else
+		{
+			// 以位的方式读取寄存器，输入寄存器的值
+			try
+			{
+				int bitIndex = Convert.ToInt32( address.Substring( address.IndexOf( '.' ) + 1 ) );
+				address = address.Substring( 0, address.IndexOf( '.' ) );
+
+				OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, station, true, ModbusInfo.ReadRegister );
+				if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
+
+				bitIndex = analysis.Content.Address * 16 + bitIndex;
+				if (analysis.Content.Function == ModbusInfo.ReadRegister)
+				{
+					return OperateResult.CreateSuccessResult( registerBuffer.GetBool( bitIndex, length ) );
+				}
+				else if (analysis.Content.Function == ModbusInfo.ReadInputRegister)
+				{
+					return OperateResult.CreateSuccessResult( inputRegisterBuffer.GetBool( bitIndex, length ) );
+				}
+				else
+				{
+					return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType );
+				}
+			}
+			catch (Exception ex)
+			{
+				return new OperateResult<bool[]>( ex.Message );
+			}
+		}
+	}
+
+	public OperateResult Write( string address, bool[] value )
+	{
+		if (address.IndexOf( '.' ) < 0)
+		{
+			OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, station, true, ModbusInfo.ReadCoil );
+			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+
+			if (analysis.Content.Function == ModbusInfo.ReadCoil || analysis.Content.Function == ModbusInfo.WriteCoil || analysis.Content.Function == ModbusInfo.WriteOneCoil)
+			{
+				coilBuffer.SetBytes( value.Select( m => (byte)(m ? 0x01 : 0x00) ).ToArray( ), analysis.Content.Address );
+				return OperateResult.CreateSuccessResult( );
+			}
+			else if (analysis.Content.Function == ModbusInfo.ReadDiscrete)
+			{
+				inputBuffer.SetBytes( value.Select( m => (byte)(m ? 0x01 : 0x00) ).ToArray( ), analysis.Content.Address );
+				return OperateResult.CreateSuccessResult( );
+			}
+			else
+			{
+				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+			}
+		}
+		else
+		{
+			try
+			{
+				int bitIndex = Convert.ToInt32( address.Substring( address.IndexOf( '.' ) + 1 ) );
+				address = address.Substring( 0, address.IndexOf( '.' ) );
+
+				OperateResult<ModbusAddress> analysis = ModbusInfo.AnalysisAddress( address, station, true, ModbusInfo.ReadRegister );
+				if (!analysis.IsSuccess) return analysis;
+
+				bitIndex = analysis.Content.Address * 16 + bitIndex;
+				if (analysis.Content.Function == ModbusInfo.ReadRegister)
+				{
+					registerBuffer.SetBool( value, bitIndex );
+					return OperateResult.CreateSuccessResult( );
+				}
+				else if (analysis.Content.Function == ModbusInfo.ReadInputRegister)
+				{
+					inputRegisterBuffer.SetBool( value, bitIndex );
+					return OperateResult.CreateSuccessResult( );
+				}
+				else
+				{
+					return new OperateResult( StringResources.Language.NotSupportedDataType );
+				}
+			}
+			catch (Exception ex)
+			{
+				return new OperateResult( ex.Message );
+			}
+		}
+	}
+
+	#region Coil Read Write
+
+	/// <summary>
+	/// 读取地址的线圈的通断情况
+	/// </summary>
+	/// <param name="address">起始地址，示例："100"</param>
+	/// <returns><c>True</c>或是<c>False</c></returns>
+	/// <exception cref="IndexOutOfRangeException"></exception>
+	public bool ReadCoil( string address )
+	{
+		ushort add = ushort.Parse( address );
+		return coilBuffer.GetByte( add ) != 0x00;
+	}
+
+	/// <summary>
+	/// 批量读取地址的线圈的通断情况
+	/// </summary>
+	/// <param name="address">起始地址，示例："100"</param>
+	/// <param name="length">读取长度</param>
+	/// <returns><c>True</c>或是<c>False</c></returns>
+	/// <exception cref="IndexOutOfRangeException"></exception>
+	public bool[] ReadCoil( string address, ushort length )
+	{
+		ushort add = ushort.Parse( address );
+		return coilBuffer.GetBytes( add, length ).Select( m => m != 0x00 ).ToArray( );
+	}
+
+	/// <summary>
+	/// 写入线圈的通断值
+	/// </summary>
+	/// <param name="address">起始地址，示例："100"</param>
+	/// <param name="data">是否通断</param>
+	/// <returns><c>True</c>或是<c>False</c></returns>
+	/// <exception cref="IndexOutOfRangeException"></exception>
+	public void WriteCoil( string address, bool data )
+	{
+		ushort add = ushort.Parse( address );
+		coilBuffer.SetValue( (byte)(data ? 0x01 : 0x00), add );
+	}
+
+	/// <summary>
+	/// 写入线圈数组的通断值
+	/// </summary>
+	/// <param name="address">起始地址，示例："100"</param>
+	/// <param name="data">是否通断</param>
+	/// <returns><c>True</c>或是<c>False</c></returns>
+	/// <exception cref="IndexOutOfRangeException"></exception>
+	public void WriteCoil( string address, bool[] data )
+	{
+		if (data == null) return;
+
+		ushort add = ushort.Parse( address );
+		coilBuffer.SetBytes( data.Select( m => (byte)(m ? 0x01 : 0x00) ).ToArray( ), add );
+	}
+
+	#endregion
+
+	#region Discrete Read Write
+
+	/// <summary>
+	/// 读取地址的离散线圈的通断情况
+	/// </summary>
+	/// <param name="address">起始地址，示例："100"</param>
+	/// <returns><c>True</c>或是<c>False</c></returns>
+	/// <exception cref="IndexOutOfRangeException"></exception>
+	public bool ReadDiscrete( string address )
+	{
+		ushort add = ushort.Parse( address );
+		return inputBuffer.GetByte( add ) != 0x00;
+	}
+
+	/// <summary>
+	/// 批量读取地址的离散线圈的通断情况
+	/// </summary>
+	/// <param name="address">起始地址，示例："100"</param>
+	/// <param name="length">读取长度</param>
+	/// <returns><c>True</c>或是<c>False</c></returns>
+	/// <exception cref="IndexOutOfRangeException"></exception>
+	public bool[] ReadDiscrete( string address, ushort length )
+	{
+		ushort add = ushort.Parse( address );
+		return inputBuffer.GetBytes( add, length ).Select( m => m != 0x00 ).ToArray( );
+	}
+
+	/// <summary>
+	/// 写入离散线圈的通断值
+	/// </summary>
+	/// <param name="address">起始地址，示例："100"</param>
+	/// <param name="data">是否通断</param>
+	/// <exception cref="IndexOutOfRangeException"></exception>
+	public void WriteDiscrete( string address, bool data )
+	{
+		ushort add = ushort.Parse( address );
+		inputBuffer.SetValue( (byte)(data ? 0x01 : 0x00), add );
+	}
+
+	/// <summary>
+	/// 写入离散线圈数组的通断值
+	/// </summary>
+	/// <param name="address">起始地址，示例："100"</param>
+	/// <param name="data">是否通断</param>
+	/// <exception cref="IndexOutOfRangeException"></exception>
+	public void WriteDiscrete( string address, bool[] data )
+	{
+		if (data == null) return;
+
+		ushort add = ushort.Parse( address );
+		inputBuffer.SetBytes( data.Select( m => (byte)(m ? 0x01 : 0x00) ).ToArray( ), add );
+	}
+
+	#endregion
+
+	/// <inheritdoc cref="ModbusTcpServer.SaveToBytes"/>
+	public byte[] SaveToBytes( )
+	{
+		byte[] buffer = new byte[DataPoolLength * 6];
+		Array.Copy( coilBuffer.GetBytes( ), 0,          buffer, DataPoolLength * 0, DataPoolLength );
+		Array.Copy( inputBuffer.GetBytes( ), 0,         buffer, DataPoolLength * 1, DataPoolLength );
+		Array.Copy( registerBuffer.GetBytes( ), 0,      buffer, DataPoolLength * 2, DataPoolLength * 2 );
+		Array.Copy( inputRegisterBuffer.GetBytes( ), 0, buffer, DataPoolLength * 4, DataPoolLength * 2 );
+		return buffer;
+	}
+
+	/// <inheritdoc cref="ModbusTcpServer.LoadFromBytes(byte[])"/>
+	public void LoadFromBytes( byte[] content, int index )
+	{
+		if (content.Length < DataPoolLength * 6) throw new Exception( "File is not correct" );
+
+		coilBuffer.         SetBytes( content, DataPoolLength * 0 + index, 0, DataPoolLength );
+		inputBuffer.        SetBytes( content, DataPoolLength * 1 + index, 0, DataPoolLength );
+		registerBuffer.     SetBytes( content, DataPoolLength * 2 + index, 0, DataPoolLength * 2 );
+		inputRegisterBuffer.SetBytes( content, DataPoolLength * 4 + index, 0, DataPoolLength * 2 );
+	}
+
+	#region IDisposable Support
+
+	/// <inheritdoc/>
+	public void Dispose( )
+	{
+		coilBuffer?.Dispose( );
+		inputBuffer?.Dispose( );
+		registerBuffer?.Dispose( );
+		inputRegisterBuffer?.Dispose( );
+	}
+
+	#endregion
+
+	private byte station = 1;                     // 当前的数据池的站号信息
+	private SoftBuffer coilBuffer;                // 线圈的数据池
+	private SoftBuffer inputBuffer;               // 离散输入的数据池
+	private SoftBuffer registerBuffer;            // 寄存器的数据池
+	private SoftBuffer inputRegisterBuffer;       // 输入寄存器的数据池
+	private const int DataPoolLength = 65536;     // 数据的长度
 }

@@ -1,7 +1,6 @@
 ﻿using HslCommunication;
 using HslCommunication.Core;
 using HslCommunication.Profinet.Omron;
-using KpCommon.Hsl.Profinet.Omron.InterFace;
 using KpCommon.Model;
 using KpOmron.Model;
 using KpOmron.Model.EnumType;

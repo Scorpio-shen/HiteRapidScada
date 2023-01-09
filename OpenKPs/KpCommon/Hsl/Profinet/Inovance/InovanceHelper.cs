@@ -4,6 +4,9 @@ using System.Linq;
 using System.Text;
 using HslCommunication.Core;
 using HslCommunication.ModBus;
+#if !NET35 && !NET20
+using System.Threading.Tasks;
+#endif
 
 namespace HslCommunication.Profinet.Inovance
 {
@@ -27,6 +30,42 @@ namespace HslCommunication.Profinet.Inovance
 		}
 
 		/// <summary>
+		/// 按照字节读取汇川M地址的数据，地址示例： MB100，MB101，需要注意的是，MB100 及 MB101 的地址是 MW50 的数据。<br />
+		/// Read the data of Inovance M address according to the byte, address example: MB100, MB101, it should be noted that the addresses of MB100 and MB101 are the data of MW50.
+		/// </summary>
+		/// <param name="modbus">汇川的PLC对象</param>
+		/// <param name="address">地址信息</param>
+		/// <returns>读取的结果数据</returns>
+		public static OperateResult<byte> ReadByte( IModbus modbus, string address )
+		{
+			int offset = 0;
+			if (address.StartsWith( "MB" ) || address.StartsWith( "mb" )) offset = Convert.ToInt32( address.Substring( 2 ) );
+			else if (address.StartsWith( "M" ) || address.StartsWith( "m" )) offset = Convert.ToInt32( address.Substring( 1 ) );
+			else new OperateResult<string>( StringResources.Language.NotSupportedDataType );
+
+			OperateResult<byte[]> read = modbus.Read( "MW" + (offset / 2).ToString( ), 1 );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte>( read );
+
+			return OperateResult.CreateSuccessResult( offset % 2 == 0 ? read.Content[1] : read.Content[0] );
+		}
+
+#if !NET20 && !NET35
+		/// <inheritdoc cref="ReadByte(IModbus, string)"/>
+		public static async Task<OperateResult<byte>> ReadByteAsync( IModbus modbus, string address )
+		{
+			int offset = 0;
+			if (address.StartsWith( "MB" ) || address.StartsWith( "mb" )) offset = Convert.ToInt32( address.Substring( 2 ) );
+			else if (address.StartsWith( "M" ) || address.StartsWith( "m" )) offset = Convert.ToInt32( address.Substring( 1 ) );
+			else new OperateResult<string>( StringResources.Language.NotSupportedDataType );
+
+			OperateResult<byte[]> read = await modbus.ReadAsync( "MW" + (offset / 2).ToString( ), 1 );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte>( read );
+
+			return OperateResult.CreateSuccessResult( offset % 2 == 0 ? read.Content[1] : read.Content[0] );
+		}
+#endif
+
+		/// <summary>
 		/// 根据汇川PLC的地址，解析出转换后的modbus协议信息，适用AM,H3U,H5U系列的PLC<br />
 		/// According to the address of Inovance PLC, analyze the converted modbus protocol information, which is suitable for AM, H3U, H5U series PLC
 		/// </summary>
@@ -36,7 +75,7 @@ namespace HslCommunication.Profinet.Inovance
 		/// <returns>Modbus格式的地址</returns>
 		public static OperateResult<string> PraseInovanceAddress( InovanceSeries series, string address, byte modbusCode )
 		{
-			if (series == InovanceSeries.AM) return PraseInovanceAMAddress( address, modbusCode );
+			if      (series == InovanceSeries.AM)  return PraseInovanceAMAddress(  address, modbusCode );
 			else if (series == InovanceSeries.H3U) return PraseInovanceH3UAddress( address, modbusCode );
 			else if (series == InovanceSeries.H5U) return PraseInovanceH5UAddress( address, modbusCode );
 			else return new OperateResult<string>( $"[{series}] Not supported series of plc" );
@@ -61,6 +100,34 @@ namespace HslCommunication.Profinet.Inovance
 					return OperateResult.CreateSuccessResult( station + "x=2;" + CalculateStartAddress( address.Substring( 1 ) ).ToString( ) );
 				else if (address.StartsWith( "MW" ) || address.StartsWith( "mw" ))
 					return OperateResult.CreateSuccessResult( station + address.Substring( 2 ) );
+				else if (address.StartsWith( "MD" ) || address.StartsWith( "md" ))
+				{
+					int add = Convert.ToInt32( address.Substring( 2 ) ) * 2;
+					return OperateResult.CreateSuccessResult( station + add.ToString( ) );
+				}
+				else if (address.StartsWith( "MX" ) || address.StartsWith( "mx" ))
+				{
+					if (modbusCode == ModbusInfo.ReadCoil || modbusCode == ModbusInfo.WriteCoil || modbusCode == ModbusInfo.WriteOneCoil)
+					{
+						if (address.IndexOf( '.' ) > 0)
+						{
+							string[] splits = address.Substring( 2 ).Split( new char[] { '.' }, StringSplitOptions.RemoveEmptyEntries );
+							int add = Convert.ToInt32( splits[0] );
+							int bit = Convert.ToInt32( splits[1] );
+							return OperateResult.CreateSuccessResult( station + (add / 2).ToString( ) + "." + (add % 2 * 8 + bit).ToString( ) );
+						}
+						else
+						{
+							int add = Convert.ToInt32( address.Substring( 2 ) );
+							return OperateResult.CreateSuccessResult( station + (add / 2).ToString( ) + ".0" );
+						}
+					}
+					else
+					{
+						int add = Convert.ToInt32( address.Substring( 2 ) );
+						return OperateResult.CreateSuccessResult( station + (add / 2).ToString( ) );
+					}
+				}
 				else if (address.StartsWith( "M" ) || address.StartsWith( "m" ))
 					return OperateResult.CreateSuccessResult( station + address.Substring( 1 ) );
 				else

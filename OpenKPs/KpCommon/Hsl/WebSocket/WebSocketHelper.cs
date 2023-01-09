@@ -1,4 +1,6 @@
-﻿using System;
+﻿using HslCommunication.BasicFramework;
+using HslCommunication.Core;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -62,7 +64,7 @@ namespace HslCommunication.WebSocket
 		}
 
 		/// <summary>
-		/// 检测当前的反馈对象是否是标准的websocket请求
+		/// 从当前的websocket的HTTP请求头里，分析出订阅的主题内容
 		/// </summary>
 		/// <param name="httpGet">http的请求内容</param>
 		/// <returns>是否验证成功</returns>
@@ -72,7 +74,23 @@ namespace HslCommunication.WebSocket
 			Match m = r.Match( httpGet );
 			if (!m.Success) return null;
 
-			return m.Value.Substring( 14 ).Replace(" ", "").Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
+			// 这里支持转义的情况，在通配符的情况下，会有一些特殊的字符
+			return SoftBasic.UrlDecode( m.Value.Substring( 14 ).Trim( ), Encoding.UTF8 ).Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
+		}
+
+		/// <summary>
+		/// 从当前的Websocket的Url里，分析出订阅的主题内容
+		/// </summary>
+		/// <param name="url">URL内容，例如 ws://127.0.0.1:1883/HslSubscribes=A,B</param>
+		/// <returns>消息主题</returns>
+		public static string[] GetWebSocketSubscribesFromUrl( string url )
+		{
+			Regex r = new Regex( @"HslSubscribes=[\s\S]+$" );
+			Match m = r.Match( url );
+			if (!m.Success) return null;
+
+			// 这里支持转义的情况，在通配符的情况下，会有一些特殊的字符
+			return SoftBasic.UrlDecode( m.Value.Substring( 14 ).Trim( ), Encoding.UTF8 ).Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries );
 		}
 
 		/// <summary>
@@ -198,8 +216,7 @@ namespace HslCommunication.WebSocket
 			byte[] mask = new byte[4] { 0x9B, 0x03, 0xA1, 0xA8 };
 			if (isMask)
 			{
-				Random random = new Random( );
-				random.NextBytes( mask );
+				HslHelper.HslRandom.NextBytes( mask );
 				for (int i = 0; i < data.Length; i++)
 				{
 					data[i] = (byte)(data[i] ^ mask[i % 4]);

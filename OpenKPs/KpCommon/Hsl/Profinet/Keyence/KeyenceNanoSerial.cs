@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HslCommunication.Reflection;
+using System.IO;
+using System.IO.Ports;
 #if !NET20 && !NET35
 using System.Threading.Tasks;
 #endif
@@ -33,15 +35,18 @@ namespace HslCommunication.Profinet.Keyence
 		/// </summary>
 		public KeyenceNanoSerial( )
 		{
-			this.ByteTransform = new RegularByteTransform( );
-			this.WordLength    = 1;
+			this.ByteTransform                         = new RegularByteTransform( );
+			this.WordLength                            = 1;
+			this.ByteTransform.IsStringReverseByteWord = true;
+			this.LogMsgFormatBinary                    = false;
+			this.ReceiveEmptyDataCount                 = 5;
 		}
 
 		/// <inheritdoc/>
-		protected override OperateResult InitializationOnOpen( )
+		protected override OperateResult InitializationOnOpen( SerialPort sp )
 		{
 			// 建立通讯连接{CR/r}
-			var result = ReadFromCoreServer( KeyenceNanoHelper.GetConnectCmd( Station, UseStation ) );
+			var result = ReadFromCoreServer( sp, KeyenceNanoHelper.GetConnectCmd( Station, UseStation ) );
 			if (!result.IsSuccess) return result;
 
 			if (result.Content.Length > 2)
@@ -52,10 +57,10 @@ namespace HslCommunication.Profinet.Keyence
 		}
 
 		/// <inheritdoc/>
-		protected override OperateResult ExtraOnClose( )
+		protected override OperateResult ExtraOnClose( SerialPort sp )
 		{
 			// 断开通讯连接{CR/r}
-			var result = ReadFromCoreServer( KeyenceNanoHelper.GetDisConnectCmd( Station, UseStation ) );
+			var result = ReadFromCoreServer( sp, KeyenceNanoHelper.GetDisConnectCmd( Station, UseStation ) );
 			if (!result.IsSuccess) return result;
 
 			if (result.Content.Length > 2)
@@ -63,6 +68,15 @@ namespace HslCommunication.Profinet.Keyence
 					return OperateResult.CreateSuccessResult( );
 
 			return new OperateResult( "Check Failed: " + SoftBasic.ByteToHexString( result.Content, ' ' ) );
+		}
+
+		/// <inheritdoc/>
+		protected override bool CheckReceiveDataComplete( MemoryStream ms )
+		{
+			byte[] buffer = ms.ToArray( );
+			if(buffer.Length > 2) return buffer[buffer.Length - 2] == 0x0D && buffer[buffer.Length - 1] == 0x0A;
+
+			return base.CheckReceiveDataComplete( ms );
 		}
 
 		#endregion

@@ -57,7 +57,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="index">索引信息</param>
 		/// <param name="encoding">编码</param>
 		/// <returns>任务对象</returns>
-		public static FanucTask PraseFrom( IByteTransform byteTransform, byte[] content, int index, Encoding encoding )
+		public static FanucTask ParseFrom( IByteTransform byteTransform, byte[] content, int index, Encoding encoding )
 		{
 			FanucTask fanucTask = new FanucTask( );
 			fanucTask.LoadByContent( byteTransform, content, index, encoding );

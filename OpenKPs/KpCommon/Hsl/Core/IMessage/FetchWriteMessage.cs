@@ -8,7 +8,7 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// 西门子Fetch/Write消息解析协议
 	/// </summary>
-	public class FetchWriteMessage : INetMessage
+	public class FetchWriteMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 16;
@@ -35,7 +35,7 @@ namespace HslCommunication.Core.IMessage
 		}
 
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token )
+		public override bool CheckHeadBytesLegal( byte[] token )
 		{
 			if (HeadBytes == null) return false;
 
@@ -46,15 +46,7 @@ namespace HslCommunication.Core.IMessage
 		}
 
 		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => HeadBytes[3];
+		public override int GetHeadBytesIdentity( ) => HeadBytes[3];
 
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 	}
 }

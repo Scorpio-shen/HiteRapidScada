@@ -11,7 +11,7 @@ using System.Net.Sockets;
 using System.Text;
 using HslCommunication.Reflection;
 using System.Text.RegularExpressions;
-using System.Runtime.InteropServices;
+using System.Threading;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -193,7 +193,7 @@ namespace HslCommunication.Profinet.Omron
 	/// 定义好后，我们再来读取就很简单了。
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronConnectedCipNetSample.cs" region="Usage9" title="读写示例" />
 	/// </example>
-	public class OmronConnectedCipNet : NetworkDeviceBase
+	public class OmronConnectedCipNet : NetworkConnectedCip, IReadWriteCip
 	{
 		#region Contructor
 
@@ -202,8 +202,8 @@ namespace HslCommunication.Profinet.Omron
 		/// </summary>
 		public OmronConnectedCipNet( )
 		{
-			WordLength    = 2;
-			ByteTransform = new RegularByteTransform( );
+			WordLength     = 2;
+			ByteTransform  = new RegularByteTransform( );
 		}
 
 		/// <summary>
@@ -211,131 +211,34 @@ namespace HslCommunication.Profinet.Omron
 		/// </summary>
 		/// <param name="ipAddress">PLC的Ip地址</param>
 		/// <param name="port">PLC的端口号信息</param>
-		public OmronConnectedCipNet(string ipAddress, int port = 44818 )
+		public OmronConnectedCipNet(string ipAddress, int port = 44818 ) : this( )
 		{
 			IpAddress       = ipAddress;
 			Port            = port;
-			WordLength      = 2;
-			ByteTransform   = new RegularByteTransform( );
 		}
 
-		/// <inheritdoc/>
-		protected override INetMessage GetNewNetMessage( ) => new AllenBradleyMessage( );
+		//private long oTConnectionId = 0x80000001;
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command )
+		protected override byte[] GetLargeForwardOpen( ushort connectionID )
 		{
-			return AllenBradleyHelper.PackRequestHeader( 0x70, SessionHandle, AllenBradleyHelper.PackCommandSpecificData(
-				GetOTConnectionIdService( ), command ) );
+			uint tOConnectionId = 0x80fe0001 + connectionID;
+			TOConnectionId = tOConnectionId;
+			byte[] buffer = @"
+00 00 00 00 00 00 02 00 00 00 00 00 b2 00 34 00
+5b 02 20 06 24 01 0e 9c 02 00 00 80 01 00 fe 80
+02 00 1b 05 30 a7 2b 03 02 00 00 00 80 84 1e 00
+cc 07 00 42 80 84 1e 00 cc 07 00 42 a3 03 20 02
+24 01 2c 01".ToHexBytes( );
+			BitConverter.GetBytes( (uint)(0x80000002 + connectionID)         ).CopyTo( buffer, 24 );   // O->T Network Connection ID
+			BitConverter.GetBytes( tOConnectionId                            ).CopyTo( buffer, 28 );   // T->O Network Connection ID
+			BitConverter.GetBytes( (ushort)(2 + connectionID)                ).CopyTo( buffer, 32 );   // Connection Serial Number
+			BitConverter.GetBytes( AllenBradleyHelper.OriginatorVendorID     ).CopyTo( buffer, 34 );   // Originator Vendor ID
+			HslHelper.HslRandom.GetBytes( 4                                  ).CopyTo( buffer, 36 );   // Originator Serial Number
+			buffer[40] = ConnectionTimeoutMultiplier;
+
+			return buffer;
 		}
-
-		#endregion
-
-		#region Double Mode Override
-
-		/// <inheritdoc/>
-		protected override OperateResult InitializationOnConnect( Socket socket )
-		{
-			// Registering Session Information
-			OperateResult<byte[]> read1 = ReadFromCoreServer( socket, AllenBradleyHelper.RegisterSessionHandle( ), hasResponseData: true, usePackAndUnpack: false );
-			if (!read1.IsSuccess) return read1;
-
-			// Check the returned status
-			OperateResult check = AllenBradleyHelper.CheckResponse( read1.Content );
-			if (!check.IsSuccess) return check;
-
-			// Extract session ID
-			SessionHandle = ByteTransform.TransUInt32( read1.Content, 4 );
-
-			// Large Forward Open(Message Router)
-			OperateResult<byte[]> read2 = ReadFromCoreServer( socket, AllenBradleyHelper.PackRequestHeader( 0x6f, SessionHandle, GetLargeForwardOpen( ) ), hasResponseData: true, usePackAndUnpack: false );
-			if (!read2.IsSuccess) return read2;
-
-			if (read2.Content[42] != 0x00)
-			{
-				if (ByteTransform.TransUInt16( read2.Content, 44 ) == 0x100) return new OperateResult( "Connection in use or duplicate Forward Open" );
-				return new OperateResult( "Forward Open failed, Code: " + ByteTransform.TransUInt16( read2.Content, 44 ) );
-			}
-
-			// Extract Connection ID
-			OTConnectionId = ByteTransform.TransUInt32( read2.Content, 44 );
-			// Reset Message Id
-			incrementCount.ResetCurrentValue( );
-
-			OperateResult<byte[]> read3 = ReadFromCoreServer( socket, AllenBradleyHelper.PackRequestHeader( 0x6f, SessionHandle, GetAttributeAll( ) ), hasResponseData: true, usePackAndUnpack: false );
-			if (!read3.IsSuccess) return read3;
-
-			if (read3.Content.Length > 59) ProductName = Encoding.UTF8.GetString( read3.Content, 59, read3.Content[58] );
-
-			return OperateResult.CreateSuccessResult( );
-		}
-
-		/// <inheritdoc/>
-		protected override OperateResult ExtraOnDisconnect( Socket socket )
-		{
-			// Unregister session Information
-			OperateResult<byte[]> read = ReadFromCoreServer( socket, AllenBradleyHelper.UnRegisterSessionHandle( SessionHandle ), hasResponseData: true, usePackAndUnpack: false );
-			if (!read.IsSuccess) return read;
-
-			return OperateResult.CreateSuccessResult( );
-		}
-
-#if !NET35 && !NET20
-
-		/// <inheritdoc/>
-		protected override async Task<OperateResult> InitializationOnConnectAsync( Socket socket )
-		{
-			// Registering Session Information
-			OperateResult<byte[]> read1 = await ReadFromCoreServerAsync( socket, AllenBradleyHelper.RegisterSessionHandle( ), hasResponseData: true, usePackAndUnpack: false );
-			if (!read1.IsSuccess) return read1;
-
-			// Check the returned status
-			OperateResult check = AllenBradleyHelper.CheckResponse( read1.Content );
-			if (!check.IsSuccess) return check;
-
-			// Extract session ID
-			SessionHandle = ByteTransform.TransUInt32( read1.Content, 4 );
-
-			// Large Forward Open(Message Router)
-			OperateResult<byte[]> read2 = await ReadFromCoreServerAsync( socket, AllenBradleyHelper.PackRequestHeader( 0x6f, SessionHandle, GetLargeForwardOpen( ) ), hasResponseData: true, usePackAndUnpack: false );
-			if (!read2.IsSuccess) return read2;
-
-			if(read2.Content[42] != 0x00)
-			{
-				if (ByteTransform.TransUInt16( read2.Content, 44 ) == 0x100) return new OperateResult( "Connection in use or duplicate Forward Open" );
-				return new OperateResult( "Forward Open failed, Code: " + ByteTransform.TransUInt16( read2.Content, 44 ) );
-			}
-
-			// Extract Connection ID
-			OTConnectionId = ByteTransform.TransUInt32( read2.Content, 44 );
-			// Reset Message Id
-			incrementCount.ResetCurrentValue( );
-
-			OperateResult<byte[]> read3 = await ReadFromCoreServerAsync( socket, AllenBradleyHelper.PackRequestHeader( 0x6f, SessionHandle, GetAttributeAll( ) ), hasResponseData: true, usePackAndUnpack: false );
-			if (!read3.IsSuccess) return read3;
-
-			if(read3.Content.Length > 59) ProductName = Encoding.UTF8.GetString( read3.Content, 59, read3.Content[58] );
-
-			return OperateResult.CreateSuccessResult( );
-		}
-
-		/// <inheritdoc/>
-		protected override async Task<OperateResult> ExtraOnDisconnectAsync( Socket socket )
-		{
-			// Unregister session Information
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( socket, AllenBradleyHelper.UnRegisterSessionHandle( SessionHandle ), hasResponseData: true, usePackAndUnpack: false );
-			if (!read.IsSuccess) return read;
-
-			return OperateResult.CreateSuccessResult( );
-		}
-
-#endif
-		#endregion
-
-		#region Public Properties
-
-		/// <inheritdoc cref="AllenBradleyNet.SessionHandle"/>
-		public uint SessionHandle { get; protected set; }
 
 		/// <summary>
 		/// 当前产品的型号信息<br />
@@ -344,20 +247,48 @@ namespace HslCommunication.Profinet.Omron
 		public string ProductName { get; private set; }
 
 		/// <summary>
-		/// O -> T Network Connection ID
+		/// 获取或设置不通信时超时的时间，默认02，为 32 秒，设置06 时为8分多，计算方法为 (2的x次方乘以8) 的秒数<br />
+		/// Get or set the timeout time when there is no communication. The default is 02, which is 32 seconds, and when 06 is set, it is more than 8 minutes. The calculation method is (2 times the power of x times 8) seconds.
 		/// </summary>
-		private uint OTConnectionId = 0;
+		public byte ConnectionTimeoutMultiplier { get; set; } = 0x02;
 
+		/// <inheritdoc/>
+		protected override OperateResult InitializationOnConnect( Socket socket )
+		{
+			OperateResult ini = base.InitializationOnConnect( socket );
+			if (!ini.IsSuccess) return ini;
+
+			OperateResult<byte[]> read = ReadFromCoreServer( socket, AllenBradleyHelper.PackRequestHeader( 0x6f, SessionHandle, GetAttributeAll( ) ), hasResponseData: true, usePackAndUnpack: false );
+			if (!read.IsSuccess) return read;
+
+			if (read.Content.Length > 59) ProductName = Encoding.UTF8.GetString( read.Content, 59, read.Content[58] );
+			return OperateResult.CreateSuccessResult( );
+		}
+
+#if !NET35 && !NET20
+		/// <inheritdoc/>
+		protected async override Task<OperateResult> InitializationOnConnectAsync( Socket socket )
+		{
+			OperateResult ini = await base.InitializationOnConnectAsync( socket );
+			if (!ini.IsSuccess) return ini;
+
+
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( socket, AllenBradleyHelper.PackRequestHeader( 0x6f, SessionHandle, GetAttributeAll( ) ), hasResponseData: true, usePackAndUnpack: false );
+			if (!read.IsSuccess) return read;
+
+			if (read.Content.Length > 59) ProductName = Encoding.UTF8.GetString( read.Content, 59, read.Content[58] );
+
+			return OperateResult.CreateSuccessResult( );
+		}
+#endif
 		#endregion
 
-		private byte[] GetOTConnectionIdService( )
+		#region Private Method
+
+
+		private byte[] GetAttributeAll( )
 		{
-			byte[] buffer = new byte[8];
-			buffer[0] = 0xA1;  // Connected Address Item
-			buffer[1] = 0x00;
-			buffer[2] = 0x04;  // Length
-			buffer[3] = 0x00;
-			ByteTransform.TransByte( OTConnectionId ).CopyTo( buffer, 4 );
+			byte[] buffer = @"00 00 00 00 00 00 02 00 00 00 00 00 b2 00 06 00 01 02 20 01 24 01".ToHexBytes( );
 			return buffer;
 		}
 
@@ -390,47 +321,6 @@ namespace HslCommunication.Profinet.Omron
 			}
 		}
 
-		private byte[] PackCommandService( params byte[][] cip )
-		{
-			MemoryStream ms = new MemoryStream( );
-			// type id   0xB2:UnConnected Data Item  0xB1:Connected Data Item  0xA1:Connect Address Item
-			ms.WriteByte( 0xB1 );
-			ms.WriteByte( 0x00 );
-			ms.WriteByte( 0x00 );     // 后续数据的长度
-			ms.WriteByte( 0x00 );
-
-			long messageId = incrementCount.GetCurrentValue( );
-			ms.WriteByte( BitConverter.GetBytes( messageId )[0] );     // CIP Sequence Count 一个累加的CIP序号
-			ms.WriteByte( BitConverter.GetBytes( messageId )[1] );
-
-			if (cip.Length == 1)
-			{
-				ms.Write( cip[0], 0, cip[0].Length );
-			}
-			else
-			{
-				ms.Write( new byte[] { 0x0A, 0x02, 0x20, 0x02, 0x24, 0x01 }, 0, 6 );
-				ms.WriteByte( BitConverter.GetBytes( cip.Length )[0] );
-				ms.WriteByte( BitConverter.GetBytes( cip.Length )[1] );
-				int offset = 2 + cip.Length * 2;
-				for (int i = 0; i < cip.Length; i++)
-				{
-					ms.WriteByte( BitConverter.GetBytes( offset )[0] );     // 各个数据的长度
-					ms.WriteByte( BitConverter.GetBytes( offset )[1] );
-					offset += cip[i].Length;
-				}
-				for (int i = 0; i < cip.Length; i++)
-				{
-					ms.Write( cip[i], 0, cip[i].Length );     // 写入欧姆龙CIP的具体内容
-				}
-			}
-
-			byte[] data = ms.ToArray( );
-			ms.Dispose( );
-			BitConverter.GetBytes( (ushort)(data.Length - 4) ).CopyTo( data, 2 );
-			return data;
-		}
-
 		private OperateResult<byte[], ushort, bool> ReadWithType( string[] address, ushort[] length )
 		{
 			// 指令生成 -> Instruction Generation
@@ -448,6 +338,8 @@ namespace HslCommunication.Profinet.Omron
 			// 提取数据 -> Extracting data
 			return ExtractActualData( read.Content, true );
 		}
+
+		#endregion
 
 		/// <inheritdoc cref="AllenBradleyNet.ReadCipFromServer(byte[][])"/>
 		public OperateResult<byte[]> ReadCipFromServer( params byte[][] cips )
@@ -541,14 +433,88 @@ namespace HslCommunication.Profinet.Omron
 			return HslHelper.ByteArrayToStruct<T>( read.Content.RemoveBegin( 2 ) );
 		}
 #endif
+
+		/// <summary>
+		/// 获取传递的最大长度的字节信息
+		/// </summary>
+		/// <returns>字节长度</returns>
+		protected virtual int GetMaxTransferBytes( ) => 1988;
+
+		private int GetLengthFromRemain( ushort dataType, int length )
+		{
+			if (dataType == AllenBradleyHelper.CIP_Type_Bool || dataType == AllenBradleyHelper.CIP_Type_Byte || dataType == AllenBradleyHelper.CIP_Type_USInt || dataType == AllenBradleyHelper.CIP_Type_BitArray)
+			{
+				return Math.Min( length, GetMaxTransferBytes( ) );
+			}
+			else if (dataType == AllenBradleyHelper.CIP_Type_UInt || dataType == AllenBradleyHelper.CIP_Type_Word)
+			{
+				return Math.Min( length, GetMaxTransferBytes( ) / 2 );
+			}
+			else if (dataType == AllenBradleyHelper.CIP_Type_DWord || dataType == AllenBradleyHelper.CIP_Type_UDint || dataType == AllenBradleyHelper.CIP_Type_Real)
+			{
+				return Math.Min( length, GetMaxTransferBytes( ) / 4 );
+			}
+			else
+			{
+				return Math.Min( length, GetMaxTransferBytes( ) / 8 );
+			}
+		}
+
 		/// <inheritdoc/>
 		[HslMqttApi( "ReadByteArray", "" )]
 		public override OperateResult<byte[]> Read( string address, ushort length )
 		{
-			OperateResult<byte[], ushort, bool> read = ReadWithType( new string[] { address }, new ushort[] { length } );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+			HslHelper.ExtractParameter( ref address, "type", 0 );
 
-			return OperateResult.CreateSuccessResult( read.Content1 );
+			if (length == 1)
+			{
+				OperateResult<byte[], ushort, bool> read = ReadWithType( new string[] { address }, new ushort[] { length } );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+
+				return OperateResult.CreateSuccessResult( read.Content1 );
+			}
+			else
+			{
+				// 如果长度超过248，那么第一次读取248，然后根据类型来确定读取的长度信息，按照字节长度最大 1988 字节
+				int count = 0;
+				int index = 0;
+				List<byte> array = new List<byte>( );
+				Match match = Regex.Match( address, @"\[[0-9]+\]$" );
+				if (match.Success)
+				{
+					address = address.Remove( match.Index, match.Length );
+					index = int.Parse( match.Value.Substring( 1, match.Value.Length - 2 ) );
+				}
+
+				ushort dataType = 0x00;
+				while (count < length)
+				{
+					if (count == 0)
+					{
+						ushort first = Math.Min( length, (ushort)248 );
+
+						OperateResult<byte[], ushort, bool> read = ReadWithType( new string[] { address + $"[{index}]" }, new ushort[] { first } );
+						if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+
+						dataType = read.Content2;
+						count += first;
+						index += first;
+						array.AddRange( read.Content1 );
+					}
+					else
+					{
+						ushort len = (ushort)GetLengthFromRemain( dataType, length - count );
+
+						OperateResult<byte[], ushort, bool> read = ReadWithType( new string[] { address + $"[{index}]" }, new ushort[] { len } );
+						if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+
+						count += len;
+						index += len;
+						array.AddRange( read.Content1 );
+					}
+				}
+				return OperateResult.CreateSuccessResult( array.ToArray( ) );
+			}
 		}
 
 		/// <inheritdoc cref="AllenBradleyNet.Read(string[], int[])"/>
@@ -574,7 +540,7 @@ namespace HslCommunication.Profinet.Omron
 		[HslMqttApi( "ReadBoolArray", "" )]
 		public override OperateResult<bool[]> ReadBool( string address, ushort length )
 		{
-			if (length == 1 && !Regex.IsMatch( address, "\\[[0-9]+\\]$" ))
+			if (length == 1 && !Regex.IsMatch( address, @"\[[0-9]+\]$" ))
 			{
 				OperateResult<byte[]> read = Read( address, length );
 				if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
@@ -598,6 +564,15 @@ namespace HslCommunication.Profinet.Omron
 		/// <returns>带有结果对象的结果数据 -> Result data with result info </returns>
 		[HslMqttApi( "ReadByte", "" )]
 		public OperateResult<byte> ReadByte( string address ) => ByteTransformHelper.GetResultFromArray( Read( address, 1 ) );
+
+		/// <inheritdoc cref="AllenBradleyNet.ReadTag(string, int)"/>
+		public OperateResult<ushort, byte[]> ReadTag( string address, ushort length = 1 )
+		{
+			OperateResult<byte[], ushort, bool> read = ReadWithType( new string[] { address }, new ushort[] { length } );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<ushort, byte[]>( read );
+
+			return OperateResult.CreateSuccessResult( read.Content2, read.Content1 );
+		}
 
 #if !NET35 && !NET20
 
@@ -623,10 +598,57 @@ namespace HslCommunication.Profinet.Omron
 		/// <inheritdoc/>
 		public override async Task<OperateResult<byte[]>> ReadAsync( string address, ushort length )
 		{
-			OperateResult<byte[], ushort, bool> read = await ReadWithTypeAsync( new string[] { address }, new ushort[] { length } );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+			HslHelper.ExtractParameter( ref address, "type", 0 );
 
-			return OperateResult.CreateSuccessResult( read.Content1 );
+			if (length == 1)
+			{
+				OperateResult<byte[], ushort, bool> read = await ReadWithTypeAsync( new string[] { address }, new ushort[] { length } );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+
+				return OperateResult.CreateSuccessResult( read.Content1 );
+			}
+			else
+			{
+				// 如果长度超过248，那么第一次读取248，然后根据类型来确定读取的长度信息，按照字节长度最大 1988 字节
+				int count = 0;
+				int index = 0;
+				List<byte> array = new List<byte>( );
+				Match match = Regex.Match( address, @"\[[0-9]+\]$" );
+				if (match.Success)
+				{
+					address = address.Remove( match.Index, match.Length );
+					index = int.Parse( match.Value.Substring( 1, match.Value.Length - 2 ) );
+				}
+
+				ushort dataType = 0x00;
+				while (count < length)
+				{
+					if (count == 0)
+					{
+						ushort first = Math.Min( length, (ushort)248 );
+
+						OperateResult<byte[], ushort, bool> read = await ReadWithTypeAsync( new string[] { address + $"[{index}]" }, new ushort[] { first } );
+						if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+
+						dataType = read.Content2;
+						count += first;
+						index += first;
+						array.AddRange( read.Content1 );
+					}
+					else
+					{
+						ushort len = (ushort)GetLengthFromRemain( dataType, length - count );
+
+						OperateResult<byte[], ushort, bool> read = await ReadWithTypeAsync( new string[] { address + $"[{index}]" }, new ushort[] { len } );
+						if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+
+						count += len;
+						index += len;
+						array.AddRange( read.Content1 );
+					}
+				}
+				return OperateResult.CreateSuccessResult( array.ToArray( ) );
+			}
 		}
 
 		/// <inheritdoc cref="Read(string[], ushort[])"/>
@@ -642,31 +664,28 @@ namespace HslCommunication.Profinet.Omron
 
 		/// <inheritdoc cref="ReadByte(string)"/>
 		public async Task<OperateResult<byte>> ReadByteAsync( string address ) => ByteTransformHelper.GetResultFromArray( await ReadAsync( address, 1 ) );
+
+		/// <inheritdoc cref="AllenBradleyNet.ReadTag(string, int)"/>
+		public async Task<OperateResult<ushort, byte[]>> ReadTagAsync( string address, ushort length = 1 )
+		{
+			OperateResult<byte[], ushort, bool> read = await ReadWithTypeAsync( new string[] { address }, new ushort[] { length } );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<ushort, byte[]>( read );
+
+			return OperateResult.CreateSuccessResult( read.Content2, read.Content1 );
+		}
 #endif
 
 		#region Write Support
 
-		/// <summary>
-		/// 当前的PLC不支持该功能，需要调用 <see cref="WriteTag(string, ushort, byte[], int)"/> 方法来实现。<br />
-		/// The current PLC does not support this function, you need to call the <see cref = "WriteTag (string, ushort, byte [], int)" /> method to achieve it.
-		/// </summary>
-		/// <param name="address">地址</param>
-		/// <param name="value">值</param>
-		/// <returns>写入结果值</returns>
+		/// <inheritdoc cref="AllenBradleyNet.Write(string, byte[])"/>
 		[HslMqttApi( "WriteByteArray", "" )]
-		public override OperateResult Write( string address, byte[] value ) => new OperateResult( StringResources.Language.NotSupportedFunction + " Please refer to use WriteTag instead " );
+		public override OperateResult Write( string address, byte[] value ) => WriteTag( address, AllenBradleyHelper.CIP_Type_D1, value, HslHelper.IsAddressEndWithIndex( address ) ? value.Length : 1 );
 
-		/// <summary>
-		/// 使用指定的类型写入指定的节点数据<br />
-		/// Writes the specified node data with the specified type
-		/// </summary>
-		/// <param name="address">节点的名称 -> Name of the node </param>
-		/// <param name="typeCode">类型代码，详细参见<see cref="AllenBradleyHelper"/>上的常用字段 ->  Type code, see the commonly used Fields section on the <see cref= "AllenBradleyHelper"/> in detail</param>
-		/// <param name="value">实际的数据值 -> The actual data value </param>
-		/// <param name="length">如果节点是数组，就是数组长度 -> If the node is an array, it is the array length </param>
-		/// <returns>是否写入成功 -> Whether to write successfully</returns>
+		/// <inheritdoc cref="AllenBradleyNet.WriteTag(string, ushort, byte[], int)"/>
 		public virtual OperateResult WriteTag( string address, ushort typeCode, byte[] value, int length = 1 )
 		{
+			typeCode = (ushort)HslHelper.ExtractParameter( ref address, "type", typeCode );
+
 			OperateResult<byte[]> command = BuildWriteCommand( address, typeCode, value, length );
 			if (!command.IsSuccess) return command;
 
@@ -685,11 +704,13 @@ namespace HslCommunication.Profinet.Omron
 #if !NET35 && !NET20
 
 		/// <inheritdoc cref="Write(string, byte[])"/>
-		public override async Task<OperateResult> WriteAsync( string address, byte[] value ) => await Task.Run( ( ) => Write( address, value ) );
+		public override async Task<OperateResult> WriteAsync( string address, byte[] value ) => await WriteTagAsync( address, AllenBradleyHelper.CIP_Type_D1, value, HslHelper.IsAddressEndWithIndex( address ) ? value.Length : 1 );
 
 		/// <inheritdoc cref="WriteTag(string, ushort, byte[], int)"/>
 		public virtual async Task<OperateResult> WriteTagAsync( string address, ushort typeCode, byte[] value, int length = 1 )
 		{
+			typeCode = (ushort)HslHelper.ExtractParameter( ref address, "type", typeCode );
+
 			OperateResult<byte[]> command = BuildWriteCommand( address, typeCode, value, length );
 			if (!command.IsSuccess) return command;
 
@@ -776,6 +797,7 @@ namespace HslCommunication.Profinet.Omron
 
 		#region Async Device Override
 #if !NET35 && !NET20
+
 		/// <inheritdoc/>
 		public override async Task<OperateResult<short[]>> ReadInt16Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, length ), m => ByteTransform.TransInt16( m, 0, length ) );
 
@@ -863,13 +885,26 @@ namespace HslCommunication.Profinet.Omron
 		[HslMqttApi( "WriteString", "" )]
 		public override OperateResult Write( string address, string value )
 		{
-			byte[] buffer = string.IsNullOrEmpty( value ) ? new byte[0] : Encoding.UTF8.GetBytes( value );
-			return WriteTag( address, AllenBradleyHelper.CIP_Type_String, SoftBasic.SpliceArray<byte>( BitConverter.GetBytes( (ushort)buffer.Length ), buffer ) );
+			return Write( address, value, Encoding.UTF8 );
+		}
+
+		/// <inheritdoc/>
+		public override OperateResult Write( string address, string value, Encoding encoding )
+		{
+			byte[] buffer = string.IsNullOrEmpty( value ) ? new byte[0] : encoding.GetBytes( value );
+			return WriteTag( address, AllenBradleyHelper.CIP_Type_String, SoftBasic.SpliceArray( BitConverter.GetBytes( (ushort)buffer.Length ), buffer ) );
 		}
 
 		/// <inheritdoc/>
 		[HslMqttApi( "WriteBool", "" )]
 		public override OperateResult Write( string address, bool value ) => WriteTag( address, AllenBradleyHelper.CIP_Type_Bool, value ? new byte[] { 0xFF, 0xFF } : new byte[] { 0x00, 0x00 } );
+
+		/// <inheritdoc cref="IReadWriteNet.Write(string, bool[])"/>
+		[HslMqttApi( "WriteBoolArray", "" )]
+		public override OperateResult Write( string address, bool[] value )
+		{
+			return WriteTag( address, AllenBradleyHelper.CIP_Type_Bool, value.Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( ), HslHelper.IsAddressEndWithIndex(address) ? value.Length : 1 );
+		}
 
 		/// <inheritdoc/>
 		[HslMqttApi( "WriteByte", "" )]
@@ -908,128 +943,75 @@ namespace HslCommunication.Profinet.Omron
 		/// <inheritdoc cref="Write(string, string)"/>
 		public override async Task<OperateResult> WriteAsync( string address, string value )
 		{
-			byte[] buffer = string.IsNullOrEmpty( value ) ? new byte[0] : Encoding.UTF8.GetBytes( value );
-			return await WriteTagAsync( address, AllenBradleyHelper.CIP_Type_String, SoftBasic.SpliceArray<byte>( BitConverter.GetBytes( (ushort)buffer.Length ), buffer ) );
+			return await WriteAsync( address, value, Encoding.UTF8 );
+		}
+
+		/// <inheritdoc/>
+		public override async Task<OperateResult> WriteAsync( string address, string value, Encoding encoding )
+		{
+			byte[] buffer = string.IsNullOrEmpty( value ) ? new byte[0] : encoding.GetBytes( value );
+			return await WriteTagAsync( address, AllenBradleyHelper.CIP_Type_String, SoftBasic.SpliceArray( BitConverter.GetBytes( (ushort)buffer.Length ), buffer ) );
 		}
 
 		/// <inheritdoc cref="Write(string, bool)"/>
 		public override async Task<OperateResult> WriteAsync( string address, bool value ) => await WriteTagAsync( address, AllenBradleyHelper.CIP_Type_Bool, value ? new byte[] { 0xFF, 0xFF } : new byte[] { 0x00, 0x00 } );
+
+		/// <inheritdoc cref="Write(string, bool[])"/>
+		public override async Task<OperateResult> WriteAsync( string address, bool[] value )
+		{
+			return await WriteTagAsync( address, AllenBradleyHelper.CIP_Type_Bool, value.Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( ), HslHelper.IsAddressEndWithIndex( address ) ? value.Length : 1 );
+		}
 
 		/// <inheritdoc cref="Write(string, byte)"/>
 		public async Task<OperateResult> WriteAsync( string address, byte value ) => await WriteTagAsync( address, AllenBradleyHelper.CIP_Type_Byte, new byte[] { value } );
 #endif
 		#endregion
 
-		private SoftIncrementCount incrementCount = new SoftIncrementCount( 65535 );
-		private Random random = new Random( );
+		#region Date ReadWrite
 
-		private byte[] GetLargeForwardOpen( )
-		{
-			byte[] buffer = @"00 00 00 00 00 00 02 00 00 00 00 00 b2 00 34 00
-5b 02 20 06 24 01 06 9c 02 00 00 80 01 00 fe 80
-02 00 1b 05 30 a7 2b 03 02 00 00 00 80 84 1e 00
-cc 07 00 42 80 84 1e 00 cc 07 00 42 a3 03 20 02
-24 01 2c 01".ToHexBytes( );
-			return buffer;
-		}
+		/// <inheritdoc cref="AllenBradleyHelper.ReadDate(IReadWriteCip, string)"/>
+		public OperateResult<DateTime> ReadDate( string address ) => AllenBradleyHelper.ReadDate( this, address );
 
-		private byte[] GetAttributeAll( )
-		{
-			byte[] buffer = @"00 00 00 00 00 00 02 00 00 00 00 00 b2 00 06 00 01 02 20 01 24 01".ToHexBytes( );
-			return buffer;
-		}
+		/// <inheritdoc cref="AllenBradleyHelper.WriteDate(IReadWriteCip, string, DateTime)"/>
+		public OperateResult WriteDate( string address, DateTime date ) => AllenBradleyHelper.WriteDate( this, address, date );
 
-		/// <summary>
-		/// 从PLC反馈的数据解析
-		/// </summary>
-		/// <param name="response">PLC的反馈数据</param>
-		/// <param name="isRead">是否是返回的操作</param>
-		/// <returns>带有结果标识的最终数据</returns>
-		public static OperateResult<byte[], ushort, bool> ExtractActualData( byte[] response, bool isRead )
-		{
-			List<byte> data = new List<byte>( );
+		/// <inheritdoc cref="WriteDate(string, DateTime)"/>
+		public OperateResult WriteTimeAndDate( string address, DateTime date ) => AllenBradleyHelper.WriteTimeAndDate( this, address, date );
 
-			int offset = 42;
-			bool hasMoreData = false;
-			ushort dataType = 0;
-			ushort count = BitConverter.ToUInt16( response, offset );    // 剩余总字节长度，在剩余的字节里，有可能是一项数据，也有可能是多项
-			if (BitConverter.ToInt32( response, 46 ) == 0x8A)
-			{
-				// 多项数据
-				offset = 50;
-				int dataCount = BitConverter.ToUInt16( response, offset );
-				for (int i = 0; i < dataCount; i++)
-				{
-					int offectStart = BitConverter.ToUInt16( response, offset + 2 + i * 2 ) + offset;
-					int offectEnd = (i == dataCount - 1) ? response.Length : (BitConverter.ToUInt16( response, (offset + 4 + i * 2) ) + offset);
-					ushort err = BitConverter.ToUInt16( response, offectStart + 2 );
-					switch (err)
-					{
-						case 0x04: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley04 };
-						case 0x05: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley05 };
-						case 0x06:
-							{
-								// 06的错误码通常是数据长度太多了
-								// CC是符号返回，D2是符号片段返回， D5是列表数据
-								if (response[offset + 2] == 0xD2 || response[offset + 2] == 0xCC)
-									return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley06 };
-								break;
-							}
-						case 0x0A: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley0A };
-						case 0x13: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley13 };
-						case 0x1C: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley1C };
-						case 0x1E: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley1E };
-						case 0x26: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley26 };
-						case 0x00: break;
-						default: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.UnknownError };
-					}
+		/// <inheritdoc cref="AllenBradleyHelper.ReadTime(IReadWriteCip, string)"/>
+		public OperateResult<TimeSpan> ReadTime( string address ) => AllenBradleyHelper.ReadTime( this, address );
 
-					if (isRead)
-					{
-						for (int j = offectStart + 6; j < offectEnd; j++)
-						{
-							data.Add( response[j] );
-						}
-					}
-				}
-			}
-			else
-			{
-				byte err = response[offset + 6];
-				switch (err)
-				{
-					case 0x04: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley04 };
-					case 0x05: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley05 };
-					case 0x06: hasMoreData = true; break;
-					case 0x0A: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley0A };
-					case 0x13: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley13 };
-					case 0x1C: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley1C };
-					case 0x1E: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley1E };
-					case 0x26: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.AllenBradley26 };
-					case 0x00: break;
-					default: return new OperateResult<byte[], ushort, bool>( ) { ErrorCode = err, Message = StringResources.Language.UnknownError };
-				}
+		/// <inheritdoc cref="AllenBradleyHelper.WriteTime(IReadWriteCip, string, TimeSpan)"/>
+		public OperateResult WriteTime( string address, TimeSpan time ) => AllenBradleyHelper.WriteTime( this, address, time );
 
-				if (response[offset + 4] == 0xCD || response[offset + 4] == 0xD3) return OperateResult.CreateSuccessResult( data.ToArray( ), dataType, hasMoreData );
+		/// <inheritdoc cref="AllenBradleyHelper.WriteTimeOfDate(IReadWriteCip, string, TimeSpan)"/>
+		public OperateResult WriteTimeOfDate( string address, TimeSpan timeOfDate ) => AllenBradleyHelper.WriteTimeOfDate( this, address, timeOfDate );
+#if !NET20 && !NET35
+		/// <inheritdoc cref="ReadDate(string)"/>
+		public async Task<OperateResult<DateTime>> ReadDateAsync( string address ) => await AllenBradleyHelper.ReadDateAsync( this, address );
 
-				if (response[offset + 4] == 0xCC || response[offset + 4] == 0xD2)
-				{
-					for (int i = offset + 10; i < offset + 2 + count; i++)
-					{
-						data.Add( response[i] );
-					}
-					dataType = BitConverter.ToUInt16( response, offset + 8 );
-				}
-				else if (response[offset + 4] == 0xD5)
-				{
-					for (int i = offset + 8; i < offset + 2 + count; i++)
-					{
-						data.Add( response[i] );
-					}
-				}
-			}
+		/// <inheritdoc cref="WriteDate(string, DateTime)"/>
+		public async Task<OperateResult> WriteDateAsync( string address, DateTime date ) => await AllenBradleyHelper.WriteDateAsync( this, address, date );
 
-			return OperateResult.CreateSuccessResult( data.ToArray( ), dataType, hasMoreData );
-		}
+		/// <inheritdoc cref="WriteTimeAndDate(string, DateTime)"/>
+		public async Task<OperateResult> WriteTimeAndDateAsync( string address, DateTime date ) => await AllenBradleyHelper.WriteTimeAndDateAsync( this, address, date );
+
+		/// <inheritdoc cref="ReadTime(string)"/>
+		public async Task<OperateResult<TimeSpan>> ReadTimeAsync( string address ) => await AllenBradleyHelper.ReadTimeAsync( this, address );
+
+		/// <inheritdoc cref="WriteTime(string, TimeSpan)"/>
+		public async Task<OperateResult> WriteTimeAsync( string address, TimeSpan time ) => await AllenBradleyHelper.WriteTimeAsync( this, address, time );
+
+		/// <inheritdoc cref="WriteTimeOfDate(string, TimeSpan)"/>
+		public async Task<OperateResult> WriteTimeOfDateAsync( string address, TimeSpan timeOfDate ) => await AllenBradleyHelper.WriteTimeOfDateAsync( this, address, timeOfDate );
+#endif
+		#endregion
+
+		#region Object Override
+
+		/// <inheritdoc/>
+		public override string ToString( ) => $"OmronConnectedCipNet[{IpAddress}:{Port}]";
+
+		#endregion
 	}
 }

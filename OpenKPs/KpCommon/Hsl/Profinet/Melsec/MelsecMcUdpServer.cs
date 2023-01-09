@@ -54,14 +54,12 @@ namespace HslCommunication.Profinet.Melsec
 		/// <summary>
 		/// 重新开始接收数据
 		/// </summary>
-		/// <exception cref="ArgumentNullException"></exception>
 		private void RefreshReceive( )
 		{
-			AppSession session = new AppSession( );
-			session.WorkSocket = CoreSocket;
+			AppSession session = new AppSession( CoreSocket );
 			session.UdpEndPoint = new IPEndPoint( IPAddress.Any, 0 );
-			session.BytesContent = new byte[ReceiveCacheLength];
-			CoreSocket.BeginReceiveFrom( session.BytesContent, 0, ReceiveCacheLength, SocketFlags.None, ref session.UdpEndPoint, new AsyncCallback( AsyncCallback ), session );
+			session.BytesBuffer = new byte[ReceiveCacheLength];
+			CoreSocket.BeginReceiveFrom( session.BytesBuffer, 0, ReceiveCacheLength, SocketFlags.None, ref session.UdpEndPoint, new AsyncCallback( AsyncCallback ), session );
 		}
 
 		#region Private Receive Callback
@@ -80,7 +78,7 @@ namespace HslCommunication.Profinet.Melsec
 					RefreshReceive( );
 					// 处理数据
 					byte[] content = new byte[received];
-					Array.Copy( session.BytesContent, 0, content, 0, received );
+					Array.Copy( session.BytesBuffer, 0, content, 0, received );
 					byte[] back = null;
 
 					if (IsBinary)

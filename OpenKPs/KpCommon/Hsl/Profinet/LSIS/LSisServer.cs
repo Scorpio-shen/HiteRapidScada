@@ -35,7 +35,6 @@ namespace HslCommunication.Profinet.LSIS
 			this.SetCpuType = CpuType;
 			WordLength = 2;
 			ByteTransform = new RegularByteTransform( );
-			serialPort = new SerialPort( );
 		}
 
 		#endregion
@@ -149,91 +148,16 @@ namespace HslCommunication.Profinet.LSIS
 		#region NetServer Override
 
 		/// <inheritdoc/>
-		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
+		protected override INetMessage GetNewNetMessage( ) => new LsisFastEnetMessage( );
+
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			// 开始接收数据信息
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-			try
-			{
-				socket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), appSession );
-				AddClient( appSession );
-			}
-			catch
-			{
-				socket.Close( );
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-			}
-		}
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
-		{
-			if (ar.AsyncState is AppSession session)
-			{
-				try
-				{
-					int receiveCount = session.WorkSocket.EndReceive( ar );
-#if NET20 || NET35
-					OperateResult<byte[]> read1 = ReceiveByMessage( session.WorkSocket, 5000, new LsisFastEnetMessage( ) );
-#else
-					OperateResult<byte[]> read1 = await ReceiveByMessageAsync( session.WorkSocket, 5000, new LsisFastEnetMessage( ) );
-#endif
-					if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{read1.Content.ToHexString( ' ' )}" );
-
-					byte[] receive = read1.Content;
-					byte[] SendData = null;
-					if (receive[20] == 0x54)
-					{
-						// 读数据
-						SendData = ReadByMessage( receive );
-					}
-					else if (receive[20] == 0x58)
-					{
-						SendData = WriteByMessage( receive );
-					}
-					else
-					{
-						RaiseDataReceived( session, SendData );
-						RemoveClient( session );
-						return;
-					}
-
-					if (SendData == null) { RemoveClient( session ); return; }
-
-					RaiseDataReceived( session, SendData );
-					session.WorkSocket.Send( SendData );
-
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{SendData.ToHexString( ' ' )}" );
-
-					session.HeartTime = DateTime.Now;
-					RaiseDataSend( receive );
-					session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), session );
-				}
-				catch( Exception ex )
-				{
-					RemoveClient( session, $"SocketAsyncCallBack -> " + ex.Message );
-				}
-			}
-		}
-
-		private byte[] ReadByMessage( byte[] packCommand )
-		{
-			List<byte> content = new List<byte>( );
-
-			content.AddRange( ReadByCommand( packCommand ) );
-			//var testD = SoftBasic.HexStringToBytes(@"4C 53 49 53 2D 58 47 54 00 00 04 01 A0 11 01 00 16 00 02 2A 55 00 02 00 00 00 00 00 03 00 02 00 D4 26 02 00 3C 34 02 00 72 33");
-			//var testM = SoftBasic.HexStringToBytes(@"4C 53 49 53 2D 58 47 54 00 00 04 01 A0 11 01 00 13 00 02 27 55 00 00 00 00 00 00 00 03 00 01 00 00 01 00 01 01 00 01");
-			//var testT = SoftBasic.HexStringToBytes(@"4C 53 49 53 2D 58 47 54 00 00 04 01 A0 11 01 00 16 00 02 2A 55 00 02 00 00 00 00 00 03 00 02 00 00 00 02 00 00 00 02 00 00 00");
-
-			return content.ToArray();
+			byte[] SendData = null;
+			if (receive[20] == 0x54)      SendData = ReadByCommand( receive );               // r
+			else if (receive[20] == 0x58) SendData = WriteByMessage( receive );              // w
+			
+			return OperateResult.CreateSuccessResult( SendData );
 		}
 
 		private byte[] ReadByCommand( byte[] command )
@@ -295,10 +219,12 @@ namespace HslCommunication.Profinet.LSIS
 			int RequestCount = BitConverter.ToUInt16( packCommand, 30 + NameLength );
 
 			byte[] data = ByteTransform.TransByte( packCommand, 32 + NameLength, RequestCount );
-			if (packCommand[22] == 0x00)
+            
+            if (packCommand[22] == 0x00)
 			{
-				int offset = Convert.ToInt32( deviceAddress.Substring( 2 ) );
-				Write( deviceAddress.Substring( 0, 2 ) + (offset / 16).ToString( ) + (offset % 16).ToString( "X1" ), packCommand[38] != 0x00 );
+				int decValue = int.Parse(deviceAddress.Substring(2), System.Globalization.NumberStyles.HexNumber);
+				int offset = Convert.ToInt32(decValue);
+				Write( deviceAddress.Substring( 0, 2 ) + (offset / 16).ToString( ) + (offset % 16).ToString( "X1" ), data[0] == 1 ? true : false);
 			}
 			else
 			{
@@ -412,117 +338,44 @@ namespace HslCommunication.Profinet.LSIS
 		#region Serial Support
 
 		private int station = 1;
-		private SerialPort serialPort;            // 核心的串口对象
 
-		/// <summary>
-		/// 使用默认的参数进行初始化串口，9600波特率，8位数据位，无奇偶校验，1位停止位
-		/// </summary>
-		/// <param name="com">串口信息</param>
-		public void StartSerialPort( string com )
+		/// <inheritdoc/>
+		protected override bool CheckSerialReceiveDataComplete( byte[] buffer, int receivedLength )
 		{
-			StartSerialPort( com, 9600 );
+			if (receivedLength > 5) return buffer[receivedLength - 3] == AsciiControl.EOT;
+			return base.CheckSerialReceiveDataComplete( buffer, receivedLength );
 		}
 
-		/// <summary>
-		/// 使用默认的参数进行初始化串口，8位数据位，无奇偶校验，1位停止位
-		/// </summary>
-		/// <param name="com">串口信息</param>
-		/// <param name="baudRate">波特率</param>
-		public void StartSerialPort( string com, int baudRate )
+		/// <inheritdoc/>
+		protected override string GetSerialMessageLogText( byte[] data )
 		{
-			StartSerialPort( sp =>
-			 {
-				 sp.PortName = com;
-				 sp.BaudRate = baudRate;
-				 sp.DataBits = 8;
-				 sp.Parity = Parity.None;
-				 sp.StopBits = StopBits.One;
-			 } );
+			return SoftBasic.GetAsciiStringRender( data );
 		}
 
-		/// <summary>
-		/// 使用自定义的初始化方法初始化串口的参数
-		/// </summary>
-		/// <param name="inni">初始化信息的委托</param>
-		public void StartSerialPort( Action<SerialPort> inni )
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> DealWithSerialReceivedData( byte[] data )
 		{
-			if (!serialPort.IsOpen)
-			{
-				inni?.Invoke( serialPort );
-
-				serialPort.ReadBufferSize = 1024;
-				serialPort.ReceivedBytesThreshold = 1;
-				serialPort.Open( );
-				serialPort.DataReceived += SerialPort_DataReceived;
-			}
-		}
-
-		/// <summary>
-		/// 关闭串口
-		/// </summary>
-		public void CloseSerialPort( )
-		{
-			if (serialPort.IsOpen)
-			{
-				serialPort.Close( );
-			}
-		}
-
-		/// <summary>
-		/// 接收到串口数据的时候触发
-		/// </summary>
-		/// <param name="sender">串口对象</param>
-		/// <param name="e">消息</param>
-		private void SerialPort_DataReceived( object sender, SerialDataReceivedEventArgs e )
-		{
-			var sp = (SerialPort)sender;
-			int rCount = 0;
-			byte[] buffer = new byte[1024];
-
-			while (true)
-			{
-				System.Threading.Thread.Sleep( 20 );
-				int count = sp.Read( buffer, rCount, sp.BytesToRead );
-				rCount += count;
-				if (count == 0) break;
-			}
-
-			if (rCount == 0) return;
-			byte[] receive = new byte[rCount];
-			Array.Copy( buffer, 0, receive, 0, rCount );
-
-			if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { return; };
-
-			LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] {StringResources.Language.Receive}：{SoftBasic.GetAsciiStringRender( receive )}" );
-
 			try
 			{
-				byte[] SendData = null;
-				if (receive[3] == 0x72 || receive[3] == 0x52) SendData = ReadSerialByCommand( receive ); // READ
-				else if (receive[3] == 0x77 || receive[3] == 0x57) SendData = WriteSerialByMessage( receive ); // Write
+				byte[] back = null;
+				if (     data[3] == 0x72 || data[3] == 0x52) back = ReadSerialByCommand( data );  // READ
+				else if (data[3] == 0x77 || data[3] == 0x57) back = WriteSerialByMessage( data ); // Write
 
-				if (SendData != null)
-				{
-					RaiseDataReceived( sender, SendData );
-					serialPort.Write( SendData, 0, SendData.Length );
-					LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] {StringResources.Language.Send}：{SoftBasic.GetAsciiStringRender( SendData )}" );
-				}
+				return OperateResult.CreateSuccessResult( back );
 			}
 			catch (Exception ex)
 			{
-				LogNet?.WriteException( ToString( ) + $"[{serialPort.PortName}] Source: " + receive.ToHexString( ' ' ), ex );
+				return new OperateResult<byte[]>( $"{ex.Message} Source: " + data.ToHexString( ' ' ) );
 			}
-
-			if (IsStarted) RaiseDataSend( receive );
 		}
 
 		private byte[] PackReadSerialResponse( byte[] receive, short err, List<byte[]> data )
 		{
 			var result = new List<byte>( 24 );
 			if(err == 0)
-				result.Add( 0x06 );    // ENQ
+				result.Add( AsciiControl.ACK );
 			else
-				result.Add( 0x15 );    // NAK
+				result.Add( AsciiControl.NAK );
 			result.AddRange( SoftBasic.BuildAsciiBytesFrom( (byte)station ) );
 			result.Add( receive[3] );    // command r / w
 
@@ -549,7 +402,7 @@ namespace HslCommunication.Profinet.LSIS
 				result.AddRange( SoftBasic.BuildAsciiBytesFrom( err ) );
 			}
 
-			result.Add( 0x03 );    // ETX
+			result.Add( AsciiControl.ETX );    // ETX
 			int sum1 = 0;
 			for (int i = 0; i < result.Count; i++)
 			{
@@ -600,7 +453,7 @@ namespace HslCommunication.Profinet.LSIS
 				int nameLength = Convert.ToInt32( Encoding.ASCII.GetString( command, 6, 2 ), 16 );
 
 				string deviceAddress = Encoding.ASCII.GetString( command, 8 + 1, nameLength - 1 );
-				ushort length = Convert.ToUInt16( Encoding.ASCII.GetString( command, 8 + nameLength, 2 ) );
+				ushort length = Convert.ToUInt16( Encoding.ASCII.GetString( command, 8 + nameLength, 2 ), 16 );
 
 				ushort byteLength = (ushort)(length * AnalysisAddressLength( deviceAddress ));
 				if (byteLength > 120) return PackReadSerialResponse( command, 0x1232, null );    // 读取不能超过60个字
@@ -665,7 +518,7 @@ namespace HslCommunication.Profinet.LSIS
 				string deviceAddress = Encoding.ASCII.GetString( command, 9, nameLength - 1 );
 
 				if (deviceAddress[1] == 'X') return PackReadSerialResponse( command, 0x1132, null );
-				ushort length = Convert.ToUInt16( Encoding.ASCII.GetString( command, 8 + nameLength, 2 ) );
+				ushort length = Convert.ToUInt16( Encoding.ASCII.GetString( command, 8 + nameLength, 2 ), 16 );
 
 				int byteLength = length * AnalysisAddressLength( deviceAddress );
 				OperateResult write = Write( deviceAddress, Encoding.ASCII.GetString( command, 10 + nameLength, byteLength * 2 ).ToHexBytes( ) );

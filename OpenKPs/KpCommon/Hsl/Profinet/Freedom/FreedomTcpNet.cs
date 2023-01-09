@@ -37,59 +37,99 @@ namespace HslCommunication.Profinet.Freedom
 		/// </summary>
 		/// <param name="ipAddress">Ip地址</param>
 		/// <param name="port">端口</param>
-		public FreedomTcpNet(string ipAddress, int port )
+		public FreedomTcpNet(string ipAddress, int port ) : this( )
 		{
 			this.IpAddress     = ipAddress;
 			this.Port          = port;
-			this.ByteTransform = new RegularByteTransform( );
 		}
+
+		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => NetMessage;
+
+		#endregion
+
+		#region Function
+
+		/// <summary>
+		/// 一个对返回数据合法检查的委托实例，默认为空，不进行合法性检查，可以实例化实现任意的报文检测，返回是否合法结果。<br />
+		/// A delegate instance that checks the legality of the returned data. It is empty by default and does not perform legality checking. 
+		/// It can be instantiated to implement any packet inspection and return whether the result is legal or not.
+		/// </summary>
+		/// <remarks>
+		/// 例如返回的第一个字节为0表示正常报文，否则是异常返回，可以简写：CheckResponseStatus = ( send, receive ) => receive[2] == 0 ? OperateResult.CreateSuccessResult( ) : new OperateResult( receive[2], "error" );<br />
+		/// For example, if the first byte returned is 0, it means a normal message, otherwise it is an abnormal return, 
+		/// which can be abbreviated as: CheckResponseStatus = ( send, receive ) => receive[2] == 0 ? OperateResult.CreateSuccessResult( ) : new OperateResult( receive[2], "error" );
+		/// </remarks>
+		public Func<byte[], byte[], OperateResult> CheckResponseStatus { get; set; }
+
+		/// <summary>
+		/// 如果当前的报文使用了固定报文头加剩余报文长度来描述完整报文的情况下，可以自定义实例化报文消息对象，可以更快更完整的接收全部报文的数据。<br />
+		/// If the current message uses a fixed header and the remaining message length to describe the complete message, 
+		/// you can customize the instantiated message object to receive the data of all messages faster and more completely.
+		/// </summary>
+		/// <remarks>
+		/// 例如当前的报文是modbustcp协议的话，NetMessage = new HslCommunication.Core.IMessage.ModbusTcpMessage( );<br />
+		/// For example, if the current message is modbustcp protocol, NetMessage = new HslCommunication.Core.IMessage.ModbusTcpMessage( );
+		/// </remarks>
+		public INetMessage NetMessage { get; set; }
 
 		#endregion
 
 		#region Read Write
 
 		/// <inheritdoc/>
+		/// <remarks>
+		/// length没有任何意义，需要传入原始的字节报文，例如：stx=9;00 00 00 00 00 06 01 03 00 64 00 01，stx得值用于获取数据移除的前置报文头，可以不填写<br />
+		/// length has no meaning, you need to pass in the original byte message, for example: stx=9;00 00 00 00 00 06 01 03 00 64 00 01, 
+		/// the value of stx is used to obtain the preamble header for data removal, can be left blank
+		/// </remarks>
 		[HslMqttApi( "ReadByteArray", "特殊的地址格式，需要采用解析包起始地址的报文，例如 modbus 协议为 stx=9;00 00 00 00 00 06 01 03 00 64 00 01" )]
 		public override OperateResult<byte[]> Read( string address, ushort length )
 		{
-			OperateResult<byte[], int> analysis = AnalysisAddress( address );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+			int startIndex = HslHelper.ExtractParameter( ref address, "stx", 0x00 );
+			byte[] send = address.ToHexBytes( );
 
-			OperateResult<byte[]> read = ReadFromCoreServer( analysis.Content1 );
+			OperateResult<byte[]> read = ReadFromCoreServer( send );
 			if (!read.IsSuccess) return read;
 
-			if (analysis.Content2 >= read.Content.Length) return new OperateResult<byte[]>( StringResources.Language.ReceiveDataLengthTooShort );
-			return OperateResult.CreateSuccessResult( read.Content.RemoveBegin( analysis.Content2 ) );
+			if (CheckResponseStatus != null)
+			{
+				OperateResult check = CheckResponseStatus.Invoke( send, read.Content );
+				if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
+			}
+
+			if (startIndex >= read.Content.Length) return new OperateResult<byte[]>( StringResources.Language.ReceiveDataLengthTooShort );
+			return OperateResult.CreateSuccessResult( read.Content.RemoveBegin( startIndex ) );
 		}
 
 		/// <inheritdoc/>
-		public override OperateResult Write( string address, byte[] value )
-		{
-			return Read( address, 0 );
-		}
+		public override OperateResult Write( string address, byte[] value ) => Read( address, 0 );
 
 		#endregion
 
 		#region Read Write Async
 #if !NET35 && !NET20
-		/// <inheritdoc/>
+		/// <inheritdoc cref="Read(string, ushort)"/>
 		public async override Task<OperateResult<byte[]>> ReadAsync( string address, ushort length )
 		{
-			OperateResult<byte[], int> analysis = AnalysisAddress( address );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+			int startIndex = HslHelper.ExtractParameter( ref address, "stx", 0x00 );
+			byte[] send = address.ToHexBytes( );
 
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( analysis.Content1 );
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( send );
 			if (!read.IsSuccess) return read;
 
-			if (analysis.Content2 >= read.Content.Length) return new OperateResult<byte[]>( StringResources.Language.ReceiveDataLengthTooShort );
-			return OperateResult.CreateSuccessResult( read.Content.RemoveBegin( analysis.Content2 ) );
+			if (CheckResponseStatus != null)
+			{
+				OperateResult check = CheckResponseStatus.Invoke( send, read.Content );
+				if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
+			}
+
+			if (startIndex >= read.Content.Length) return new OperateResult<byte[]>( StringResources.Language.ReceiveDataLengthTooShort );
+			return OperateResult.CreateSuccessResult( read.Content.RemoveBegin( startIndex ) );
 		}
 
 		/// <inheritdoc/>
-		public async override Task<OperateResult> WriteAsync( string address, byte[] value )
-		{
-			return await ReadAsync( address, 0 );
-		}
+		public async override Task<OperateResult> WriteAsync( string address, byte[] value ) => await ReadAsync( address, 0 );
 #endif
 		#endregion
 
@@ -97,49 +137,6 @@ namespace HslCommunication.Profinet.Freedom
 
 		/// <inheritdoc/>
 		public override string ToString( ) => $"FreedomTcpNet<{ByteTransform.GetType( )}>[{IpAddress}:{Port}]";
-
-		#endregion
-
-		#region Static Helper
-
-		/// <summary>
-		/// 分析地址的方法，会转换成一个数据报文和数据结果偏移的信息
-		/// </summary>
-		/// <param name="address">地址信息</param>
-		/// <returns>报文结果内容</returns>
-		public static OperateResult<byte[], int> AnalysisAddress(string address )
-		{
-			try
-			{
-				int index = 0;
-				byte[] buffer = null;
-				if (address.IndexOf( ';' ) > 0)
-				{
-					string[] splits = address.Split( new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries );
-					for (int i = 0; i < splits.Length; i++)
-					{
-						if (splits[i].StartsWith( "stx=" ))
-						{
-							index = Convert.ToInt32( splits[i].Substring( 4 ) );
-						}
-						else
-						{
-							buffer = splits[i].ToHexBytes( );
-						}
-					}
-				}
-				else
-				{
-					buffer = address.ToHexBytes( );
-				}
-
-				return OperateResult.CreateSuccessResult( buffer, index );
-			}
-			catch(Exception ex)
-			{
-				return new OperateResult<byte[], int>( ex.Message );
-			}
-		}
 
 		#endregion
 	}

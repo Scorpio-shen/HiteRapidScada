@@ -4,6 +4,10 @@ using System.Linq;
 using System.Text;
 using System.IO.Ports;
 using HslCommunication.LogNet;
+using HslCommunication.BasicFramework;
+using HslCommunication.Reflection;
+using System.Configuration;
+using HslCommunication.Core;
 
 namespace HslCommunication.Profinet.Toledo
 {
@@ -27,12 +31,24 @@ namespace HslCommunication.Profinet.Toledo
 		private void SerialPort_DataReceived( object sender, SerialDataReceivedEventArgs e )
 		{
 			// 接收数据
-			List<byte> buffer = new List<byte>( );
+			List<byte> array = new List<byte>( );
 			byte[] data = new byte[1024];
+			int receiveEmptyCount = 0;                                      // 当前接收空数据的次数统计
 			while (true)
 			{
 				System.Threading.Thread.Sleep( 20 );
-				if (serialPort.BytesToRead < 1) break;
+
+				if (serialPort.BytesToRead < 1)
+				{
+					// 没有接收到数据的情况
+					receiveEmptyCount++;
+					if (receiveEmptyCount >= 3) break;
+					else continue;
+				}
+				else
+				{
+					receiveEmptyCount = 0;
+				}
 
 				try
 				{
@@ -40,7 +56,17 @@ namespace HslCommunication.Profinet.Toledo
 
 					byte[] buffer2 = new byte[recCount];
 					Array.Copy( data, 0, buffer2, 0, recCount );
-					buffer.AddRange( buffer2 );
+					array.AddRange( buffer2 );
+
+					if (HasChk)
+					{
+						if (array.Count > 15 && array[array.Count - 2] == AsciiControl.CR) break;
+					}
+					else
+					{
+						if (array.Count > 15 && array[array.Count - 1] == AsciiControl.CR) break;
+						if (array.Count > 15 && array[array.Count - 2] == AsciiControl.CR) break;
+					}
 				}
 				catch(Exception ex)
 				{
@@ -49,9 +75,20 @@ namespace HslCommunication.Profinet.Toledo
 				}
 			}
 
-			if (buffer.Count == 0) return;
+			if (array.Count == 0) return;
+			byte[] buffer = array.ToArray( );
+			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + buffer.ToHexString( ' ' ) );
 
-			OnToledoStandardDataReceived?.Invoke( this, new ToledoStandardData( buffer.ToArray( ) ) );
+			ToledoStandardData toledo = null;
+			try
+			{
+				toledo = new ToledoStandardData( buffer );
+			}
+			catch( Exception ex )
+			{
+				logNet?.WriteException( ToString( ), "ToledoStandardData new failed: " + buffer.ToHexString( ' ' ), ex );
+			}
+			if (toledo != null) OnToledoStandardDataReceived?.Invoke( this, toledo );
 		}
 
 		#endregion
@@ -177,6 +214,22 @@ namespace HslCommunication.Profinet.Toledo
 		/// </summary>
 		public int BaudRate { get; private set; }
 
+		/// <summary>
+		/// 接收数据的超时时间，默认5000ms<br />
+		/// Timeout for receiving data, default is 5000ms
+		/// </summary>
+		[HslMqttApi( Description = "Timeout for receiving data, default is 5000ms" )]
+		public int ReceiveTimeout
+		{
+			get { return receiveTimeout; }
+			set { receiveTimeout = value; }
+		}
+
+		/// <summary>
+		/// 获取或设置当前的报文否是含有校验的，默认为含有校验
+		/// </summary>
+		public bool HasChk { get; set; } = false;
+
 		#endregion
 
 		#region Event Handle
@@ -199,6 +252,7 @@ namespace HslCommunication.Profinet.Toledo
 
 		private SerialPort serialPort;                            // 串口的信息
 		private ILogNet logNet;                                   // 日志存储
+		private int receiveTimeout = 5000;                        // 接收数据的超时时间
 
 		#endregion
 

@@ -68,17 +68,15 @@ namespace HslCommunication.Enthernet
 			if (!check.IsSuccess) return;
 
 			// 允许发布订阅信息
-			AppSession session = new AppSession
+			AppSession session = new AppSession( socket )
 			{
-				KeyGroup = receive.Content2,
-				WorkSocket = socket
+				KeyGroup = receive.Content2
 			};
+			session.BytesBuffer = new byte[4];
 
-			session.IpEndPoint = endPoint;
-			session.IpAddress = endPoint.Address.ToString( );
 			try
 			{
-				socket.BeginReceive( session.BytesHead, 0, session.BytesHead.Length, SocketFlags.None, new AsyncCallback( ReceiveCallback ), session );
+				socket.BeginReceive( session.BytesBuffer, 0, session.BytesBuffer.Length, SocketFlags.None, new AsyncCallback( ReceiveCallback ), session );
 			}
 			catch (Exception ex)
 			{
@@ -218,7 +216,7 @@ namespace HslCommunication.Enthernet
 					}
 					else
 					{
-						session.HeartTime = DateTime.Now;
+						session.UpdateHeartTime( );
 					}
 				}
 				catch (Exception ex)

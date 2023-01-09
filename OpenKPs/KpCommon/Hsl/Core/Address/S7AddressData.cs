@@ -111,32 +111,48 @@ namespace HslCommunication.Core.Address
 			S7AddressData addressData = new S7AddressData( );
 			try
 			{
+				address = address.ToUpper( );
 				addressData.Length = length;
 				addressData.DbBlock = 0;
-				if (address.StartsWith( "AI" ) || address.StartsWith( "ai" ))
+				if (address.StartsWith( "AI" ))
 				{
 					addressData.DataCode = 0x06;
-					addressData.AddressStart = CalculateAddressStarted( address.Substring( 2 ) );
+					if (address.StartsWith( "AIX" ) || address.StartsWith( "AIB" ) || address.StartsWith( "AIW" ) || address.StartsWith( "AID" ))
+						addressData.AddressStart = CalculateAddressStarted( address.Substring( 3 ) );
+					else
+						addressData.AddressStart = CalculateAddressStarted( address.Substring( 2 ) );
 				}
-				else if (address.StartsWith( "AQ" ) || address.StartsWith( "aq" ))
+				else if (address.StartsWith( "AQ" ))
 				{
 					addressData.DataCode = 0x07;
-					addressData.AddressStart = CalculateAddressStarted( address.Substring( 2 ) );
+					if (address.StartsWith( "AQX" ) || address.StartsWith( "AQB" ) || address.StartsWith( "AQW" ) || address.StartsWith( "AQD" ))
+						addressData.AddressStart = CalculateAddressStarted( address.Substring( 3 ) );
+					else
+						addressData.AddressStart = CalculateAddressStarted( address.Substring( 2 ) );
 				}
 				else if (address[0] == 'I')
 				{
 					addressData.DataCode = 0x81;
-					addressData.AddressStart = CalculateAddressStarted( address.Substring( 1 ) );
+					if (address.StartsWith( "IX" ) || address.StartsWith( "IB" ) || address.StartsWith( "IW" ) || address.StartsWith( "ID" ))
+						addressData.AddressStart = CalculateAddressStarted( address.Substring( 2 ) );
+					else
+						addressData.AddressStart = CalculateAddressStarted( address.Substring( 1 ) );
 				}
 				else if (address[0] == 'Q')
 				{
 					addressData.DataCode = 0x82;
-					addressData.AddressStart = CalculateAddressStarted( address.Substring( 1 ) );
+					if (address.StartsWith( "QX" ) || address.StartsWith( "QB" ) || address.StartsWith( "QW" ) || address.StartsWith( "QD" ))
+						addressData.AddressStart = CalculateAddressStarted( address.Substring( 2 ) );
+					else
+						addressData.AddressStart = CalculateAddressStarted( address.Substring( 1 ) );
 				}
 				else if (address[0] == 'M')
 				{
 					addressData.DataCode = 0x83;
-					addressData.AddressStart = CalculateAddressStarted( address.Substring( 1 ) );
+					if (address.StartsWith( "MX" ) || address.StartsWith( "MB" ) || address.StartsWith( "MW" ) || address.StartsWith( "MD" ))
+						addressData.AddressStart = CalculateAddressStarted( address.Substring( 2 ) );
+					else
+						addressData.AddressStart = CalculateAddressStarted( address.Substring( 1 ) );
 				}
 				else if (address[0] == 'D' || address.Substring( 0, 2 ) == "DB")
 				{

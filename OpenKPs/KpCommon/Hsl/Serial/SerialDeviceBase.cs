@@ -67,14 +67,14 @@ namespace HslCommunication.Serial
 
 		#region Public Member
 
-		/// <inheritdoc cref="HslCommunication.Core.Net.NetworkDoubleBase.ByteTransform"/>
+		/// <inheritdoc cref="NetworkDoubleBase.ByteTransform"/>
 		public IByteTransform ByteTransform
 		{
 			get { return byteTransform; }
 			set { byteTransform = value; }
 		}
 
-		/// <inheritdoc cref="HslCommunication.Core.Net.NetworkDoubleBase.ConnectionId"/>
+		/// <inheritdoc cref="NetworkDoubleBase.ConnectionId"/>
 		public string ConnectionId
 		{
 			get { return connectionId; }
@@ -85,8 +85,19 @@ namespace HslCommunication.Serial
 
 		#region Protect Member
 
-		/// <inheritdoc cref="HslCommunication.Core.Net.NetworkDeviceBase.WordLength"/>
+		/// <inheritdoc cref="NetworkDeviceBase.WordLength"/>
 		protected ushort WordLength { get; set; } = 1;
+
+		/// <inheritdoc cref="NetworkDeviceBase.GetWordLength(string, int, int)"/>
+		protected virtual ushort GetWordLength( string address, int length, int dataTypeLength )
+		{
+			if (WordLength == 0)
+			{
+				int len = length * dataTypeLength * 2 / 4;
+				return len == 0 ? (ushort)1 : (ushort)len;
+			}
+			return (ushort)(WordLength * length * dataTypeLength);
+		}
 
 		#endregion
 
@@ -151,27 +162,13 @@ namespace HslCommunication.Serial
 		#region Customer Read Write
 
 		/// <inheritdoc cref="IReadWriteNet.ReadCustomer{T}(string)"/>
-		public OperateResult<T> ReadCustomer<T>( string address ) where T : IDataTransfer, new()
-		{
-			OperateResult<T> result = new OperateResult<T>( );
-			T Content = new T( );
-			OperateResult<byte[]> read = Read( address, Content.ReadCount );
-			if (read.IsSuccess)
-			{
-				Content.ParseSource( read.Content );
-				result.Content = Content;
-				result.IsSuccess = true;
-			}
-			else
-			{
-				result.ErrorCode = read.ErrorCode;
-				result.Message = read.Message;
-			}
-			return result;
-		}
+		public OperateResult<T> ReadCustomer<T>( string address ) where T : IDataTransfer, new() => ReadWriteNetHelper.ReadCustomer<T>( this, address );
+
+		/// <inheritdoc cref="IReadWriteNet.ReadCustomer{T}(string, T)"/>
+		public OperateResult<T> ReadCustomer<T>( string address, T obj ) where T : IDataTransfer, new() => ReadWriteNetHelper.ReadCustomer( this, address, obj );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteCustomer{T}(string, T)"/>
-		public OperateResult WriteCustomer<T>( string address, T data ) where T : IDataTransfer, new() => Write( address, data.ToSource( ) );
+		public OperateResult WriteCustomer<T>( string address, T data ) where T : IDataTransfer, new() => ReadWriteNetHelper.WriteCustomer( this, address, data );
 
 		#endregion
 
@@ -183,6 +180,9 @@ namespace HslCommunication.Serial
 		/// <inheritdoc cref="IReadWriteNet.Write{T}(T)"/>
 		public virtual OperateResult Write<T>( T data ) where T : class, new() => HslReflectionHelper.Write<T>( data, this );
 
+		/// <inheritdoc cref="IReadWriteNet.ReadStruct{T}(string, ushort)"/>
+		public virtual OperateResult<T> ReadStruct<T>( string address, ushort length ) where T : class, new() => ReadWriteNetHelper.ReadStruct<T>( this, address, length, this.ByteTransform );
+
 		#endregion
 
 		#region Read Support
@@ -193,7 +193,7 @@ namespace HslCommunication.Serial
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt16(string, ushort)"/>
 		[HslMqttApi( "ReadInt16Array", "" )]
-		public virtual OperateResult<short[]> ReadInt16( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength) ), m => ByteTransform.TransInt16( m, 0, length ) );
+		public virtual OperateResult<short[]> ReadInt16( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 1 ) ), m => ByteTransform.TransInt16( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt16(string)"/>
 		[HslMqttApi( "ReadUInt16", "" )]
@@ -201,7 +201,7 @@ namespace HslCommunication.Serial
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt16(string, ushort)"/>
 		[HslMqttApi( "ReadUInt16Array", "" )]
-		public virtual OperateResult<ushort[]> ReadUInt16( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength) ), m => ByteTransform.TransUInt16( m, 0, length ) );
+		public virtual OperateResult<ushort[]> ReadUInt16( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 1 ) ), m => ByteTransform.TransUInt16( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt32(string)"/>
 		[HslMqttApi( "ReadInt32", "" )]
@@ -209,7 +209,7 @@ namespace HslCommunication.Serial
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt32(string, ushort)"/>
 		[HslMqttApi( "ReadInt32Array", "" )]
-		public virtual OperateResult<int[]> ReadInt32( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransInt32( m, 0, length ) );
+		public virtual OperateResult<int[]> ReadInt32( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransInt32( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32(string)"/>
 		[HslMqttApi( "ReadUInt32", "" )]
@@ -217,7 +217,7 @@ namespace HslCommunication.Serial
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32(string, ushort)"/>
 		[HslMqttApi( "ReadUInt32Array", "" )]
-		public virtual OperateResult<uint[]> ReadUInt32( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransUInt32( m, 0, length ) );
+		public virtual OperateResult<uint[]> ReadUInt32( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransUInt32( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloat(string)"/>
 		[HslMqttApi( "ReadFloat", "" )]
@@ -225,7 +225,7 @@ namespace HslCommunication.Serial
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloat(string, ushort)"/>
 		[HslMqttApi( "ReadFloatArray", "" )]
-		public virtual OperateResult<float[]> ReadFloat( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransSingle( m, 0, length ) );
+		public virtual OperateResult<float[]> ReadFloat( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransSingle( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64(string)"/>
 		[HslMqttApi( "ReadInt64", "" )]
@@ -233,7 +233,7 @@ namespace HslCommunication.Serial
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64(string, ushort)"/>
 		[HslMqttApi( "ReadInt64Array", "" )]
-		public virtual OperateResult<long[]> ReadInt64( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransInt64( m, 0, length ) );
+		public virtual OperateResult<long[]> ReadInt64( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransInt64( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64(string)"/>
 		[HslMqttApi( "ReadUInt64", "" )]
@@ -241,7 +241,7 @@ namespace HslCommunication.Serial
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64(string, ushort)"/>
 		[HslMqttApi( "ReadUInt64Array", "" )]
-		public virtual OperateResult<ulong[]> ReadUInt64( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransUInt64( m, 0, length ) );
+		public virtual OperateResult<ulong[]> ReadUInt64( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransUInt64( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDouble(string)"/>
 		[HslMqttApi( "ReadDouble", "" )]
@@ -249,11 +249,11 @@ namespace HslCommunication.Serial
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDouble(string, ushort)"/>
 		[HslMqttApi( "ReadDoubleArray", "" )]
-		public virtual OperateResult<double[]> ReadDouble( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransDouble( m, 0, length ) );
+		public virtual OperateResult<double[]> ReadDouble( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransDouble( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadString(string, ushort)"/>
 		[HslMqttApi( "ReadString", "" )]
-		public OperateResult<string> ReadString( string address, ushort length ) => ReadString( address, length, Encoding.ASCII );
+		public virtual OperateResult<string> ReadString( string address, ushort length ) => ReadString( address, length, Encoding.ASCII );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadString(string, ushort, Encoding)"/>
 		public virtual OperateResult<string> ReadString( string address, ushort length, Encoding encoding ) => ByteTransformHelper.GetResultFromBytes( Read( address, length ), m => ByteTransform.TransString( m, 0, m.Length, encoding ) );
@@ -337,7 +337,7 @@ namespace HslCommunication.Serial
 		public virtual OperateResult Write( string address, string value, Encoding encoding )
 		{
 			byte[] temp = ByteTransform.TransByte( value, encoding );
-			if (WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
+			if (this.WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
 			return Write( address, temp );
 		}
 
@@ -345,7 +345,7 @@ namespace HslCommunication.Serial
 		public virtual OperateResult Write( string address, string value, int length, Encoding encoding )
 		{
 			byte[] temp = ByteTransform.TransByte( value, encoding );
-			if (WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
+			if (this.WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
 			temp = SoftBasic.ArrayExpandToLength( temp, length );
 			return Write( address, temp );
 		}
@@ -438,28 +438,14 @@ namespace HslCommunication.Serial
 
 		#region Async Customer Read Write
 #if !NET35 && !NET20
-		/// <inheritdoc cref="IReadWriteNet.WriteCustomerAsync{T}(string, T)"/>
-		public async Task<OperateResult<T>> ReadCustomerAsync<T>( string address ) where T : IDataTransfer, new()
-		{
-			OperateResult<T> result = new OperateResult<T>( );
-			T Content = new T( );
-			OperateResult<byte[]> read = await ReadAsync( address, Content.ReadCount );
-			if (read.IsSuccess)
-			{
-				Content.ParseSource( read.Content );
-				result.Content = Content;
-				result.IsSuccess = true;
-			}
-			else
-			{
-				result.ErrorCode = read.ErrorCode;
-				result.Message = read.Message;
-			}
-			return result;
-		}
+		/// <inheritdoc cref="IReadWriteNet.ReadCustomerAsync{T}(string)"/>
+		public async Task<OperateResult<T>> ReadCustomerAsync<T>( string address ) where T : IDataTransfer, new() => await ReadWriteNetHelper.ReadCustomerAsync<T>( this, address );
+
+		/// <inheritdoc cref="IReadWriteNet.ReadCustomerAsync{T}(string, T)"/>
+		public async Task<OperateResult<T>> ReadCustomerAsync<T>( string address, T obj ) where T : IDataTransfer, new() => await ReadWriteNetHelper.ReadCustomerAsync( this, address, obj );
 
 		/// <inheritdoc cref="IReadWriteNet.WriteCustomerAsync{T}(string, T)"/>
-		public async Task<OperateResult> WriteCustomerAsync<T>( string address, T data ) where T : IDataTransfer, new() => await WriteAsync( address, data.ToSource( ) );
+		public async Task<OperateResult> WriteCustomerAsync<T>( string address, T data ) where T : IDataTransfer, new() => await ReadWriteNetHelper.WriteCustomerAsync( this, address, data );
 #endif
 		#endregion
 
@@ -470,6 +456,10 @@ namespace HslCommunication.Serial
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync{T}(T)"/>
 		public virtual async Task<OperateResult> WriteAsync<T>( T data ) where T : class, new() => await HslReflectionHelper.WriteAsync<T>( data, this );
+
+		/// <inheritdoc cref="IReadWriteNet.ReadStruct{T}(string, ushort)"/>
+		public virtual async Task<OperateResult<T>> ReadStructAsync<T>( string address, ushort length ) where T : class, new() => await ReadWriteNetHelper.ReadStructAsync<T>( this, address, length, this.ByteTransform );
+
 #endif
 		#endregion
 
@@ -479,52 +469,52 @@ namespace HslCommunication.Serial
 		public async Task<OperateResult<short>> ReadInt16Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadInt16Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt16Async(string, ushort)"/>
-		public virtual async Task<OperateResult<short[]>> ReadInt16Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength) ), m => ByteTransform.TransInt16( m, 0, length ) );
+		public virtual async Task<OperateResult<short[]>> ReadInt16Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 1 ) ), m => ByteTransform.TransInt16( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt16Async(string)"/>
 		public async Task<OperateResult<ushort>> ReadUInt16Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadUInt16Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt16Async(string, ushort)"/>
-		public virtual async Task<OperateResult<ushort[]>> ReadUInt16Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength) ), m => ByteTransform.TransUInt16( m, 0, length ) );
+		public virtual async Task<OperateResult<ushort[]>> ReadUInt16Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 1 ) ), m => ByteTransform.TransUInt16( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt32Async(string)"/>
 		public async Task<OperateResult<int>> ReadInt32Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadInt32Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt32Async(string, ushort)"/>
-		public virtual async Task<OperateResult<int[]>> ReadInt32Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransInt32( m, 0, length ) );
+		public virtual async Task<OperateResult<int[]>> ReadInt32Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransInt32( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32Async(string)"/>
 		public async Task<OperateResult<uint>> ReadUInt32Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadUInt32Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32Async(string, ushort)"/>
-		public virtual async Task<OperateResult<uint[]>> ReadUInt32Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransUInt32( m, 0, length ) );
+		public virtual async Task<OperateResult<uint[]>> ReadUInt32Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransUInt32( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloatAsync(string)"/>
 		public async Task<OperateResult<float>> ReadFloatAsync( string address ) => ByteTransformHelper.GetResultFromArray( await ReadFloatAsync( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloatAsync(string, ushort)"/>
-		public virtual async Task<OperateResult<float[]>> ReadFloatAsync( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => ByteTransform.TransSingle( m, 0, length ) );
+		public virtual async Task<OperateResult<float[]>> ReadFloatAsync( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => ByteTransform.TransSingle( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64Async(string)"/>
 		public async Task<OperateResult<long>> ReadInt64Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadInt64Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64Async(string, ushort)"/>
-		public virtual async Task<OperateResult<long[]>> ReadInt64Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransInt64( m, 0, length ) );
+		public virtual async Task<OperateResult<long[]>> ReadInt64Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransInt64( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64Async(string)"/>
 		public async Task<OperateResult<ulong>> ReadUInt64Async( string address ) => ByteTransformHelper.GetResultFromArray( await ReadUInt64Async( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64Async(string, ushort)"/>
-		public virtual async Task<OperateResult<ulong[]>> ReadUInt64Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransUInt64( m, 0, length ) );
+		public virtual async Task<OperateResult<ulong[]>> ReadUInt64Async( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransUInt64( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDoubleAsync(string)"/>
 		public async Task<OperateResult<double>> ReadDoubleAsync( string address ) => ByteTransformHelper.GetResultFromArray( await ReadDoubleAsync( address, 1 ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDoubleAsync(string, ushort)"/>
-		public virtual async Task<OperateResult<double[]>> ReadDoubleAsync( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => ByteTransform.TransDouble( m, 0, length ) );
+		public virtual async Task<OperateResult<double[]>> ReadDoubleAsync( string address, ushort length ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => ByteTransform.TransDouble( m, 0, length ) );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadStringAsync(string, ushort)"/>
-		public async Task<OperateResult<string>> ReadStringAsync( string address, ushort length ) => await ReadStringAsync( address, length, Encoding.ASCII );
+		public virtual async Task<OperateResult<string>> ReadStringAsync( string address, ushort length ) => await ReadStringAsync( address, length, Encoding.ASCII );
 
 		/// <inheritdoc cref="IReadWriteNet.ReadStringAsync(string, ushort, Encoding)"/>
 		public virtual async Task<OperateResult<string>> ReadStringAsync( string address, ushort length, Encoding encoding ) => ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, length ), m => ByteTransform.TransString( m, 0, m.Length, encoding ) );
@@ -588,7 +578,7 @@ namespace HslCommunication.Serial
 		public virtual async Task<OperateResult> WriteAsync( string address, string value, Encoding encoding )
 		{
 			byte[] temp = ByteTransform.TransByte( value, encoding );
-			if (WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
+			if (this.WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
 			return await WriteAsync( address, temp );
 		}
 
@@ -599,7 +589,7 @@ namespace HslCommunication.Serial
 		public virtual async Task<OperateResult> WriteAsync( string address, string value, int length, Encoding encoding )
 		{
 			byte[] temp = ByteTransform.TransByte( value, encoding );
-			if (WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
+			if (this.WordLength == 1) temp = SoftBasic.ArrayExpandToLengthEven( temp );
 			temp = SoftBasic.ArrayExpandToLength( temp, length );
 			return await WriteAsync( address, temp );
 		}

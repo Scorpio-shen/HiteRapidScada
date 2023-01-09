@@ -105,11 +105,11 @@ namespace HslCommunication.Enthernet.Redis
 		/// </summary>
 		/// <param name="commandLine">原始的字节数据</param>
 		/// <returns>带有结果对象的数据信息</returns>
-		public static OperateResult<string> GetStringFromCommandLine( byte[] commandLine )
+		public static OperateResult<string[]> GetStringFromCommandLine( byte[] commandLine )
 		{
 			try
 			{
-				if (commandLine[0] != '$') return new OperateResult<string>( Encoding.UTF8.GetString( commandLine ) );
+				if (commandLine[0] != '$') return new OperateResult<string[]>( Encoding.UTF8.GetString( commandLine ) );
 
 				// 先找到换行符
 				int index_start = -1;
@@ -130,13 +130,13 @@ namespace HslCommunication.Enthernet.Redis
 				}
 
 				int length = Convert.ToInt32( Encoding.UTF8.GetString( commandLine, 1, index_start - 1 ) );
-				if (length < 0) return new OperateResult<string>( "(nil) None Value" );
+				if (length < 0) return new OperateResult<string[]>( "(nil) None Value" );
 
-				return OperateResult.CreateSuccessResult( Encoding.UTF8.GetString( commandLine, index_end + 1, length ) );
+				return OperateResult.CreateSuccessResult( new string[] { Encoding.UTF8.GetString( commandLine, index_end + 1, length ) } );
 			}
 			catch (Exception ex)
 			{
-				return new OperateResult<string>( ex.Message );
+				return new OperateResult<string[]>( ex.Message );
 			}
 		}
 

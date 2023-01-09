@@ -13,5 +13,8 @@ namespace HslCommunication.Core
 
 		/// <inheritdoc cref="ISessionContext.ClientId"/>
 		public string ClientId { get; set; }
+
+		/// <inheritdoc cref="ISessionContext.Tag"/>
+		public object Tag { get; set; }
 	}
 }

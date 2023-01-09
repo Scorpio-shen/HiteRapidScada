@@ -21,7 +21,7 @@ namespace HslCommunication.Profinet.Melsec
 	/// The Ethernet module on the PLC side needs to be configured first. It must be binary communication.
 	/// </summary>
 	/// <remarks>
-	/// 支持读写的数据类型详细参考API文档，支持高级的数据读取，例如读取智能模块，缓冲存储器等等。
+	/// 支持读写的数据类型详细参考API文档，支持高级的数据读取，例如读取智能模块，缓冲存储器等等。如果使用的Fx5u的PLC，如果之前有写过用户认证，需要对设备信息全部初始化
 	/// </remarks>
 	/// <list type="number">
 	/// 目前组件测试通过的PLC型号列表，有些来自于网友的测试
@@ -304,13 +304,13 @@ namespace HslCommunication.Profinet.Melsec
 		public virtual OperateResult<McAddressData> McAnalysisAddress( string address, ushort length ) => McAddressData.ParseMelsecFrom( address, length );
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command )
+		public override byte[] PackCommandWithHeader( byte[] command )
 		{
 			return McBinaryHelper.PackMcCommand( command, this.NetworkNumber, this.NetworkStationNumber );
 		}
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
 		{
 			OperateResult check = McBinaryHelper.CheckResponseContentHelper( response );
 			if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
@@ -325,7 +325,7 @@ namespace HslCommunication.Profinet.Melsec
 
 		#region Read Write Support
 
-		/// <inheritdoc/>
+		/// <inheritdoc cref="McHelper.Read(IReadWriteMc, string, ushort)"/>
 		[HslMqttApi( "ReadByteArray", "" )]
 		public override OperateResult<byte[]> Read( string address, ushort length ) => McHelper.Read( this, address, length );
 
@@ -334,7 +334,7 @@ namespace HslCommunication.Profinet.Melsec
 		public override OperateResult Write( string address, byte[] value ) => McHelper.Write( this, address, value );
 
 #if !NET35 && !NET20
-		/// <inheritdoc/>
+		/// <inheritdoc cref="McHelper.Read(IReadWriteMc, string, ushort)"/>
 		public override async Task<OperateResult<byte[]>> ReadAsync( string address, ushort length ) => await McHelper.ReadAsync( this, address, length );
 
 		/// <inheritdoc/>
@@ -374,8 +374,11 @@ namespace HslCommunication.Profinet.Melsec
 		#endregion
 
 		#region Bool Operate Support
+		/// <inheritdoc cref="McHelper.ReadBool(IReadWriteMc, string)"/>
+		[HslMqttApi( "ReadBool", "" )]
+		public override OperateResult<bool> ReadBool( string address ) => base.ReadBool( address );
 
-		/// <inheritdoc/>
+		/// <inheritdoc cref="McHelper.ReadBool(IReadWriteMc, string, ushort)"/>
 		[HslMqttApi( "ReadBoolArray", "" )]
 		public override OperateResult<bool[]> ReadBool( string address, ushort length ) => McHelper.ReadBool( this, address, length );
 
@@ -384,7 +387,10 @@ namespace HslCommunication.Profinet.Melsec
 		public override OperateResult Write( string address, bool[] values ) => McHelper.Write( this, address, values );
 
 #if !NET35 && !NET20
-		/// <inheritdoc cref="ReadBool(string, ushort)"/>
+		/// <inheritdoc cref="McHelper.ReadBool(IReadWriteMc, string)"/>
+		public override async Task<OperateResult<bool>> ReadBoolAsync( string address ) => await base.ReadBoolAsync( address );
+
+		/// <inheritdoc cref="McHelper.ReadBool(IReadWriteMc, string, ushort)"/>
 		public override async Task<OperateResult<bool[]>> ReadBoolAsync( string address, ushort length ) => await McHelper.ReadBoolAsync( this, address, length );
 
 		/// <inheritdoc cref="Write(string, bool[])"/>

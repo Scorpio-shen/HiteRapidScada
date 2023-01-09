@@ -51,11 +51,41 @@ namespace HslCommunication.Robot.FANUC
 		/// Parse data information from FANUC robot address, the address is D, I, Q, M, AI, AQ area
 		/// </summary>
 		/// <param name="address">fanuc机器人的地址信息</param>
+		/// <param name="isBit">是否使用位操作</param>
 		/// <returns>解析结果</returns>
-		public static OperateResult<byte, ushort> AnalysisFanucAddress( string address )
+		public static OperateResult<byte, ushort> AnalysisFanucAddress( string address, bool isBit )
 		{
 			try
 			{
+				if (isBit)
+				{
+					if (address.StartsWith( "sdo" ) || address.StartsWith( "SDO" ))
+					{
+						int add = Convert.ToInt32( address.Substring( 3 ) );
+						if (add < 11001)
+							return OperateResult.CreateSuccessResult( SELECTOR_I, (ushort)add );
+						else
+							return OperateResult.CreateSuccessResult( SELECTOR_M, (ushort)(add - 11000) );
+					}
+					else if (address.StartsWith( "sdi" ) || address.StartsWith( "SDI" )) return OperateResult.CreateSuccessResult( SELECTOR_Q, ushort.Parse( address.Substring( 3 ) ) );
+					else if (address.StartsWith( "rdi" ) || address.StartsWith( "RDI" )) return OperateResult.CreateSuccessResult( SELECTOR_Q, (ushort)(Convert.ToInt32( address.Substring( 3 ) ) + 5000) );
+					else if (address.StartsWith( "rdo" ) || address.StartsWith( "RDO" )) return OperateResult.CreateSuccessResult( SELECTOR_I, (ushort)(Convert.ToInt32( address.Substring( 3 ) ) + 5000) );
+					else if (address.StartsWith( "ui" )  || address.StartsWith( "UI" ))  return OperateResult.CreateSuccessResult( SELECTOR_Q, (ushort)(Convert.ToInt32( address.Substring( 2 ) ) + 6000) );
+					else if (address.StartsWith( "uo" )  || address.StartsWith( "UO" ))  return OperateResult.CreateSuccessResult( SELECTOR_I, (ushort)(Convert.ToInt32( address.Substring( 2 ) ) + 6000) );
+					else if (address.StartsWith( "si" )  || address.StartsWith( "SI" ))  return OperateResult.CreateSuccessResult( SELECTOR_Q, (ushort)(Convert.ToInt32( address.Substring( 2 ) ) + 7000) );
+					else if (address.StartsWith( "so" )  || address.StartsWith( "SO" ))  return OperateResult.CreateSuccessResult( SELECTOR_I, (ushort)(Convert.ToInt32( address.Substring( 2 ) ) + 7000) );
+				}
+				else
+				{
+					if (address.StartsWith( "gi" ) || address.StartsWith( "GI" )) return OperateResult.CreateSuccessResult( SELECTOR_AQ, ushort.Parse( address.Substring( 2 ) ) );
+					else if (address.StartsWith( "go" ) || address.StartsWith( "GO" ))
+					{
+						int add = Convert.ToInt32( address.Substring( 2 ) );
+						if (add >= 10001) add -= 6000;
+						return OperateResult.CreateSuccessResult( SELECTOR_AI, (ushort)add );
+					}
+				}
+
 				if (address.StartsWith( "aq" ) || address.StartsWith( "AQ" ))
 					return OperateResult.CreateSuccessResult( SELECTOR_AQ, ushort.Parse( address.Substring( 2 ) ) );
 				else if (address.StartsWith( "ai" ) || address.StartsWith( "AI" ))
@@ -176,6 +206,15 @@ namespace HslCommunication.Robot.FANUC
 				return write_req;
 			}
 		}
+
+		/// <summary>
+		/// 当前地址不允许位操作
+		/// </summary>
+		public const string NotAllowedBool = ", Current address not support bool read/write";
+		/// <summary>
+		/// 当前地址不允许字操作
+		/// </summary>
+		public const string NotAllowedWord = ", Current address not support word read/write";
 
 		/// <summary>
 		/// 获取所有的命令信息<br />

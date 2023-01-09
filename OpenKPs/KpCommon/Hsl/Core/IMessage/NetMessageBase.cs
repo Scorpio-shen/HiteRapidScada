@@ -2,36 +2,34 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace KpCommon.Hsl.Core.IMessage
+namespace HslCommunication.Core.IMessage
 {
-    public class NetMessageBase
-    {
-        public byte[] HeadBytes { get; set; }
+	/// <summary>
+	/// 消息类的基类
+	/// </summary>
+	public class NetMessageBase
+	{
+		/// <inheritdoc cref="INetMessage.HeadBytes"/>
+		public byte[] HeadBytes { get; set; }
 
-        public byte[] ContentBytes { get; set; }
+		/// <inheritdoc cref="INetMessage.ContentBytes"/>
+		public byte[] ContentBytes { get; set; }
 
-        public byte[] SendBytes { get; set; }
+		/// <inheritdoc cref="INetMessage.SendBytes"/>
+		public byte[] SendBytes { get; set; }
 
-        public virtual int PependedUselesByteLength(byte[] headByte)
-        {
-            return 0;
-        }
+		/// <inheritdoc cref="INetMessage.PependedUselesByteLength"/>
+		public virtual int PependedUselesByteLength( byte[] headByte ) => 0;
 
-        public virtual int GetHeadBytesIdentity()
-        {
-            return 0;
-        }
+		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
+		public virtual int GetHeadBytesIdentity( ) => 0;
 
-        public virtual bool CheckHeadBytesLegal(byte[] token)
-        {
-            if (HeadBytes == null)
-            {
-                return false;
-            }
-
-            return true;
-        }
-    }
+		/// <inheritdoc cref="CheckHeadBytesLegal(byte[])"/>
+		public virtual bool CheckHeadBytesLegal( byte[] token )
+		{
+			if (HeadBytes == null) return false;
+			return true;
+		}
+	}
 }

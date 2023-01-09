@@ -2,8 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using HslCommunication.BasicFramework;
 using HslCommunication.Core;
 using HslCommunication.ModBus;
+using HslCommunication.Core.Address;
+using System.Text.RegularExpressions;
+#if !NET35 && !NET20
+using System.Threading.Tasks;
+#endif
 
 namespace HslCommunication.Profinet.XINJE
 {
@@ -32,25 +38,81 @@ namespace HslCommunication.Profinet.XINJE
 		/// <returns>还原后的modbus地址</returns>
 		public static OperateResult<string> PraseXinJEAddress( XinJESeries series, string address, byte modbusCode )
 		{
-			if (series == XinJESeries.XC) return PraseXinJEXCAddress( address, modbusCode );
-			return PraseXinJEXD1XD2XD3XL1XL3Address( address, modbusCode );
+			string station = string.Empty;
+			OperateResult<int> stationPara = HslHelper.ExtractParameter( ref address, "s" );
+			if (stationPara.IsSuccess) station = $"s={stationPara.Content};";
+
+			string function = string.Empty;
+			OperateResult<int> functionPara = HslHelper.ExtractParameter( ref address, "x" );
+			if (functionPara.IsSuccess) function = $"x={functionPara.Content};";
+
+
+			if (series == XinJESeries.XC)
+			{
+				try
+				{
+					if (Regex.IsMatch( address, "^X[0-9]+", RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^Y[0-9]+", RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^M[0-9]+", RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^S[0-9]+", RegexOptions.IgnoreCase ))
+					{
+						if (modbusCode == ModbusInfo.ReadRegister)
+						{
+							modbusCode = ModbusInfo.ReadCoil;
+							function = "x=1;";
+						}
+					}
+				}
+				catch
+				{
+
+				}
+				return PraseXinJEXCAddress( station + function, address, modbusCode );
+			}
+			else
+			{
+				try
+				{
+					if (Regex.IsMatch( address, "^X[0-9]+",   RegexOptions.IgnoreCase) ||
+						Regex.IsMatch( address, "^Y[0-9]+",   RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^M[0-9]+",   RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^S[0-9]+",   RegexOptions.IgnoreCase) ||
+						Regex.IsMatch( address, "^SEM[0-9]+", RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^HSC[0-9]+", RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^SM[0-9]+",  RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^ET[0-9]+",  RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^HM[0-9]+",  RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^HS[0-9]+",  RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^HT[0-9]+",  RegexOptions.IgnoreCase ) ||
+						Regex.IsMatch( address, "^HC[0-9]+",  RegexOptions.IgnoreCase ))
+					{
+						if (modbusCode == ModbusInfo.ReadRegister)
+						{
+							modbusCode = ModbusInfo.ReadCoil;
+							function = "x=1;";
+						}
+					}
+				}
+				catch
+				{
+
+				}
+				return PraseXinJEXD1XD2XD3XL1XL3Address( station + function, address, modbusCode );
+			}
 		}
 
 		/// <summary>
 		/// 根据信捷PLC的地址，解析出转换后的modbus协议信息，适用XC系列
 		/// </summary>
-		/// <param name="address">安川plc的地址信息</param>
+		/// <param name="station">站号的特殊指定信息，可以为空</param>
+		/// <param name="address">信捷plc的地址信息</param>
 		/// <param name="modbusCode">原始的对应的modbus信息</param>
 		/// <returns>还原后的modbus地址</returns>
-		public static OperateResult<string> PraseXinJEXCAddress( string address, byte modbusCode )
+		public static OperateResult<string> PraseXinJEXCAddress( string station, string address, byte modbusCode )
 		{
 			try
 			{
-				string station = string.Empty;
-				OperateResult<int> stationPara = HslHelper.ExtractParameter( ref address, "s" );
-				if (stationPara.IsSuccess) station = $"s={stationPara.Content};";
-
-				if (modbusCode == ModbusInfo.ReadCoil || modbusCode == ModbusInfo.WriteCoil || modbusCode == ModbusInfo.WriteOneCoil)
+				if (modbusCode == ModbusInfo.ReadCoil || modbusCode == ModbusInfo.ReadDiscrete || modbusCode == ModbusInfo.WriteCoil || modbusCode == ModbusInfo.WriteOneCoil)
 				{
 					if (address.StartsWith( "X" ) || address.StartsWith( "x" ))
 						return OperateResult.CreateSuccessResult( station + (CalculateXinJEStartAddress( address.Substring( 1 ) ) + 0x4000).ToString( ) );
@@ -108,18 +170,16 @@ namespace HslCommunication.Profinet.XINJE
 		/// <summary>
 		/// 解析信捷的XD1,XD2,XD3,XL1,XL3系列的PLC的Modbus地址和内部软元件的对照
 		/// </summary>
+		/// <remarks>适用 XD1、XD2、XD3、XL1、XL3、XD5、XDM、XDC、XD5E、XDME、XL5、XL5E、XLME, XDH 只是支持的地址范围不一样而已</remarks>
+		/// <param name="station">站号的特殊指定信息，可以为空</param>
 		/// <param name="address">PLC内部的软元件的地址</param>
 		/// <param name="modbusCode">默认的Modbus功能码</param>
 		/// <returns>解析后的Modbus地址</returns>
-		public static OperateResult<string> PraseXinJEXD1XD2XD3XL1XL3Address( string address, byte modbusCode )
+		public static OperateResult<string> PraseXinJEXD1XD2XD3XL1XL3Address( string station, string address, byte modbusCode )
 		{
 			try
 			{
-				string station = string.Empty;
-				OperateResult<int> stationPara = HslHelper.ExtractParameter( ref address, "s" );
-				if (stationPara.IsSuccess) station = $"s={stationPara.Content};";
-
-				if (modbusCode == ModbusInfo.ReadCoil || modbusCode == ModbusInfo.WriteCoil || modbusCode == ModbusInfo.WriteOneCoil)
+				if (modbusCode == ModbusInfo.ReadCoil || modbusCode == ModbusInfo.ReadDiscrete || modbusCode == ModbusInfo.WriteCoil || modbusCode == ModbusInfo.WriteOneCoil)
 				{
 					if (address.StartsWith( "X" ) || address.StartsWith( "x" ))
 					{
@@ -215,6 +275,403 @@ namespace HslCommunication.Profinet.XINJE
 				return new OperateResult<string>( ex.Message );
 			}
 		}
+
+
+
+		#region Static Helper
+
+		//internal static OperateResult<byte[]> ExtractActualData( byte[] core )
+		//{
+		//	if (
+		//		core[1] == ModbusInfo.ReadCoil ||
+		//		core[1] == ModbusInfo.ReadDiscrete ||
+		//		core[1] == ModbusInfo.ReadRegister ||
+		//		core[1] == ModbusInfo.ReadInputRegister ||
+		//		core[1] == ModbusInfo.WriteOneCoil ||
+		//		core[1] == ModbusInfo.WriteCoil ||
+		//		core[1] == ModbusInfo.WriteOneRegister ||
+		//		core[1] == ModbusInfo.WriteRegister ||
+		//		core[1] == ModbusInfo.WriteMaskRegister)
+		//		return ModbusInfo.ExtractActualData( core );
+		//	else if (
+		//		core[1] == 0x1E ||
+		//		core[1] == 0x1F ||
+		//		core[1] == 0x20 ||
+		//		core[1] == 0x21)
+		//	{
+		//		if (core[1] > 0x80) return new OperateResult<byte[]>( core[1], StringResources.Language.UnknownError + core.ToHexString( ' ' ) );
+		//		if (core.Length > 9) return OperateResult.CreateSuccessResult( core.RemoveBegin( 9 ) );
+		//		return OperateResult.CreateSuccessResult( new byte[0] );
+		//	}
+		//	else
+		//		return new OperateResult<byte[]>( $"Function not identify: [{core[1]}] source: " + core.ToHexString( ' ' ) );
+		//}
+
+		internal static OperateResult<List<byte[]>> BuildReadCommand( byte station, string address, ushort length, bool isBit )
+		{
+			OperateResult<XinJEAddress> read = XinJEAddress.ParseFrom( address, station );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<List<byte[]>>( read );
+
+			return BuildReadCommand( read.Content, length, isBit );
+		}
+
+		internal static OperateResult<List<byte[]>> BuildReadCommand( XinJEAddress address, ushort length, bool isBit )
+		{
+			List<byte[]> array = new List<byte[]>( );
+			int[] splits = SoftBasic.SplitIntegerToArray( length, isBit ? 120 * 16 : 120 );
+			for (int i = 0; i < splits.Length; i++)
+			{
+				byte[] command = new byte[8];
+				command[0] = address.Station;
+				command[1] = isBit ? (byte)0x1E : (byte)0x20;
+				command[2] = address.DataCode;
+				command[3] = BitConverter.GetBytes( address.AddressStart )[2];
+				command[4] = BitConverter.GetBytes( address.AddressStart )[1];
+				command[5] = BitConverter.GetBytes( address.AddressStart )[0];
+				command[6] = BitConverter.GetBytes( splits[i] )[1];
+				command[7] = BitConverter.GetBytes( splits[i] )[0];
+
+				address.AddressStart += splits[i];
+				array.Add( command );
+			}
+			return OperateResult.CreateSuccessResult( array );
+		}
+
+		internal static OperateResult<byte[]> BuildWriteWordCommand( byte station, string address, byte[] value )
+		{
+			OperateResult<XinJEAddress> read = XinJEAddress.ParseFrom( address, station );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+
+			return BuildWriteWordCommand( read.Content, value );
+		}
+
+		internal static OperateResult<byte[]> BuildWriteWordCommand( XinJEAddress address, byte[] value )
+		{
+			byte[] command = new byte[9 + value.Length];
+			command[0] = address.Station;
+			command[1] = 0x21;
+			command[2] = address.DataCode;
+			command[3] = BitConverter.GetBytes( address.AddressStart )[2];
+			command[4] = BitConverter.GetBytes( address.AddressStart )[1];
+			command[5] = BitConverter.GetBytes( address.AddressStart )[0];
+			command[6] = BitConverter.GetBytes( value.Length / 2 )[1];
+			command[7] = BitConverter.GetBytes( value.Length / 2 )[0];
+			command[8] = (byte)value.Length;
+			value.CopyTo( command, 9 );
+			return OperateResult.CreateSuccessResult( command );
+		}
+
+		internal static OperateResult<byte[]> BuildWriteBoolCommand( byte station, string address, bool[] value )
+		{
+			OperateResult<XinJEAddress> read = XinJEAddress.ParseFrom( address, station );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
+
+			return BuildWriteBoolCommand( read.Content, value );
+		}
+
+		internal static OperateResult<byte[]> BuildWriteBoolCommand( XinJEAddress address, bool[] value )
+		{
+			byte[] buffer = value.ToByteArray( );
+			byte[] command = new byte[9 + buffer.Length];
+			command[0] = address.Station;
+			command[1] = 0x1F;
+			command[2] =address.DataCode;
+			command[3] = BitConverter.GetBytes( address.AddressStart )[2];
+			command[4] = BitConverter.GetBytes( address.AddressStart )[1];
+			command[5] = BitConverter.GetBytes( address.AddressStart )[0];
+			command[6] = BitConverter.GetBytes( value.Length )[1];
+			command[7] = BitConverter.GetBytes( value.Length )[0];
+			command[8] = (byte)buffer.Length;
+			buffer.CopyTo( command, 9 );
+			return OperateResult.CreateSuccessResult( command );
+		}
+
+		#endregion
+
+		#region Read Write Helper
+
+		internal static OperateResult<byte[]> Read( IModbus modbus, string address, ushort length, Func<string, ushort, OperateResult<byte[]>> funcRead )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, length, modbus.Station );
+			if (!analysis.IsSuccess) return funcRead.Invoke( address, length );
+
+			XinJEAddress xinJE = analysis.Content;
+			if (xinJE.AddressStart + length <= xinJE.CriticalAddress) return funcRead.Invoke( address, length );
+
+			List<byte> result = new List<byte>( );
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+			{
+				OperateResult<byte[]> read = funcRead.Invoke( address, (ushort)(xinJE.CriticalAddress - xinJE.AddressStart) );
+				if (!read.IsSuccess) return read;
+
+				result.AddRange( read.Content );
+				length = (ushort)(length - (xinJE.CriticalAddress - xinJE.AddressStart));
+				xinJE.AddressStart = xinJE.CriticalAddress;
+			}
+
+			OperateResult<List<byte[]>> command = XinJEHelper.BuildReadCommand( xinJE, length, false );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
+
+			OperateResult<byte[]> readAgain = modbus.ReadFromCoreServer( command.Content );
+			if (!readAgain.IsSuccess) return readAgain;
+
+			result.AddRange( readAgain.Content );
+			return OperateResult.CreateSuccessResult( result.ToArray( ) );
+		}
+
+		internal static OperateResult Write( IModbus modbus, string address, byte[] value, Func<string, byte[], OperateResult> funcWrite )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return funcWrite.Invoke( address, value );
+
+			XinJEAddress xinJE = analysis.Content;
+			if ((xinJE.AddressStart + value.Length / 2) <= xinJE.CriticalAddress) return funcWrite.Invoke( address, value );
+
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+			{
+				OperateResult write = funcWrite.Invoke( address, value.SelectBegin( (xinJE.CriticalAddress - xinJE.AddressStart) * 2 ) );
+				if (!write.IsSuccess) return write;
+
+				value = value.RemoveBegin( (xinJE.CriticalAddress - xinJE.AddressStart) * 2 );
+				xinJE.AddressStart = xinJE.CriticalAddress;
+			}
+
+			OperateResult<byte[]> command = XinJEHelper.BuildWriteWordCommand( xinJE, value );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
+
+			return modbus.ReadFromCoreServer( command.Content );
+		}
+
+		internal static OperateResult Write( IModbus modbus, string address, short value, Func<string, short, OperateResult> funcWrite )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return funcWrite.Invoke( address, value );
+
+			XinJEAddress xinJE = analysis.Content;
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+				return funcWrite.Invoke( address, value );
+			else
+				return modbus.Write( address, modbus.ByteTransform.TransByte( value ) );
+		}
+
+		internal static OperateResult Write( IModbus modbus, string address, ushort value, Func<string, ushort, OperateResult> funcWrite )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return funcWrite.Invoke( address, value );
+
+			XinJEAddress xinJE = analysis.Content;
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+				return funcWrite.Invoke( address, value );
+			else
+				return modbus.Write( address, modbus.ByteTransform.TransByte( value ) );
+		}
+
+		internal static OperateResult<bool[]> ReadBool( IModbus modbus, string address, ushort length, Func<string, ushort, OperateResult<bool[]>> funcRead )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, length, modbus.Station );
+			if (!analysis.IsSuccess) return funcRead.Invoke( address, length );
+
+			XinJEAddress xinJE = analysis.Content;
+			if (xinJE.AddressStart + length <= xinJE.CriticalAddress) return funcRead.Invoke( address, length );
+
+			List<bool> result = new List<bool>( );
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+			{
+				OperateResult<bool[]> read = funcRead.Invoke( address, (ushort)(xinJE.CriticalAddress - xinJE.AddressStart) );
+				if (!read.IsSuccess) return read;
+
+				result.AddRange( read.Content );
+				length = (ushort)(length - (xinJE.CriticalAddress - xinJE.AddressStart));
+				xinJE.AddressStart = xinJE.CriticalAddress;
+			}
+
+			OperateResult<List<byte[]>> command = XinJEHelper.BuildReadCommand( xinJE, length, true );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
+
+			OperateResult<byte[]> readAgain = modbus.ReadFromCoreServer( command.Content );
+			if (!readAgain.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( readAgain );
+
+			result.AddRange( readAgain.Content.ToBoolArray( ).SelectBegin( length ) );
+			return OperateResult.CreateSuccessResult( result.ToArray( ) );
+		}
+
+		internal static OperateResult Write( IModbus modbus, string address, bool[] values, Func<string, bool[], OperateResult> funcWrite )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return funcWrite.Invoke( address, values );
+
+			XinJEAddress xinJE = analysis.Content;
+			if ((xinJE.AddressStart + values.Length) <= xinJE.CriticalAddress) return funcWrite.Invoke( address, values );
+
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+			{
+				OperateResult write = funcWrite.Invoke( address, values.SelectBegin( xinJE.CriticalAddress - xinJE.AddressStart ) );
+				if (!write.IsSuccess) return write;
+
+				values = values.RemoveBegin( xinJE.CriticalAddress - xinJE.AddressStart );
+				xinJE.AddressStart = xinJE.CriticalAddress;
+			}
+
+			OperateResult<byte[]> command = XinJEHelper.BuildWriteBoolCommand( xinJE, values );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
+
+			return modbus.ReadFromCoreServer( command.Content );
+		}
+
+		internal static OperateResult Write( IModbus modbus, string address, bool value, Func<string, bool, OperateResult> funcWrite )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return funcWrite.Invoke( address, value );
+
+			XinJEAddress xinJE = analysis.Content;
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+				return funcWrite.Invoke( address, value );
+			else
+				return modbus.Write( address, new bool[] { value } );
+		}
+
+#if !NET35 && !NET20
+		internal async static Task<OperateResult<byte[]>> ReadAsync( IModbus modbus, string address, ushort length, Func<string, ushort, Task<OperateResult<byte[]>>> funcRead )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return await funcRead.Invoke( address, length );
+
+			XinJEAddress xinJE = analysis.Content;
+			if (xinJE.AddressStart + length <= xinJE.CriticalAddress) return await funcRead.Invoke( address, length );
+
+			List<byte> result = new List<byte>( );
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+			{
+				OperateResult<byte[]> read = await funcRead.Invoke( address, (ushort)(xinJE.CriticalAddress - xinJE.AddressStart) );
+				if (!read.IsSuccess) return read;
+
+				result.AddRange( read.Content );
+				length = (ushort)(length - (xinJE.CriticalAddress - xinJE.AddressStart));
+				xinJE.AddressStart = xinJE.CriticalAddress;
+			}
+
+			OperateResult<List<byte[]>> command = XinJEHelper.BuildReadCommand( analysis.Content, length, false );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
+
+			OperateResult<byte[]> readAgain = await modbus.ReadFromCoreServerAsync( command.Content );
+			if (!readAgain.IsSuccess) return readAgain;
+
+			result.AddRange( readAgain.Content );
+			return OperateResult.CreateSuccessResult( result.ToArray( ) );
+		}
+
+		internal async static Task<OperateResult> WriteAsync( IModbus modbus, string address, byte[] value, Func<string, byte[], Task<OperateResult>> funcWrite )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return await funcWrite.Invoke( address, value );
+
+			XinJEAddress xinJE = analysis.Content;
+			if ((xinJE.AddressStart + value.Length / 2) <= xinJE.CriticalAddress) return await funcWrite.Invoke( address, value );
+
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+			{
+				OperateResult write = await funcWrite.Invoke( address, value.SelectBegin( (xinJE.CriticalAddress - xinJE.AddressStart) * 2 ) );
+				if (!write.IsSuccess) return write;
+
+				value = value.RemoveBegin( (xinJE.CriticalAddress - xinJE.AddressStart) * 2 );
+				xinJE.AddressStart = xinJE.CriticalAddress;
+			}
+
+			OperateResult<byte[]> command = XinJEHelper.BuildWriteWordCommand( xinJE, value );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
+
+			return await modbus.ReadFromCoreServerAsync( command.Content );
+		}
+
+		internal static async Task<OperateResult> WriteAsync( IModbus modbus, string address, short value, Func<string, short, Task<OperateResult>> funcWrite )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return await funcWrite.Invoke( address, value );
+
+			XinJEAddress xinJE = analysis.Content;
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+				return await funcWrite.Invoke( address, value );
+			else
+				return await modbus.WriteAsync( address, modbus.ByteTransform.TransByte( value ) );
+		}
+
+		internal static async Task<OperateResult> WriteAsync( IModbus modbus, string address, ushort value, Func<string, ushort, Task<OperateResult>> funcWrite )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return await funcWrite.Invoke( address, value );
+
+			XinJEAddress xinJE = analysis.Content;
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+				return await funcWrite.Invoke( address, value );
+			else
+				return await modbus.WriteAsync( address, modbus.ByteTransform.TransByte( value ) );
+		}
+
+		internal async static Task<OperateResult<bool[]>> ReadBoolAsync( IModbus modbus, string address, ushort length, Func<string, ushort, Task<OperateResult<bool[]>>> funcRead )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, length, modbus.Station );
+			if (!analysis.IsSuccess) return await funcRead.Invoke( address, length );
+
+			XinJEAddress xinJE = analysis.Content;
+			if (xinJE.AddressStart + length <= xinJE.CriticalAddress) return await funcRead.Invoke( address, length );
+
+			List<bool> result = new List<bool>( );
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+			{
+				OperateResult<bool[]> read = await funcRead.Invoke( address, (ushort)(xinJE.CriticalAddress - xinJE.AddressStart) );
+				if (!read.IsSuccess) return read;
+
+				result.AddRange( read.Content );
+				length = (ushort)(length - (xinJE.CriticalAddress - xinJE.AddressStart));
+				xinJE.AddressStart = xinJE.CriticalAddress;
+			}
+
+			OperateResult<List<byte[]>> command = XinJEHelper.BuildReadCommand( xinJE, length, true );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
+
+			OperateResult<byte[]> readAgain = await modbus.ReadFromCoreServerAsync( command.Content );
+			if (!readAgain.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( readAgain );
+
+			result.AddRange( readAgain.Content.ToBoolArray( ).SelectBegin( length ) );
+			return OperateResult.CreateSuccessResult( result.ToArray( ) );
+		}
+
+		internal async static Task<OperateResult> WriteAsync( IModbus modbus, string address, bool[] values, Func<string, bool[], Task<OperateResult>> funcWrite )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return await funcWrite.Invoke( address, values );
+
+			XinJEAddress xinJE = analysis.Content;
+			if ((xinJE.AddressStart + values.Length) <= xinJE.CriticalAddress) return await funcWrite.Invoke( address, values );
+
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+			{
+				OperateResult write = await funcWrite.Invoke( address, values.SelectBegin( xinJE.CriticalAddress - xinJE.AddressStart ) );
+				if (!write.IsSuccess) return write;
+
+				values = values.RemoveBegin( xinJE.CriticalAddress - xinJE.AddressStart );
+				xinJE.AddressStart = xinJE.CriticalAddress;
+			}
+
+			OperateResult<byte[]> command = XinJEHelper.BuildWriteBoolCommand( xinJE, values );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
+
+			return await modbus.ReadFromCoreServerAsync( command.Content );
+		}
+
+		internal async static Task<OperateResult> WriteAsync( IModbus modbus, string address, bool value, Func<string, bool, Task<OperateResult>> funcWrite )
+		{
+			OperateResult<XinJEAddress> analysis = XinJEAddress.ParseFrom( address, modbus.Station );
+			if (!analysis.IsSuccess) return await funcWrite.Invoke( address, value );
+
+			XinJEAddress xinJE = analysis.Content;
+			if (xinJE.AddressStart < xinJE.CriticalAddress)
+				return await funcWrite.Invoke( address, value );
+			else
+				return await modbus.WriteAsync( address, new bool[] { value } );
+		}
+#endif
+		#endregion
 
 	}
 }

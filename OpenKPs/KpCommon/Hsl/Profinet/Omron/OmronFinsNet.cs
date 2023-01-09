@@ -15,8 +15,9 @@ using System.Threading.Tasks;
 namespace HslCommunication.Profinet.Omron
 {
 	/// <summary>
-	/// 欧姆龙PLC通讯类，采用Fins-Tcp通信协议实现，支持的地址信息参见api文档信息。<br />
+	/// 欧姆龙PLC通讯类，采用Fins-Tcp通信协议实现，支持的地址信息参见api文档信息。本协议下PLC默认的端口号为 9600，也可以手动更改，重启PLC更改生效。<br />
 	/// Omron PLC communication class is implemented using Fins-Tcp communication protocol. For the supported address information, please refer to the api document information.
+	/// The default port number of the PLC under this protocol is 9600, and it can also be changed manually. Restart the PLC to make the changes take effect.
 	/// </summary>
 	/// <remarks>
 	/// <note type="important">PLC的IP地址的要求，最后一个整数的范围应该小于250，否则会发生连接不上的情况。</note>
@@ -46,7 +47,7 @@ namespace HslCommunication.Profinet.Omron
 	///     <term>10</term>
 	///     <term>√</term>
 	///     <term>√</term>
-	///     <term></term>
+	///     <term>也可以写DM100，DM200</term>
 	///   </item>
 	///   <item>
 	///     <term>CIO Area</term>
@@ -55,7 +56,7 @@ namespace HslCommunication.Profinet.Omron
 	///     <term>10</term>
 	///     <term>√</term>
 	///     <term>√</term>
-	///     <term></term>
+	///     <term>也可以写CIO100，CIO200</term>
 	///   </item>
 	///   <item>
 	///     <term>Work Area</term>
@@ -64,7 +65,7 @@ namespace HslCommunication.Profinet.Omron
 	///     <term>10</term>
 	///     <term>√</term>
 	///     <term>√</term>
-	///     <term></term>
+	///     <term>也可以写WR100，WR200</term>
 	///   </item>
 	///   <item>
 	///     <term>Holding Bit Area</term>
@@ -73,7 +74,7 @@ namespace HslCommunication.Profinet.Omron
 	///     <term>10</term>
 	///     <term>√</term>
 	///     <term>√</term>
-	///     <term></term>
+	///     <term>也可以写HR100，HR200</term>
 	///   </item>
 	///   <item>
 	///     <term>Auxiliary Bit Area</term>
@@ -82,7 +83,7 @@ namespace HslCommunication.Profinet.Omron
 	///     <term>10</term>
 	///     <term>√</term>
 	///     <term>√</term>
-	///     <term></term>
+	///     <term>也可以写成AR100，AR200</term>
 	///   </item>
 	///   <item>
 	///     <term>EM Area</term>
@@ -91,11 +92,58 @@ namespace HslCommunication.Profinet.Omron
 	///     <term>10</term>
 	///     <term>√</term>
 	///     <term>√</term>
-	///     <term></term>
+	///     <term>也可以写成EM0.0，EMF.200</term>
+	///   </item>
+	///   <item>
+	///     <term>Timer Area</term>
+	///     <term>TIM</term>
+	///     <term>TIM100,TIM200</term>
+	///     <term>10</term>
+	///     <term>√</term>
+	///     <term>√</term>
+	///     <term>读bool就是完成标记，读字就是当前值</term>
+	///   </item>
+	///   <item>
+	///     <term>Counter Area</term>
+	///     <term>CNT</term>
+	///     <term>CNT100,CNT200</term>
+	///     <term>10</term>
+	///     <term>√</term>
+	///     <term>√</term>
+	///     <term>读bool就是完成标记，读字就是当前值</term>
+	///   </item>
+	///   <item>
+	///     <term>Index Register</term>
+	///     <term>IR</term>
+	///     <term>IR0,IR15</term>
+	///     <term>10</term>
+	///     <term>√</term>
+	///     <term>√</term>
+	///     <term>只能读写字</term>
+	///   </item>
+	///   <item>
+	///     <term>Data Register</term>
+	///     <term>DR</term>
+	///     <term>DR0,DR15</term>
+	///     <term>10</term>
+	///     <term>√</term>
+	///     <term>√</term>
+	///     <term>只能读写字</term>
 	///   </item>
 	/// </list>
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronFinsNet.cs" region="Usage" title="简单的短连接使用" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronFinsNet.cs" region="Usage2" title="简单的长连接使用" />
+	/// 下面演示下各种类型的读写操作
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronFinsNet.cs" region="ReadExample1" title="各种类型读取的示例" />
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronFinsNet.cs" region="WriteExample1" title="各种类型写入的示例" />
+	/// 如果想要一次性读取不同类型的数据的话，可以读取byte[]，然后自行解析
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronFinsNet.cs" region="ReadExample2" title="自定义解析读取" />
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronFinsNet.cs" region="WriteExample2" title="自定义解析写入" />
+	/// 读写bool的示例代码
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronFinsNet.cs" region="ReadBool" title="读取bool示例" />
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronFinsNet.cs" region="WriteBool" title="写入bool示例" />
+	/// 以下演示随机字读取的例子，在某些情况下可以更加的高性能
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronFinsNet.cs" region="ReadMulti" title="随机读取示例" />
 	/// </example>
 	public class OmronFinsNet : NetworkDeviceBase
 	{
@@ -130,22 +178,6 @@ namespace HslCommunication.Profinet.Omron
 
 		#endregion
 
-		#region IpAddress Override
-
-		/// <inheritdoc/>
-		[HslMqttApi( HttpMethod = "GET", Description = "Get or set the IP address of the remote server. If it is a local test, then it needs to be set to 127.0.0.1" )]
-		public override string IpAddress
-		{
-			get => base.IpAddress;
-			set
-			{
-				base.IpAddress = value;
-				DA1 = Convert.ToByte( base.IpAddress.Substring( base.IpAddress.LastIndexOf( "." ) + 1 ) );
-			}
-		}
-
-		#endregion
-
 		#region Public Member
 
 		/// <summary>
@@ -177,14 +209,11 @@ namespace HslCommunication.Profinet.Omron
 		public byte DNA { get; set; } = 0x00;
 
 		/// <summary>
-		/// PLC的节点地址，这个值在配置了ip地址之后是默认赋值的，默认为Ip地址的最后一位<br />
-		/// PLC node address. This value is assigned by default after the IP address is configured. The default is the last bit of the IP address.
+		/// PLC的节点地址，默认为0，在和PLC连接的过程中，自动从PLC获取到DA1的值。<br />
+		/// The node address of the PLC is 0 by default. During the process of connecting with the PLC, the value of DA1 is automatically obtained from the PLC.
 		/// </summary>
-		/// <remarks>
-		/// <note type="important">假如你的PLC的Ip地址为192.168.0.10，那么这个值就是10</note>
-		/// </remarks>
-		[HslMqttApi( HttpMethod = "GET", Description = "PLC node address. This value is assigned by default after the IP address is configured. The default is the last bit of the IP address." )]
-		public byte DA1 { get; set; } = 0x13;
+		[HslMqttApi( HttpMethod = "GET", Description = "The node address of the PLC is 0 by default. During the process of connecting with the PLC, the value of DA1 is automatically obtained from the PLC." )]
+		public byte DA1 { get; set; } = 0x00;
 
 		/// <summary>
 		/// PLC的单元号地址，通常都为0<br />
@@ -333,10 +362,10 @@ namespace HslCommunication.Profinet.Omron
 		#region Message Pack Extra
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command ) => PackCommand( command );
+		public override byte[] PackCommandWithHeader( byte[] command ) => PackCommand( command );
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => OmronFinsNetHelper.ResponseValidAnalysis( response );
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => OmronFinsNetHelper.ResponseValidAnalysis( response );
 
 		#endregion
 
@@ -375,6 +404,10 @@ namespace HslCommunication.Profinet.Omron
 		{
 			return base.Write( address, value, Encoding.UTF8 );
 		}
+
+		/// <inheritdoc cref="OmronFinsNetHelper.Read(IReadWriteDevice, string[])"/>
+		public OperateResult<byte[]> Read( string[] address ) => OmronFinsNetHelper.Read( this, address );
+
 		#endregion
 
 		#region Async Read Write Override
@@ -396,6 +429,10 @@ namespace HslCommunication.Profinet.Omron
 		{
 			return await base.WriteAsync( address, value, Encoding.UTF8 );
 		}
+
+		/// <inheritdoc cref="OmronFinsNetHelper.Read(IReadWriteDevice, string[])"/>
+		public async Task<OperateResult<byte[]>> ReadAsync( string[] address ) => await OmronFinsNetHelper.ReadAsync( this, address );
+
 #endif
 		#endregion
 

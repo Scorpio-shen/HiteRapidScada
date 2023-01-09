@@ -21,6 +21,41 @@ namespace HslCommunication.Profinet.Omron
 		#region Static Method Helper
 
 		/// <summary>
+		/// 同时读取多个地址的命令报文信息
+		/// </summary>
+		/// <param name="address">多个地址</param>
+		/// <returns>命令报文信息</returns>
+		public static OperateResult<List<byte[]>> BuildReadCommand( string[] address )
+		{
+			List<byte[]> cmds = new List<byte[]>( );
+			List<string[]> splits = SoftBasic.ArraySplitByLength( address, 89 );
+			for (int i = 0; i < splits.Count; i++)
+			{
+				string[] adds = splits[i];
+				byte[] _PLCCommand = new byte[2 + 4 * adds.Length];
+
+				_PLCCommand[0] = 0x01;    // 批量读取存储区数据
+				_PLCCommand[1] = 0x04;
+
+				for (int j = 0; j < adds.Length; j++)
+				{
+					var analysis = OmronFinsAddress.ParseFrom( adds[j], 1 );
+					if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<List<byte[]>>( analysis );
+
+					_PLCCommand[2 + 4 * j] = analysis.Content.WordCode;
+					_PLCCommand[3 + 4 * j] = (byte)(analysis.Content.AddressStart / 16 / 256);
+					_PLCCommand[4 + 4 * j] = (byte)(analysis.Content.AddressStart / 16 % 256);
+					_PLCCommand[5 + 4 * j] = (byte)(analysis.Content.AddressStart % 16);
+
+				}
+
+				cmds.Add( _PLCCommand );
+			}
+
+			return OperateResult.CreateSuccessResult( cmds );
+		}
+
+		/// <summary>
 		/// 根据读取的地址，长度，是否位读取创建Fins协议的核心报文<br />
 		/// According to the read address, length, whether to read the core message that creates the Fins protocol
 		/// </summary>
@@ -35,7 +70,7 @@ namespace HslCommunication.Profinet.Omron
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<List<byte[]>>( analysis );
 
 			List<byte[]> cmds = new List<byte[]>( );
-			int[] lengths = SoftBasic.SplitIntegerToArray( length, isBit ? int.MaxValue : splitLength );
+			int[] lengths = SoftBasic.SplitIntegerToArray( length, isBit ? 1998 : splitLength );
 			for (int i = 0; i < lengths.Length; i++)
 			{
 				byte[] _PLCCommand = new byte[8];
@@ -155,6 +190,7 @@ namespace HslCommunication.Profinet.Omron
 					(response[10] == 0x21 & response[11] == 0x02) ||
 					(response[10] == 0x22 & response[11] == 0x02))
 				{
+					// C0 00 02 00 00 00 00 01 00 00 01 01 21 08
 					// Read 操作
 					byte[] content = new byte[response.Length - 14];
 					if (content.Length > 0) Array.Copy( response, 14, content, 0, content.Length );
@@ -163,6 +199,17 @@ namespace HslCommunication.Profinet.Omron
 					if (content.Length == 0) success.IsSuccess = false;
 					success.ErrorCode = err;
 					success.Message = GetStatusDescription( err ) + " Received:" + SoftBasic.ByteToHexString( response, ' ' );
+
+					if (response[10] == 0x01 & response[11] == 0x04)          // 多个数据块读取的情况，还需要二次解析数据
+					{
+						byte[] buffer = content.Length > 0 ? new byte[content.Length * 2 / 3] : new byte[0];
+						for (int i = 0; i < content.Length / 3; i++)
+						{
+							buffer[i * 2 + 0] = content[i * 3 + 1];
+							buffer[i * 2 + 1] = content[i * 3 + 2];
+						}
+						success.Content = buffer;
+					}
 					return success;
 				}
 				else
@@ -198,7 +245,7 @@ namespace HslCommunication.Profinet.Omron
 				case 0x23: return StringResources.Language.OmronStatus23;
 				case 0x24: return StringResources.Language.OmronStatus24;
 				case 0x25: return StringResources.Language.OmronStatus25;
-				default: return StringResources.Language.UnknownError;
+				default:   return StringResources.Language.UnknownError;
 			}
 		}
 
@@ -233,6 +280,21 @@ namespace HslCommunication.Profinet.Omron
 			}
 
 			return OperateResult.CreateSuccessResult( contentArray.ToArray( ) );
+		}
+
+		/// <summary>
+		/// 从欧姆龙PLC中读取多个地址的数据，返回读取结果，每个地址按照字为单位读取，地址格式为"D100","C100","W100","H100","A100"
+		/// </summary>
+		/// <param name="omron">PLC设备的连接对象</param>
+		/// <param name="address">从欧姆龙PLC中读取多个地址的数据，返回读取结果，每个地址按照字为单位读取，地址格式为"D100","C100","W100","H100","A100"</param>
+		/// <returns>带成功标志的结果数据对象</returns>
+		public static OperateResult<byte[]> Read( IReadWriteDevice omron, string[] address )
+		{
+			// 获取指令
+			var command = OmronFinsNetHelper.BuildReadCommand( address );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
+
+			return omron.ReadFromCoreServer( command.Content );
 		}
 
 		/// <summary>
@@ -291,6 +353,16 @@ namespace HslCommunication.Profinet.Omron
 
 			// 成功
 			return OperateResult.CreateSuccessResult( );
+		}
+
+		/// <inheritdoc cref="Read(IReadWriteDevice, string[])"/>
+		public static async Task<OperateResult<byte[]>> ReadAsync( IReadWriteDevice omron, string[] address )
+		{
+			// 获取指令
+			var command = OmronFinsNetHelper.BuildReadCommand( address );
+			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
+
+			return await omron.ReadFromCoreServerAsync( command.Content );
 		}
 #endif
 

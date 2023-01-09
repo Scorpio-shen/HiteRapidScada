@@ -41,7 +41,7 @@ namespace HslCommunication.Profinet.Fuji
 			ByteTransform = new RegularByteTransform( );
 			ByteTransform.DataFormat = DataFormat.CDAB;
 			WordLength = 1;
-			serialPort = new SerialPort( );
+			LogMsgFormatBinary = false;
 		}
 
 		#endregion
@@ -164,27 +164,37 @@ namespace HslCommunication.Profinet.Fuji
 			}
 		}
 
+		private int GetBitIndex( string address )
+		{
+			int bitIndex = 0;
+			if (address.LastIndexOf( '.' ) > 0)
+			{
+				bitIndex = HslHelper.GetBitIndexInformation( ref address );
+				bitIndex = Convert.ToInt32( address.Substring( 1 ) ) * 16 + bitIndex;
+			}
+			else
+			{
+				if (address[0] == 'X' || address[0] == 'x' ||
+					address[0] == 'Y' || address[0] == 'y' ||
+					address[0] == 'M' || address[0] == 'm')
+				{
+					bitIndex = Convert.ToInt32( address.Substring( 1 ) );
+				}
+				else
+				{
+					bitIndex = Convert.ToInt32( address.Substring( 1 ) ) * 16;
+				}
+			}
+			return bitIndex;
+		}
+
 		/// <inheritdoc cref="FujiSPBOverTcp.ReadBool(string, ushort)"/>
 		[HslMqttApi( "ReadBoolArray", "" )]
 		public override OperateResult<bool[]> ReadBool( string address, ushort length )
 		{
 			try
 			{
-				int bitIndex = 0;
-				if (address.LastIndexOf( '.' ) > 0)
-				{
-					bitIndex = HslHelper.GetBitIndexInformation( ref address );
-					bitIndex = Convert.ToInt32( address.Substring( 1 ) ) * 16 + bitIndex;
-				}
-				else
-				{
-					if( address[0] == 'X' || address[0] == 'x' ||
-						address[0] == 'Y' || address[0] == 'y' ||
-						address[0] == 'M' || address[0] == 'm')
-					{
-						bitIndex = Convert.ToInt32( address.Substring( 1 ) );
-					}
-				}
+				int bitIndex = GetBitIndex( address );
 				switch (address[0])
 				{
 					case 'X':
@@ -214,21 +224,7 @@ namespace HslCommunication.Profinet.Fuji
 		{
 			try
 			{
-				int bitIndex = 0;
-				if (address.LastIndexOf( '.' ) > 0)
-				{
-					HslHelper.GetBitIndexInformation( ref address );
-					bitIndex = Convert.ToInt32( address.Substring( 1 ) ) * 16 + bitIndex;
-				}
-				else
-				{
-					if (address[0] == 'X' || address[0] == 'x' ||
-						address[0] == 'Y' || address[0] == 'y' ||
-						address[0] == 'M' || address[0] == 'm')
-					{
-						bitIndex = Convert.ToInt32( address.Substring( 1 ) );
-					}
-				}
+				int bitIndex = GetBitIndex( address );
 				switch (address[0])
 				{
 					case 'X':
@@ -257,53 +253,18 @@ namespace HslCommunication.Profinet.Fuji
 		#region NetServer Override
 
 		/// <inheritdoc/>
-		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
+		protected override INetMessage GetNewNetMessage( ) => new FujiSPBMessage( );
+
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			// 开始接收数据信息
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
+			if (receive.Length < 5) return new OperateResult<byte[]>( $"Uknown message" );
+			if (receive[0] != 0x3A) return new OperateResult<byte[]>( $"NMessage must start with 0x3A" );
 
-			if (socket.BeginReceiveResult( SocketAsyncCallBack, appSession ).IsSuccess)
-				AddClient( appSession );
-			else
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
+			if (Encoding.ASCII.GetString( receive, 1, 2 ) != station.ToString( "X2" ))
+				return new OperateResult<byte[]>( $"Station not match , Except: {station:X2} , Actual: {Encoding.ASCII.GetString( receive, 1, 2 )}" );
 
-		}
-
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
-		{
-			if (ar.AsyncState is AppSession session)
-			{
-				if (!session.WorkSocket.EndReceiveResult( ar ).IsSuccess) { RemoveClient( session ); return; }
-#if NET20 || NET35
-				OperateResult<byte[]> read1 = ReceiveByMessage( session.WorkSocket, 2000, new FujiSPBMessage( ) );
-#else
-				OperateResult<byte[]> read1 = await ReceiveByMessageAsync( session.WorkSocket, 2000, new FujiSPBMessage( ) );
-#endif
-				if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-				if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-				if ( read1.Content[0] != 0x3A ) { RemoveClient( session ); return; }
-
-				LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{Encoding.ASCII.GetString( read1.Content.RemoveLast( 2 ) )}" );
-
-				byte[] back = ReadFromSPBCore( read1.Content );
-
-				if (back == null) { RemoveClient( session ); return; }
-				if (!Send( session.WorkSocket, back ).IsSuccess) { RemoveClient( session ); return; }
-
-				LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{Encoding.ASCII.GetString( back.RemoveLast( 2 ) )}" );
-
-				session.HeartTime = DateTime.Now;
-				RaiseDataReceived( session, read1.Content );
-				if (!session.WorkSocket.BeginReceiveResult( SocketAsyncCallBack, session ).IsSuccess) RemoveClient( session );
-			}
+			return OperateResult.CreateSuccessResult( ReadFromSPBCore( receive ) );
 		}
 
 		#endregion
@@ -406,103 +367,10 @@ namespace HslCommunication.Profinet.Fuji
 
 		#region Serial Support
 
-		private SerialPort serialPort;            // 核心的串口对象
-
-		/// <summary>
-		/// 启动SPB串口的从机服务，使用默认的参数进行初始化串口，9600波特率，8位数据位，无奇偶校验，1位停止位<br />
-		/// Start the slave service of modbus-rtu, initialize the serial port with default parameters, 9600 baud rate, 8 data bits, no parity, 1 stop bit
-		/// </summary>
-		/// <param name="com">串口信息</param>
-		public void StartSerial( string com ) => StartSerial( com, 9600 );
-
-		/// <summary>
-		/// 启动SPB串口的从机服务，使用默认的参数进行初始化串口，8位数据位，无奇偶校验，1位停止位<br />
-		/// Start the slave service of modbus-rtu, initialize the serial port with default parameters, 8 data bits, no parity, 1 stop bit
-		/// </summary>
-		/// <param name="com">串口信息</param>
-		/// <param name="baudRate">波特率</param>
-		public void StartSerial( string com, int baudRate )
+		/// <inheritdoc/>
+		protected override bool CheckSerialReceiveDataComplete( byte[] buffer, int receivedLength )
 		{
-			StartSerial( sp =>
-			{
-				sp.PortName = com;
-				sp.BaudRate = baudRate;
-				sp.DataBits = 8;
-				sp.Parity = Parity.None;
-				sp.StopBits = StopBits.One;
-			} );
-		}
-
-		/// <summary>
-		/// 启动SPB串口的从机服务，使用自定义的初始化方法初始化串口的参数<br />
-		/// Start the slave service of modbus-rtu and initialize the parameters of the serial port using a custom initialization method
-		/// </summary>
-		/// <param name="inni">初始化信息的委托</param>
-		public void StartSerial( Action<SerialPort> inni )
-		{
-			if (!serialPort.IsOpen)
-			{
-				inni?.Invoke( serialPort );
-
-				serialPort.ReadBufferSize = 1024;
-				serialPort.ReceivedBytesThreshold = 1;
-				serialPort.Open( );
-				serialPort.DataReceived += SerialPort_DataReceived;
-			}
-		}
-
-		/// <summary>
-		/// 关闭SPB的串口对象<br />
-		/// Close the serial port object of modbus-rtu
-		/// </summary>
-		public void CloseSerial( )
-		{
-			if (serialPort.IsOpen)
-			{
-				serialPort.Close( );
-			}
-		}
-
-		/// <summary>
-		/// 接收到串口数据的时候触发
-		/// </summary>
-		/// <param name="sender">串口对象</param>
-		/// <param name="e">消息</param>
-		private void SerialPort_DataReceived( object sender, SerialDataReceivedEventArgs e )
-		{
-			int rCount = 0;
-			byte[] buffer = new byte[1024];
-			while (true)
-			{
-				System.Threading.Thread.Sleep( 20 );            // 此处做个微小的延时，等待数据接收完成
-				int count = serialPort.Read( buffer, rCount, serialPort.BytesToRead );
-				rCount += count;
-				if (count == 0) break;
-			}
-
-			if (rCount == 0) return;
-			byte[] receive = buffer.SelectBegin( rCount );
-			if (receive.Length < 5)
-			{
-				LogNet?.WriteError( ToString( ), $"[{serialPort.PortName}] Uknown Data：{receive.ToHexString( ' ' )}" );
-				return;
-			}
-
-			if (receive[0] != 0x3A) return;
-			LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] Ascii {StringResources.Language.Receive}：{Encoding.ASCII.GetString( receive.RemoveLast( 2 ) )}" );
-
-			if (Encoding.ASCII.GetString( receive, 1, 2 ) != station.ToString( "X2" ))
-			{
-				LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] Station not match , Except: {station:X2} , Actual: {Encoding.ASCII.GetString( receive, 1, 2 )}" );
-				return;
-			}
-
-			byte[] back = ReadFromSPBCore( receive );
-			if (back == null) return;
-			serialPort.Write( back, 0, back.Length );
-
-			LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] Ascii {StringResources.Language.Send}：{Encoding.ASCII.GetString( back.RemoveLast( 2 ) )}" );
-			if (IsStarted) RaiseDataReceived( sender, receive );
+			return ModBus.ModbusInfo.CheckAsciiReceiveDataComplete( buffer, receivedLength );
 		}
 
 		#endregion
@@ -520,7 +388,6 @@ namespace HslCommunication.Profinet.Fuji
 				dBuffer.Dispose( );
 				rBuffer.Dispose( );
 				wBuffer.Dispose( );
-				serialPort?.Dispose( );
 			}
 			base.Dispose( disposing );
 		}

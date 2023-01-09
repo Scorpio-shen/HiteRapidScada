@@ -2,7 +2,7 @@
 using HslCommunication.Core;
 using HslCommunication.Core.IMessage;
 using HslCommunication.Core.Net;
-using HslCommunication;
+using HslCommunication.Core.Address;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,6 +10,8 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using HslCommunication.Reflection;
+using HslCommunication.Algorithms.ConnectPool;
+using HslCommunication.Core.Pipe;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -34,7 +36,7 @@ namespace HslCommunication.CNC.Fanuc
 			this.Port           = port;
 			this.ByteTransform  = new ReverseBytesTransform( );
 			this.encoding       = Encoding.Default;
-			this.receiveTimeOut = 30_000;
+			this.ReceiveTimeOut = 30_000;
 		}
 
 		/// <inheritdoc/>
@@ -51,6 +53,13 @@ namespace HslCommunication.CNC.Fanuc
 			set => this.encoding = value;
 		}
 
+		/// <summary>
+		/// 获取或设置当前操作的路径信息，默认为1，如果机床支持多路径的，可以设置为其他值。<br />
+		/// Gets or sets the path information for the current operation, the default is 1, if the machine supports multipathing, it can be set to other values.
+		/// </summary>
+		[HslMqttApi( Description = "Gets or sets the path information for the current operation, the default is 1" )]
+		public short OperatePath { get => this.opPath; set => this.opPath = value; }
+
 		#endregion
 
 		#region NetworkDoubleBase Override
@@ -61,8 +70,11 @@ namespace HslCommunication.CNC.Fanuc
 			OperateResult<byte[]> read1 = ReadFromCoreServer( socket, "a0 a0 a0 a0 00 01 01 01 00 02 00 02".ToHexBytes( ) );
 			if (!read1.IsSuccess) return read1;
 
-			OperateResult<byte[]> read2 = ReadFromCoreServer( socket, "a0 a0 a0 a0 00 01 21 01 00 1e 00 01 00 1c 00 01 00 01 00 18 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00".ToHexBytes( ) );
+			// 读取系统信息
+			OperateResult<byte[]> read2 = ReadFromCoreServer( socket, BuildReadArray( BuildReadSingle( 0x18, 0, 0, 0, 0, 0 ) ) );
 			if (!read2.IsSuccess) return read2;
+
+			this.fanucSysInfo = new FanucSysInfo( read2.Content );
 
 			return OperateResult.CreateSuccessResult( );
 		}
@@ -78,8 +90,11 @@ namespace HslCommunication.CNC.Fanuc
 			OperateResult<byte[]> read1 = await ReadFromCoreServerAsync( socket, "a0 a0 a0 a0 00 01 01 01 00 02 00 02".ToHexBytes( ) );
 			if (!read1.IsSuccess) return read1;
 
+			// 读取系统信息
 			OperateResult<byte[]> read2 = await ReadFromCoreServerAsync( socket, BuildReadArray( BuildReadSingle( 0x18, 0, 0, 0, 0, 0 ) ) );
 			if (!read2.IsSuccess) return read2;
+
+			this.fanucSysInfo = new FanucSysInfo( read2.Content );
 
 			return OperateResult.CreateSuccessResult( );
 		}
@@ -140,6 +155,17 @@ namespace HslCommunication.CNC.Fanuc
 		#region Read Write Support
 
 		/// <summary>
+		/// 获取fanuc机床设备的基本信息，型号，轴数量等等。<br />
+		/// Get basic information about fanuc machines, models, number of axes and much more
+		/// </summary>
+		/// <returns>机床信息</returns>
+		[HslMqttApi( Description = "Get basic information about fanuc machines, models, number of axes and much more" )]
+		public OperateResult<FanucSysInfo> ReadSysInfo( )
+		{
+			return this.fanucSysInfo == null ? new OperateResult<FanucSysInfo>( "Must connect device first!" ) : OperateResult.CreateSuccessResult( this.fanucSysInfo );
+		}
+
+		/// <summary>
 		/// 主轴转速及进给倍率<br />
 		/// Spindle speed and feedrate override
 		/// </summary>
@@ -170,14 +196,15 @@ namespace HslCommunication.CNC.Fanuc
 		[HslMqttApi( Description = "Read program name and program number" )]
 		public OperateResult<string, int> ReadSystemProgramCurrent( )
 		{
-			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray(
-				BuildReadSingle( 0xCF, 0, 0, 0, 0, 0 )
-				) );
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0xCF, 0, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string, int>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			int number = ByteTransform.TransInt32( result[0], 14 );
-			string name = this.encoding.GetString( result[0].SelectMiddle( 18, 36 ) ).TrimEnd( '\0' );
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			OperateResult check = CheckSingleResultLeagle( result );
+			if (!check.IsSuccess) return OperateResult.CreateFailedResult<string, int>( check );
+
+			int number = ByteTransform.TransInt32( result, 14 );
+			string name = result.GetStringOrEndChar( 18, 36, this.encoding );
 			return OperateResult.CreateSuccessResult( name, number );
 		}
 
@@ -190,13 +217,14 @@ namespace HslCommunication.CNC.Fanuc
 		[HslMqttApi( Description = "Read the language setting information of the machine tool" )]
 		public OperateResult<ushort> ReadLanguage( )
 		{
-			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray(
-				BuildReadSingle( 0x8D, 0x0CD1, 0x0CD1, 0, 0, 0 )
-				) );
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0x8D, 0x0CD1, 0x0CD1, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<ushort>( read );
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
 
-			ushort code = ByteTransform.TransUInt16( result[0], 24 );
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			OperateResult check = CheckSingleResultLeagle( result );
+			if (!check.IsSuccess) return OperateResult.CreateFailedResult<ushort>( check );
+
+			ushort code = ByteTransform.TransUInt16( result, 24 );
 			ChangeTextEncoding( code );
 			return OperateResult.CreateSuccessResult( code );
 		}
@@ -258,20 +286,11 @@ namespace HslCommunication.CNC.Fanuc
 		[HslMqttApi( Description = "Write macro variable, need to specify the address and write data" )]
 		public OperateResult WriteSystemMacroValue( int number, double[] values )
 		{
-			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray(
-				BuildWriteSingle( 0x16, number, number + values.Length - 1, 0, 0, values )
-				) );
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildWriteSingle( 0x16, number, number + values.Length - 1, 0, 0, values ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string, int>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			if (ByteTransform.TransUInt16( result[0], 6 ) == 0)
-			{
-				return OperateResult.CreateSuccessResult( );
-			}
-			else
-			{
-				return new OperateResult( ByteTransform.TransUInt16( result[0], 6 ), "Unknown Error" );
-			}
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			return CheckSingleResultLeagle( result );
 		}
 
 		/// <summary>
@@ -378,25 +397,26 @@ namespace HslCommunication.CNC.Fanuc
 		[HslMqttApi( Description = "Read alarm information" )]
 		public OperateResult<SysAlarm[]> ReadSystemAlarm( )
 		{
-			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray(
-				BuildReadSingle( 0x23, -1, 10, 2, 64, 0 )
-				) );
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0x23, -1, 10, 2, 64, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<SysAlarm[]>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			if (ByteTransform.TransUInt16( result[0], 12 ) > 0)
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			OperateResult check = CheckSingleResultLeagle( result );
+			if (!check.IsSuccess) return OperateResult.CreateFailedResult<SysAlarm[]>( check );
+
+			if (ByteTransform.TransUInt16( result, 12 ) > 0)
 			{
-				int length = ByteTransform.TransUInt16( result[0], 12 ) / 80;
+				int length = ByteTransform.TransUInt16( result, 12 ) / 80;
 				SysAlarm[] alarms = new SysAlarm[length];
 				for (int i = 0; i < alarms.Length; i++)
 				{
 					alarms[i] = new SysAlarm( );
-					alarms[i].AlarmId = ByteTransform.TransInt32( result[0], 14 + 80 * i );
-					alarms[i].Type = ByteTransform.TransInt16( result[0], 20 + 80 * i );
-					alarms[i].Axis = ByteTransform.TransInt16( result[0], 24 + 80 * i );
+					alarms[i].AlarmId = ByteTransform.TransInt32( result, 14 + 80 * i );
+					alarms[i].Type = ByteTransform.TransInt16( result, 20 + 80 * i );
+					alarms[i].Axis = ByteTransform.TransInt16( result, 24 + 80 * i );
 
-					ushort msgLength = ByteTransform.TransUInt16( result[0], 28 + 80 * i );
-					alarms[i].Message = this.encoding.GetString( result[0], 30 + 80 * i, msgLength );
+					ushort msgLength = ByteTransform.TransUInt16( result, 28 + 80 * i );
+					alarms[i].Message = this.encoding.GetString( result, 30 + 80 * i, msgLength );
 				}
 				return OperateResult.CreateSuccessResult( alarms );
 			}
@@ -414,19 +434,20 @@ namespace HslCommunication.CNC.Fanuc
 		[HslMqttApi( Description = "Read the time of the fanuc machine tool, 0 is the boot time, 1 is the running time, 2 is the cutting time, 3 is the cycle time, 4 is the idle time, and returns the information in seconds." )]
 		public OperateResult<long> ReadTimeData( int timeType )
 		{
-			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray(
-				BuildReadSingle( 0x0120, timeType, 0, 0, 0, 0 )
-				) );
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0x0120, timeType, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<long>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			int millisecond = ByteTransform.TransInt32( result[0], 18 );
-			long munite = ByteTransform.TransInt32( result[0], 14 );
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			OperateResult check = CheckSingleResultLeagle( result );
+			if (!check.IsSuccess) return OperateResult.CreateFailedResult<long>( check );
 
-			if (millisecond < 0 || millisecond > 60000)
+			int millisecond = ByteTransform.TransInt32( result, 18 );
+			long munite     = ByteTransform.TransInt32( result, 14 );
+
+			if (millisecond < 0 || millisecond > 60000 || munite < 0)
 			{
-				millisecond = BitConverter.ToInt32( result[0], 18 );
-				munite = BitConverter.ToInt32( result[0], 14 );
+				millisecond = BitConverter.ToInt32( result, 18 );
+				munite      = BitConverter.ToInt32( result, 14 );
 			}
 			
 			long seconds = millisecond / 1000;
@@ -442,13 +463,15 @@ namespace HslCommunication.CNC.Fanuc
 		[HslMqttApi( Description = "Read alarm status information" )]
 		public OperateResult<int> ReadAlarmStatus( )
 		{
-			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray(
-				BuildReadSingle( 0x1A, 0, 0, 0, 0, 0 )
-				) );
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0x1A, 0, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			return OperateResult.CreateSuccessResult( (int)ByteTransform.TransUInt16( result[0], 16 ) );
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult check = CheckSingleResultLeagle( result );
+			if (!check.IsSuccess) return OperateResult.CreateFailedResult<int>( check );
+
+			return OperateResult.CreateSuccessResult( (int)ByteTransform.TransUInt16( result, 16 ) );
 		}
 
 		/// <summary>
@@ -489,21 +512,21 @@ namespace HslCommunication.CNC.Fanuc
 		[HslMqttApi( Description = "Read the program list of the device" )]
 		public OperateResult<int[]> ReadProgramList( )
 		{
-			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray(
-				BuildReadSingle( 0x06, 0x01, 0x13, 0, 0, 0 )
-				) );
-			OperateResult<byte[]> check = ReadFromCoreServer( BuildReadArray(
-				BuildReadSingle( 0x06, 0x1A0B, 0x13, 0, 0, 0 )
-				) );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int[]>( read );
+			OperateResult<byte[]> read  = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0x06, 0x01,   0x13, 0, 0, 0 ) ) );
+			OperateResult<byte[]> check = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0x06, 0x1A0B, 0x13, 0, 0, 0 ) ) );
+			if (!read.IsSuccess)  return OperateResult.CreateFailedResult<int[]>( read );
 			if (!check.IsSuccess) return OperateResult.CreateFailedResult<int[]>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			int length = (result[0].Length - 14) / 72;
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<int[]>( checkResult );
+
+			int length = (result.Length - 14) / 72;
 			int[] programs = new int[length];
 			for (int i = 0; i < length; i++)
 			{
-				programs[i] = ByteTransform.TransInt32( result[0], 14 + 72 * i );
+				programs[i] = ByteTransform.TransInt32( result, 14 + 72 * i );
 			}
 			return OperateResult.CreateSuccessResult( programs );
 		}
@@ -547,23 +570,72 @@ namespace HslCommunication.CNC.Fanuc
 		}
 
 		/// <summary>
-		/// 读取R数据，需要传入起始地址和结束地址，返回byte[]数据信息<br />
-		/// To read R data, you need to pass in the start address and end address, and return byte[] data information
+		/// 读取寄存器的数据信息，需要传入寄存器的代码，起始地址，结束地址信息<br />
+		/// To read the data information of the register, you need to pass in the code of the register, the start address, and the end address information
 		/// </summary>
-		/// <param name="start">起始地址</param>
-		/// <param name="end">结束地址</param>
-		/// <returns>读取结果</returns>
-		[HslMqttApi( Description = "To read R data, you need to pass in the start address and end address, and return byte[] data information" )]
-		public OperateResult<byte[]> ReadRData( int start, int end )
+		/// <param name="code">寄存器代码</param>
+		/// <param name="start">起始的地址</param>
+		/// <param name="end">结束的地址</param>
+		/// <returns>包含原始字节信息的结果对象</returns>
+		[HslMqttApi( Description = "To read the data information of the register, you need to pass in the code of the register, the start address, and the end address information" )]
+		public OperateResult<byte[]> ReadData( int code, int start, int end )
 		{
-			OperateResult<byte[]> read1 = ReadFromCoreServer( 
-				BuildReadArray( BuildReadMulti( 0x02, 0x8001, start, end, 0x05, 0, 0 ) ) );
+			OperateResult<byte[]> read1 = ReadFromCoreServer( BuildReadArray( BuildReadMulti( 0x02, 0x8001, start, end, code, 0, 0 ) ) );
 			if (!read1.IsSuccess) return read1;
 
-			List<byte[]> result = ExtraContentArray( read1.Content.RemoveBegin( 10 ) );
-			int length = this.ByteTransform.TransUInt16( result[0], 12 );
-			return OperateResult.CreateSuccessResult( result[0].SelectMiddle( 14, length ) );
+			byte[] result = ExtraContentArray( read1.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( checkResult );
+
+			int length = this.ByteTransform.TransUInt16( result, 12 );
+			return OperateResult.CreateSuccessResult( result.SelectMiddle( 14, length ) );
 		}
+
+		/// <summary>
+		/// 将原始字节的数据写入到指定的寄存器里，需要传入寄存器的代码，起始地址，原始的字节数据信息<br />
+		/// To write the original byte data into the specified register, you need to pass in the code of the register, the starting address, and the original byte data information
+		/// </summary>
+		/// <param name="code">寄存器代码</param>
+		/// <param name="start">起始的地址</param>
+		/// <param name="data">等待写入的原始字节数据</param>
+		/// <returns>是否写入成功</returns>
+		[HslMqttApi( Description = "To write the original byte data into the specified register, you need to pass in the code of the register, the starting address, and the original byte data information" )]
+		public OperateResult WriteData( int code, int start, byte[] data )
+		{
+			if (data == null) data = new byte[0];
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildWriteSingle( 0x02, 0x8002, start, start + data.Length - 1, code, 0, data ) ) );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string, int>( read );
+
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			return CheckSingleResultLeagle( result );
+		}
+
+		/// <summary>
+		/// 读取PMC数据，需要传入起始地址和结束地址，返回byte[]数据信息<br />
+		/// To read PMC data, you need to pass in the start address and length, and return byte[] data information
+		/// </summary>
+		/// <remarks>
+		/// 地址支持，G,F,Y,X,A,R,T,K,C,D,E 地址，例如 G5
+		/// </remarks>
+		/// <param name="address">起始地址，地址支持，G,F,Y,X,A,R,T,K,C,D,E 地址，例如 G5</param>
+		/// <param name="length">长度信息</param>
+		/// <returns>读取结果</returns>
+		[HslMqttApi( Description = "To read PMC data, you need to pass in the start address and length, and return byte[] data information" )]
+		public OperateResult<byte[]> ReadPMCData( string address, ushort length ) => FanucPMCAddress.ParseFrom( address, length ).Then( m => ReadData( m.DataCode, m.AddressStart, m.AddressEnd ) );
+
+		/// <summary>
+		/// 写入PMC数据，需要传入起始地址和，以及等待写入的byte[]数据信息<br />
+		/// To write PMC data, you need to pass in the start address, as well as the byte[] data information waiting to be written
+		/// </summary>
+		/// <remarks>
+		/// 地址支持，G,F,Y,X,A,R,T,K,C,D,E 地址，例如 G5
+		/// </remarks>
+		/// <param name="address">起始地址，地址支持，G,F,Y,X,A,R,T,K,C,D,E 地址，例如 G5</param>
+		/// <param name="value">等待写入的原始字节数据</param>
+		/// <returns>是否写入成功</returns>
+		[HslMqttApi( Description = "To write PMC data, you need to pass in the start address, as well as the byte[] data information waiting to be written" )]
+		public OperateResult WritePMCData( string address, byte[] value ) => FanucPMCAddress.ParseFrom( address, 1 ).Then( m => WriteData( m.DataCode, m.AddressStart, value ) );
 
 		/// <summary>
 		/// 读取工件尺寸<br />
@@ -586,6 +658,10 @@ namespace HslCommunication.CNC.Fanuc
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
 
 			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<string>( checkResult );
+
 			return OperateResult.CreateSuccessResult( Encoding.ASCII.GetString( result, 18, result.Length - 18 ) );
 		}
 
@@ -598,15 +674,11 @@ namespace HslCommunication.CNC.Fanuc
 		[HslMqttApi( Description = "Set the specified program number as the current main program, if the program number does not exist, an error message will be returned." )]
 		public OperateResult SetCurrentProgram( ushort programNum )
 		{
-			OperateResult<byte[]> read = ReadFromCoreServer(
-				BuildReadArray( BuildReadSingle( 0x03, programNum, 0, 0, 0, 0 ) ) );
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0x03, programNum, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int, string>( read );
 
 			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
-			short err = this.ByteTransform.TransInt16( result, 6 );
-
-			if (err == 0) return OperateResult.CreateSuccessResult( );
-			else return new OperateResult( err, StringResources.Language.UnknownError );
+			return CheckSingleResultLeagle( result );
 		}
 
 		/// <summary>
@@ -617,15 +689,11 @@ namespace HslCommunication.CNC.Fanuc
 		[HslMqttApi( Description = "Start the processing program" )]
 		public OperateResult StartProcessing( )
 		{
-			OperateResult<byte[]> read = ReadFromCoreServer(
-				BuildReadArray( BuildReadSingle( 0x01, 0, 0, 0, 0, 0 ) ) );
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0x01, 0, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int, string>( read );
 
 			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
-			short err = this.ByteTransform.TransInt16( result, 6 );
-
-			if (err == 0) return OperateResult.CreateSuccessResult( );
-			else return new OperateResult( err, StringResources.Language.UnknownError );
+			return CheckSingleResultLeagle( result );
 		}
 
 		/// <summary>
@@ -663,9 +731,10 @@ namespace HslCommunication.CNC.Fanuc
 		/// </remarks>
 		/// <param name="program">程序内容信息</param>
 		/// <param name="everyWriteSize">每次写入的长度信息</param>
+		/// <param name="path">程序路径信息，默认为空，就是 //CNC_MEM/USER/PATH1/ 如果需要指定PATH2，需要输入 //CNC_MEM/USER/PATH2/</param>
 		/// <returns>是否下载成功</returns>
 		[HslMqttApi( Description = "Download the NC machining program to the CNC machine tool, and return whether the download is successful" )]
-		public OperateResult WriteProgramContent( string program, int everyWriteSize = 512 )
+		public OperateResult WriteProgramContent( string program, int everyWriteSize = 512, string path = "" )
 		{
 			if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) return new OperateResult( StringResources.Language.InsufficientPrivileges );
 
@@ -675,7 +744,7 @@ namespace HslCommunication.CNC.Fanuc
 			OperateResult<byte[]> ini1 = ReadFromCoreServer( socket.Content, "a0 a0 a0 a0 00 01 01 01 00 02 00 01".ToHexBytes( ) );
 			if (!ini1.IsSuccess) return ini1;
 
-			OperateResult<byte[]> read1 = ReadFromCoreServer( socket.Content, BulidWriteProgramFilePre( ) );
+			OperateResult<byte[]> read1 = ReadFromCoreServer( socket.Content, BulidWriteProgramFilePre( path ) );
 			if (!read1.IsSuccess) return read1;
 
 			List<byte[]> contents = BulidWriteProgram( Encoding.ASCII.GetBytes( program ), everyWriteSize );
@@ -699,13 +768,14 @@ namespace HslCommunication.CNC.Fanuc
 		}
 
 		/// <summary>
-		/// <b>[商业授权]</b> 读取指定程序号的程序内容<br />
+		/// <b>[商业授权]</b> 读取指定程序号的程序内容，可以指定路径信息，路径默认为空就是主路径，//CNC_MEM/USER/PATH1/ ，也可以指定其他路径<br />
 		/// <b>[Authorization]</b> Read the program content of the specified program number
 		/// </summary>
 		/// <param name="program">程序号</param>
+		/// <param name="path">程序路径信息，默认为空，就是 //CNC_MEM/USER/PATH1/ 如果需要指定PATH2，需要输入 //CNC_MEM/USER/PATH2/</param>
 		/// <returns>程序内容</returns>
 		[HslMqttApi( Description = "Read the program content of the specified program number" )]
-		public OperateResult<string> ReadProgram( int program )
+		public OperateResult<string> ReadProgram( int program, string path = "" )
 		{
 			if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) return new OperateResult<string>( StringResources.Language.InsufficientPrivileges );
 
@@ -715,7 +785,7 @@ namespace HslCommunication.CNC.Fanuc
 			OperateResult<byte[]> ini1 = ReadFromCoreServer( socket.Content, "a0 a0 a0 a0 00 01 01 01 00 02 00 01".ToHexBytes( ) );
 			if (!ini1.IsSuccess) return OperateResult.CreateFailedResult<string>( ini1 );
 
-			OperateResult<byte[]> read1 = ReadFromCoreServer( socket.Content, BuildReadProgramPre( program ) );
+			OperateResult<byte[]> read1 = ReadFromCoreServer( socket.Content, BuildReadProgramPre( program, path ) );
 			if (!read1.IsSuccess) return OperateResult.CreateFailedResult<string>( read1 );
 
 			// 检测错误信息
@@ -738,6 +808,9 @@ namespace HslCommunication.CNC.Fanuc
 					break;
 			}
 
+			OperateResult<byte[]> read3 = ReadFromCoreServer( socket.Content, null );
+			if (!read3.IsSuccess) return OperateResult.CreateFailedResult<string>( read3 );
+
 			OperateResult send = Send( socket.Content, new byte[] { 0xa0, 0xa0, 0xa0, 0xa0, 0x00, 0x01, 0x17, 0x02, 0x00, 0x00 } );
 			if (!send.IsSuccess) return OperateResult.CreateFailedResult<string>( send );
 
@@ -754,15 +827,30 @@ namespace HslCommunication.CNC.Fanuc
 		[HslMqttApi( Description = "According to the designated program number information, delete the current program information" )]
 		public OperateResult DeleteProgram( int program )
 		{
-			OperateResult<byte[]> read = ReadFromCoreServer(
-				BuildReadArray( BuildReadSingle( 0x05, program, 0, 0, 0, 0 ) ) );
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0x05, program, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int, string>( read );
 
 			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
-			short err = this.ByteTransform.TransInt16( result, 6 );
+			return CheckSingleResultLeagle( result );
+		}
 
-			if (err == 0) return OperateResult.CreateSuccessResult( );
-			else return new OperateResult( err, StringResources.Language.UnknownError );
+		/// <summary>
+		/// 根据指定的文件名来删除文件，如果是路径，则必须 '/' 结尾，如果是文件，则需要输入完整的文件名，例如：//CNC_MEM/USER/PATH2/O12<br />
+		/// Delete the file according to the specified file name, if it is a path, it must end with '/', if it is a file, you need to enter the complete file name, for example: //CNC_MEM/USER/PATH2/O12
+		/// </summary>
+		/// <param name="fileName">文件名称，也可以是路径信息</param>
+		/// <returns>是否删除成功</returns>
+		[HslMqttApi( Description = "Delete the file according to the specified file name, if it is a path, it must end with '/', if it is a file, you need to enter the complete file name, for example: //CNC_MEM/USER/PATH2/O12" )]
+		public OperateResult DeleteFile( string fileName )
+		{
+			byte[] buffer = new byte[256];
+			Encoding.ASCII.GetBytes( fileName ).CopyTo( buffer, 0 );
+
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildWriteSingle( 0x01, 0xB6, 0, 0, 0, 0, buffer ) ) );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
+
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			return CheckSingleResultLeagle( result );
 		}
 
 		/// <summary>
@@ -776,18 +864,84 @@ namespace HslCommunication.CNC.Fanuc
 			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0xB0, 1, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			int index = 0;
-			for (int i = 14; i < result[0].Length; i++)
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<string>( checkResult );
+
+			return OperateResult.CreateSuccessResult( result.GetStringOrEndChar(14, result.Length - 14, this.encoding) );
+		}
+
+		/// <summary>
+		/// 读取指定路径下的所有的子路径和文件的信息，路径信息，例如 "//CNC_MEM/USER/"
+		/// </summary>
+		/// <param name="path">路径信息，例如 "//CNC_MEM/USER/"</param>
+		/// <returns>文件及路径信息</returns>
+		public OperateResult<FileDirInfo[]> ReadAllDirectoryAndFile( string path )
+		{
+			if (!path.EndsWith( "/" )) path += "/";
+
+			byte[] buffer = new byte[256];
+			Encoding.ASCII.GetBytes( path ).CopyTo( buffer, 0 );
+
+			// 先获取文件数量信息
+			OperateResult<int> readCount = ReadAllDirectoryAndFileCount( path );
+			if (!readCount.IsSuccess) return OperateResult.CreateFailedResult<FileDirInfo[]>( readCount );
+			if (readCount.Content == 0) return OperateResult.CreateSuccessResult( new FileDirInfo[0] );
+
+			// 分割成20的长度读取
+			int[] splits = SoftBasic.SplitIntegerToArray( readCount.Content, 0x14 );
+			List<FileDirInfo> list = new List<FileDirInfo>( );
+
+			int already = 0;
+			for ( int j = 0; j < splits.Length; j++)
 			{
-				if (result[0][i] == 0x00)
+				// a:req_num, b:num_prog, c:type, d:size_kind
+				OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildWriteSingle( 0x01, 0xB3, already, splits[j], 1, 1, buffer ) ) );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<FileDirInfo[]>( read );
+
+				if (read.Content.Length == 0x12 || this.ByteTransform.TransInt16( read.Content, 10 ) == 0)
 				{
-					index = i;
-					break;
+					read = ReadFromCoreServer( BuildReadArray( BuildWriteSingle( 0x01, 0xB3, 0, 0x14, 1, 1, buffer ) ) );
+					if (!read.IsSuccess) return OperateResult.CreateFailedResult<FileDirInfo[]>( read );
 				}
+
+				byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+				OperateResult checkResult = CheckSingleResultLeagle( result );
+				if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<FileDirInfo[]>( checkResult );
+
+				int count = (result.Length - 14) / 128;
+				for (int i = 0; i < count; i++)
+				{
+					list.Add( new FileDirInfo( this.ByteTransform, result, 14 + 128 * i ) );
+				}
+				already += splits[j];
 			}
-			if (index == 0) index = result[0].Length;
-			return OperateResult.CreateSuccessResult( Encoding.ASCII.GetString( result[0], 14, index - 14 ) );
+			return OperateResult.CreateSuccessResult( list.ToArray( ) );
+		}
+
+		/// <summary>
+		/// 获取指定的路径里所有的文件夹数量和文件数量之和，路径示例：例如 "//CNC_MEM/USER/"， "//CNC_MEM/USER/PATH1/"
+		/// </summary>
+		/// <param name="path">路径信息，例如 "//CNC_MEM/USER/"</param>
+		/// <returns>文件夹数量和文件数量之和</returns>
+		public OperateResult<int> ReadAllDirectoryAndFileCount( string path )
+		{
+			if (!path.EndsWith( "/" )) path += "/";
+
+			byte[] buffer = new byte[256];
+			Encoding.ASCII.GetBytes( path ).CopyTo( buffer, 0 );
+
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildWriteSingle( 0x01, 0xB4, 0, 0, 0, 0, buffer ) ) );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int>( read );
+
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<int>( checkResult );
+
+			return OperateResult.CreateSuccessResult( ByteTransform.TransInt32( result, 14 ) + ByteTransform.TransInt32( result, 18 ) );
 		}
 
 		/// <summary>
@@ -805,14 +959,11 @@ namespace HslCommunication.CNC.Fanuc
 			byte[] buffer = new byte[256];
 			Encoding.ASCII.GetBytes( path.Content + programName ).CopyTo( buffer, 0 );
 
-			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildWriteSingle( 0xBA, 0, 0, 0, 0, buffer ) ) );
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildWriteSingle( 0x01, 0xBA, 0, 0, 0, 0, buffer ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			int status = result[0][10] * 256 + result[0][11];
-
-			if (status == 0) return OperateResult.CreateSuccessResult( );
-			else return new OperateResult( status, StringResources.Language.UnknownError );
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			return CheckSingleResultLeagle( result );
 		}
 
 		/// <summary>
@@ -865,6 +1016,36 @@ namespace HslCommunication.CNC.Fanuc
 			return OperateResult.CreateSuccessResult( Convert.ToInt32( read.Content ) );
 		}
 
+		/// <summary>
+		/// 读取机床的操作信息<br />
+		/// Read machine operation information
+		/// </summary>
+		/// <returns>操作信息列表</returns>
+		[HslMqttApi( Description = "Read machine operation information" )]
+		public OperateResult<FanucOperatorMessage[]> ReadOperatorMessage( )
+		{
+			OperateResult<byte[]> read = ReadFromCoreServer( BuildReadArray( BuildReadSingle( 0x34, 0, 0, 0, 0, 0 ) ) );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<FanucOperatorMessage[]>( read );
+
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<FanucOperatorMessage[]>( checkResult );
+
+			List<FanucOperatorMessage> list = new List<FanucOperatorMessage>( );
+			int index = 12;
+			while (true)
+			{
+				ushort len = this.ByteTransform.TransUInt16(result, index );
+				list.Add( FanucOperatorMessage.CreateMessage( this.ByteTransform, result.SelectMiddle( index + 2, len ), this.encoding ) );
+
+				index += 2;
+				index += len;
+				if (index >= result.Length) break;
+			}
+			return OperateResult.CreateSuccessResult( list.ToArray( ) );
+		}
+
 		#endregion
 
 		#region Async Read Write Support
@@ -890,27 +1071,29 @@ namespace HslCommunication.CNC.Fanuc
 		/// <inheritdoc cref="ReadSystemProgramCurrent"/>
 		public async Task<OperateResult<string, int>> ReadSystemProgramCurrentAsync( )
 		{
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray(
-				BuildReadSingle( 0xCF, 0, 0, 0, 0, 0 )
-				) );
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildReadSingle( 0xCF, 0, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string, int>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			int number = ByteTransform.TransInt32( result[0], 14 );
-			string name = this.encoding.GetString( result[0].SelectMiddle( 18, 36 ) ).TrimEnd( '\0' );
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			OperateResult check = CheckSingleResultLeagle( result );
+			if (!check.IsSuccess) return OperateResult.CreateFailedResult<string, int>( check );
+
+			int number = ByteTransform.TransInt32( result, 14 );
+			string name = result.GetStringOrEndChar( 18, 36, this.encoding );
 			return OperateResult.CreateSuccessResult( name, number );
 		}
 
 		/// <inheritdoc cref="ReadLanguage"/>
 		public async Task<OperateResult<ushort>> ReadLanguageAsync( )
 		{
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray(
-				BuildReadSingle( 0x8D, 0x0CD1, 0x0CD1, 0, 0, 0 )
-				) );
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildReadSingle( 0x8D, 0x0CD1, 0x0CD1, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<ushort>( read );
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
 
-			ushort code = ByteTransform.TransUInt16( result[0], 24 );
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			OperateResult check = CheckSingleResultLeagle( result );
+			if (!check.IsSuccess) return OperateResult.CreateFailedResult<ushort>( check );
+
+			ushort code = ByteTransform.TransUInt16( result, 24 );
 			ChangeTextEncoding( code );
 			return OperateResult.CreateSuccessResult( code );
 		}
@@ -960,20 +1143,11 @@ namespace HslCommunication.CNC.Fanuc
 		/// <inheritdoc cref="WriteSystemMacroValue(int, double[])"/>
 		public async Task<OperateResult> WriteSystemMacroValueAsync( int number, double[] values )
 		{
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray(
-				BuildWriteSingle( 0x16, number, number + values.Length - 1, 0, 0, values )
-				) );
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildWriteSingle( 0x16, number, number + values.Length - 1, 0, 0, values ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string, int>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			if (ByteTransform.TransUInt16( result[0], 6 ) == 0)
-			{
-				return OperateResult.CreateSuccessResult( );
-			}
-			else
-			{
-				return new OperateResult( ByteTransform.TransUInt16( result[0], 6 ), "Unknown Error" );
-			}
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			return CheckSingleResultLeagle( result );
 		}
 
 		/// <inheritdoc cref="WriteCutterLengthShapeOffset(int, double)"/>
@@ -1037,25 +1211,26 @@ namespace HslCommunication.CNC.Fanuc
 		/// <inheritdoc cref="ReadSystemAlarm"/>
 		public async Task<OperateResult<SysAlarm[]>> ReadSystemAlarmAsync( )
 		{
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray(
-				BuildReadSingle( 0x23, -1, 10, 2, 64, 0 )
-				) );
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildReadSingle( 0x23, -1, 10, 2, 64, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<SysAlarm[]>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			if (ByteTransform.TransUInt16( result[0], 12 ) > 0)
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			OperateResult check = CheckSingleResultLeagle( result );
+			if (!check.IsSuccess) return OperateResult.CreateFailedResult<SysAlarm[]>( check );
+
+			if (ByteTransform.TransUInt16( result, 12 ) > 0)
 			{
-				int length = ByteTransform.TransUInt16( result[0], 12 ) / 80;
+				int length = ByteTransform.TransUInt16( result, 12 ) / 80;
 				SysAlarm[] alarms = new SysAlarm[length];
 				for (int i = 0; i < alarms.Length; i++)
 				{
 					alarms[i] = new SysAlarm( );
-					alarms[i].AlarmId = ByteTransform.TransInt32( result[0], 14 + 80 * i );
-					alarms[i].Type = ByteTransform.TransInt16( result[0], 20 + 80 * i );
-					alarms[i].Axis = ByteTransform.TransInt16( result[0], 24 + 80 * i );
+					alarms[i].AlarmId = ByteTransform.TransInt32( result, 14 + 80 * i );
+					alarms[i].Type    = ByteTransform.TransInt16( result, 20 + 80 * i );
+					alarms[i].Axis    = ByteTransform.TransInt16( result, 24 + 80 * i );
 
-					ushort msgLength = ByteTransform.TransUInt16( result[0], 28 + 80 * i );
-					alarms[i].Message = this.encoding.GetString( result[0], 30 + 80 * i, msgLength );
+					ushort msgLength = ByteTransform.TransUInt16( result, 28 + 80 * i );
+					alarms[i].Message = this.encoding.GetString( result, 30 + 80 * i, msgLength );
 				}
 				return OperateResult.CreateSuccessResult( alarms );
 			}
@@ -1066,19 +1241,20 @@ namespace HslCommunication.CNC.Fanuc
 		/// <inheritdoc cref="ReadTimeData(int)"/>
 		public async Task<OperateResult<long>> ReadTimeDataAsync( int timeType )
 		{
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray(
-				BuildReadSingle( 0x0120, timeType, 0, 0, 0, 0 )
-				) );
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildReadSingle( 0x0120, timeType, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<long>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			int millisecond = ByteTransform.TransInt32( result[0], 18 );
-			long munite = ByteTransform.TransInt32( result[0], 14 );
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			OperateResult check = CheckSingleResultLeagle( result );
+			if (!check.IsSuccess) return OperateResult.CreateFailedResult<long>( check );
 
-			if (millisecond < 0 || millisecond > 60000)
+			int millisecond = ByteTransform.TransInt32( result, 18 );
+			long munite = ByteTransform.TransInt32( result, 14 );
+
+			if (millisecond < 0 || millisecond > 60000 || munite < 0)
 			{
-				millisecond = BitConverter.ToInt32( result[0], 18 );
-				munite = BitConverter.ToInt32( result[0], 14 );
+				millisecond = BitConverter.ToInt32( result, 18 );
+				munite = BitConverter.ToInt32( result, 14 );
 			}
 
 			long seconds = millisecond / 1000;
@@ -1089,13 +1265,15 @@ namespace HslCommunication.CNC.Fanuc
 		/// <inheritdoc cref="ReadAlarmStatus"/>
 		public async Task<OperateResult<int>> ReadAlarmStatusAsync( )
 		{
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray(
-				BuildReadSingle( 0x1A, 0, 0, 0, 0, 0 )
-				) );
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildReadSingle( 0x1A, 0, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			return OperateResult.CreateSuccessResult( (int)ByteTransform.TransUInt16( result[0], 16 ) );
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult check = CheckSingleResultLeagle( result );
+			if (!check.IsSuccess) return OperateResult.CreateFailedResult<int>( check );
+
+			return OperateResult.CreateSuccessResult( (int)ByteTransform.TransUInt16( result, 16 ) );
 		}
 
 		/// <inheritdoc cref="ReadSysStatusInfo"/>
@@ -1126,21 +1304,21 @@ namespace HslCommunication.CNC.Fanuc
 		/// <inheritdoc cref="ReadProgramList"/>
 		public async Task<OperateResult<int[]>> ReadProgramListAsync( )
 		{
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray(
-				BuildReadSingle( 0x06, 0x01, 0x13, 0, 0, 0 )
-				) );
-			OperateResult<byte[]> check = await ReadFromCoreServerAsync( BuildReadArray(
-				BuildReadSingle( 0x06, 0x1A0B, 0x13, 0, 0, 0 )
-				) );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int[]>( read );
+			OperateResult<byte[]> read  = await ReadFromCoreServerAsync( BuildReadArray( BuildReadSingle( 0x06, 0x01,   0x13, 0, 0, 0 ) ) );
+			OperateResult<byte[]> check = await ReadFromCoreServerAsync( BuildReadArray( BuildReadSingle( 0x06, 0x1A0B, 0x13, 0, 0, 0 ) ) );
+			if (!read.IsSuccess)  return OperateResult.CreateFailedResult<int[]>( read );
 			if (!check.IsSuccess) return OperateResult.CreateFailedResult<int[]>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			int length = (result[0].Length - 14) / 72;
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<int[]>( checkResult );
+
+			int length = (result.Length - 14) / 72;
 			int[] programs = new int[length];
 			for (int i = 0; i < length; i++)
 			{
-				programs[i] = ByteTransform.TransInt32( result[0], 14 + 72 * i );
+				programs[i] = ByteTransform.TransInt32( result, 14 + 72 * i );
 			}
 			return OperateResult.CreateSuccessResult( programs );
 		}
@@ -1163,16 +1341,48 @@ namespace HslCommunication.CNC.Fanuc
 			return ExtraCutterInfos( read1.Content, read2.Content, read3.Content, read4.Content, cutterNumber );
 		}
 
-		/// <inheritdoc cref="ReadRData(int, int)"/>
-		public async Task<OperateResult<byte[]>> ReadRDataAsync( int start, int end )
+		/// <inheritdoc cref="ReadData(int, int, int)"/>
+		public async Task<OperateResult<byte[]>> ReadDataAsync( int code, int start, int end )
 		{
-			OperateResult<byte[]> read1 = await ReadFromCoreServerAsync(
-				BuildReadArray( BuildReadMulti( 0x02, 0x8001, start, end, 0x05, 0, 0 ) ) );
+			OperateResult<byte[]> read1 = await ReadFromCoreServerAsync( BuildReadArray( BuildReadMulti( 0x02, 0x8001, start, end, code, 0, 0 ) ) );
 			if (!read1.IsSuccess) return read1;
 
-			List<byte[]> result = ExtraContentArray( read1.Content.RemoveBegin( 10 ) );
-			int length = this.ByteTransform.TransUInt16( result[0], 12 );
-			return OperateResult.CreateSuccessResult( result[0].SelectMiddle( 14, length ) );
+			byte[] result = ExtraContentArray( read1.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( checkResult );
+
+			int length = this.ByteTransform.TransUInt16( result, 12 );
+			return OperateResult.CreateSuccessResult( result.SelectMiddle( 14, length ) );
+		}
+
+		/// <inheritdoc cref="WriteData(int, int, byte[])"/>
+		public async Task<OperateResult> WriteDataAsync( int code, int start, byte[] data )
+		{
+			if (data == null) data = new byte[0];
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildWriteSingle( 0x02, 0x8002, start, start + data.Length - 1, code, 0, data ) ) );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string, int>( read );
+
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			return CheckSingleResultLeagle( result );
+		}
+
+		/// <inheritdoc cref="ReadPMCData(string, ushort)"/>
+		public async Task<OperateResult<byte[]>> ReadPMCDataAsync( string address, ushort length )
+		{
+			OperateResult<FanucPMCAddress> analysis = FanucPMCAddress.ParseFrom( address, length );
+			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+
+			return await ReadDataAsync( analysis.Content.DataCode, analysis.Content.AddressStart, analysis.Content.AddressEnd );
+		}
+
+		/// <inheritdoc cref="WritePMCData(string, byte[])"/>
+		public async Task<OperateResult> WritePMCDataAsync( string address, byte[] value )
+		{
+			OperateResult<FanucPMCAddress> analysis = FanucPMCAddress.ParseFrom( address, 1 );
+			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+
+			return await WriteDataAsync( analysis.Content.DataCode, analysis.Content.AddressStart, value );
 		}
 
 		/// <inheritdoc cref="ReadDeviceWorkPiecesSize"/>
@@ -1185,18 +1395,76 @@ namespace HslCommunication.CNC.Fanuc
 			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildReadSingle( 0xB0, 1, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			int index = 0;
-			for (int i = 14; i < result[0].Length; i++)
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<string>( checkResult );
+
+			return OperateResult.CreateSuccessResult( result.GetStringOrEndChar( 14, result.Length - 14, this.encoding ) );
+		}
+
+		/// <inheritdoc cref="ReadAllDirectoryAndFile(string)"/>
+		public async Task<OperateResult<FileDirInfo[]>> ReadAllDirectoryAndFileAsync( string path )
+		{
+			if (!path.EndsWith( "/" )) path += "/";
+
+			byte[] buffer = new byte[256];
+			Encoding.ASCII.GetBytes( path ).CopyTo( buffer, 0 );
+
+			// 先获取文件数量信息
+			OperateResult<int> readCount = await ReadAllDirectoryAndFileCountAsync( path );
+			if (!readCount.IsSuccess)   return OperateResult.CreateFailedResult<FileDirInfo[]>( readCount );
+			if (readCount.Content == 0) return OperateResult.CreateSuccessResult( new FileDirInfo[0] );
+
+			// 分割成20的长度读取
+			int[] splits = SoftBasic.SplitIntegerToArray( readCount.Content, 0x14 );
+			List<FileDirInfo> list = new List<FileDirInfo>( );
+
+			int already = 0;
+			for (int j = 0; j < splits.Length; j++)
 			{
-				if (result[0][i] == 0x00)
+				// a:req_num, b:num_prog, c:type, d:size_kind
+				OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildWriteSingle( 0x01, 0xB3, already, splits[j], 1, 1, buffer ) ) );
+				if (!read.IsSuccess) return OperateResult.CreateFailedResult<FileDirInfo[]>( read );
+
+				if (read.Content.Length == 0x12 || this.ByteTransform.TransInt16( read.Content, 10 ) == 0)
 				{
-					index = i;
-					break;
+					read = ReadFromCoreServer( BuildReadArray( BuildWriteSingle( 0x01, 0xB3, 0, 0x14, 1, 1, buffer ) ) );
+					if (!read.IsSuccess) return OperateResult.CreateFailedResult<FileDirInfo[]>( read );
 				}
+
+				byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+				OperateResult checkResult = CheckSingleResultLeagle( result );
+				if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<FileDirInfo[]>( checkResult );
+
+				int count = (result.Length - 14) / 128;
+				for (int i = 0; i < count; i++)
+				{
+					list.Add( new FileDirInfo( this.ByteTransform, result, 14 + 128 * i ) );
+				}
+				already += splits[j];
 			}
-			if (index == 0) index = result[0].Length;
-			return OperateResult.CreateSuccessResult( Encoding.ASCII.GetString( result[0], 14, index - 14 ) );
+			return OperateResult.CreateSuccessResult( list.ToArray( ) );
+		}
+
+		/// <inheritdoc cref="ReadAllDirectoryAndFileCount(string)"/>
+		public async Task<OperateResult<int>> ReadAllDirectoryAndFileCountAsync( string path )
+		{
+			if (!path.EndsWith( "/" )) path += "/";
+
+			byte[] buffer = new byte[256];
+			Encoding.ASCII.GetBytes( path ).CopyTo( buffer, 0 );
+
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildWriteSingle( 0x01, 0xB4, 0, 0, 0, 0, buffer ) ) );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int>( read );
+
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<int>( checkResult );
+
+			return OperateResult.CreateSuccessResult( ByteTransform.TransInt32( result, 14 ) + ByteTransform.TransInt32( result, 18 ) );
 		}
 
 		/// <inheritdoc cref="SetDeviceProgsCurr(string)"/>
@@ -1208,14 +1476,11 @@ namespace HslCommunication.CNC.Fanuc
 			byte[] buffer = new byte[256];
 			Encoding.ASCII.GetBytes( path.Content + programName ).CopyTo( buffer, 0 );
 
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildWriteSingle( 0xBA, 0, 0, 0, 0, buffer ) ) );
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildWriteSingle( 0x01, 0xBA, 0, 0, 0, 0, buffer ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
 
-			List<byte[]> result = ExtraContentArray( read.Content.RemoveBegin( 10 ) );
-			int status = result[0][10] * 256 + result[0][11];
-
-			if (status == 0) return OperateResult.CreateSuccessResult( );
-			else return new OperateResult( status, StringResources.Language.UnknownError );
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			return CheckSingleResultLeagle( result );
 		}
 
 		/// <inheritdoc cref="ReadCurrentDateTime"/>
@@ -1261,6 +1526,9 @@ namespace HslCommunication.CNC.Fanuc
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
 
 			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			OperateResult checkResult = CheckSingleResultLeagle( result );
+			if (!checkResult.IsSuccess) return OperateResult.CreateFailedResult<string>( checkResult );
+
 			return OperateResult.CreateSuccessResult( Encoding.ASCII.GetString( result, 18, result.Length - 18 ) );
 		}
 
@@ -1272,35 +1540,28 @@ namespace HslCommunication.CNC.Fanuc
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int, string>( read );
 
 			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
-			short err = this.ByteTransform.TransInt16( result, 6 );
-
-			if (err == 0) return OperateResult.CreateSuccessResult( );
-			else return new OperateResult( err, StringResources.Language.UnknownError );
+			return CheckSingleResultLeagle( result );
 		}
 
 		/// <inheritdoc cref="StartProcessing"/>
 		public async Task<OperateResult> StartProcessingAsync( )
 		{
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync(
-				BuildReadArray( BuildReadSingle( 0x01, 0, 0, 0, 0, 0 ) ) );
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync( BuildReadArray( BuildReadSingle( 0x01, 0, 0, 0, 0, 0 ) ) );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int, string>( read );
 
 			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
-			short err = this.ByteTransform.TransInt16( result, 6 );
-
-			if (err == 0) return OperateResult.CreateSuccessResult( );
-			else return new OperateResult( err, StringResources.Language.UnknownError );
+			return CheckSingleResultLeagle( result );
 		}
 
 		/// <inheritdoc cref="WriteProgramFile(string)"/>
-		public async Task<OperateResult> WriteProgramFileAsync( string file )
+		public async Task<OperateResult> WriteProgramFileAsync( string file, int everyWriteSize = 512, string path = "" )
 		{
 			string content = File.ReadAllText( file );
-			return await WriteProgramContentAsync( content );
+			return await WriteProgramContentAsync( content, everyWriteSize, path );
 		}
 
-		/// <inheritdoc cref="WriteProgramContent(string, int)"/>
-		public async Task<OperateResult> WriteProgramContentAsync( string program, int everyWriteSize = 512 )
+		/// <inheritdoc cref="WriteProgramContent(string, int, string)"/>
+		public async Task<OperateResult> WriteProgramContentAsync( string program, int everyWriteSize = 512, string path = "" )
 		{
 			if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) return new OperateResult( StringResources.Language.InsufficientPrivileges );
 
@@ -1310,7 +1571,7 @@ namespace HslCommunication.CNC.Fanuc
 			OperateResult<byte[]> ini1 = await ReadFromCoreServerAsync( socket.Content, "a0 a0 a0 a0 00 01 01 01 00 02 00 01".ToHexBytes( ) );
 			if (!ini1.IsSuccess) return ini1;
 
-			OperateResult<byte[]> read1 = await ReadFromCoreServerAsync( socket.Content, BulidWriteProgramFilePre( ) );
+			OperateResult<byte[]> read1 = await ReadFromCoreServerAsync( socket.Content, BulidWriteProgramFilePre( path ) );
 			if (!read1.IsSuccess) return read1;
 
 			List<byte[]> contents = BulidWriteProgram( Encoding.ASCII.GetBytes( program ), everyWriteSize );
@@ -1333,8 +1594,8 @@ namespace HslCommunication.CNC.Fanuc
 			return OperateResult.CreateSuccessResult( );
 		}
 
-		/// <inheritdoc cref="ReadProgram(int)"/>
-		public async Task<OperateResult<string>> ReadProgramAsync( int program )
+		/// <inheritdoc cref="ReadProgram(int, string)"/>
+		public async Task<OperateResult<string>> ReadProgramAsync( int program, string path = "" )
 		{
 			if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) return new OperateResult<string>( StringResources.Language.InsufficientPrivileges );
 
@@ -1344,7 +1605,7 @@ namespace HslCommunication.CNC.Fanuc
 			OperateResult<byte[]> ini1 = await ReadFromCoreServerAsync( socket.Content, "a0 a0 a0 a0 00 01 01 01 00 02 00 01".ToHexBytes( ) );
 			if (!ini1.IsSuccess) return OperateResult.CreateFailedResult<string>( ini1 );
 
-			OperateResult<byte[]> read1 = await ReadFromCoreServerAsync( socket.Content, BuildReadProgramPre( program ) );
+			OperateResult<byte[]> read1 = await ReadFromCoreServerAsync( socket.Content, BuildReadProgramPre( program, path ) );
 			if (!read1.IsSuccess) return OperateResult.CreateFailedResult<string>( read1 );
 
 			// 检测错误信息
@@ -1367,6 +1628,9 @@ namespace HslCommunication.CNC.Fanuc
 					break;
 			}
 
+			OperateResult<byte[]> read3 = await ReadFromCoreServerAsync( socket.Content, null );
+			if (!read3.IsSuccess) return OperateResult.CreateFailedResult<string>( read3 );
+
 			OperateResult send = await SendAsync( socket.Content, new byte[] { 0xa0, 0xa0, 0xa0, 0xa0, 0x00, 0x01, 0x17, 0x02, 0x00, 0x00 } );
 			if (!send.IsSuccess) return OperateResult.CreateFailedResult<string>( send );
 
@@ -1382,10 +1646,21 @@ namespace HslCommunication.CNC.Fanuc
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int, string>( read );
 
 			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
-			short err = this.ByteTransform.TransInt16( result, 6 );
+			return CheckSingleResultLeagle( result );
+		}
 
-			if (err == 0) return OperateResult.CreateSuccessResult( );
-			else return new OperateResult( err, StringResources.Language.UnknownError );
+		/// <inheritdoc cref="DeleteFile(string)"/>
+		public async Task<OperateResult> DeleteFileAsync( string fileName )
+		{
+			byte[] buffer = new byte[256];
+			Encoding.ASCII.GetBytes( fileName ).CopyTo( buffer, 0 );
+
+			OperateResult<byte[]> read = await ReadFromCoreServerAsync(
+				BuildReadArray( BuildWriteSingle( 0x01, 0xB6, 0, 0, 0, 0, buffer ) ) );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
+
+			byte[] result = ExtraContentArray( read.Content.RemoveBegin( 10 ) )[0];
+			return CheckSingleResultLeagle( result );
 		}
 
 #endif
@@ -1422,9 +1697,9 @@ namespace HslCommunication.CNC.Fanuc
 		private byte[] BuildReadMulti( ushort mode, ushort code, int a, int b, int c, int d, int e )
 		{
 			byte[] buffer = new byte[28];
-			buffer[1] = 0x1C;
+			this.ByteTransform.TransByte( (ushort)buffer.Length ).CopyTo( buffer, 0 );
 			this.ByteTransform.TransByte( mode ).CopyTo( buffer, 2 );
-			buffer[5] = 0x01;
+			this.ByteTransform.TransByte( opPath ).CopyTo( buffer, 4 );
 			this.ByteTransform.TransByte( code ).CopyTo( buffer, 6 );
 			this.ByteTransform.TransByte( a ).CopyTo( buffer, 8 );
 			this.ByteTransform.TransByte( b ).CopyTo( buffer, 12 );
@@ -1437,6 +1712,7 @@ namespace HslCommunication.CNC.Fanuc
 		/// <summary>
 		/// 创建写入byte[]数组的报文信息
 		/// </summary>
+		/// <param name="mode">模式</param>
 		/// <param name="code">命令码</param>
 		/// <param name="a">第一个参数内容</param>
 		/// <param name="b">第二个参数内容</param>
@@ -1444,12 +1720,12 @@ namespace HslCommunication.CNC.Fanuc
 		/// <param name="d">第四个参数内容</param>
 		/// <param name="data">等待写入的byte数组信息</param>
 		/// <returns>总报文信息</returns>
-		private byte[] BuildWriteSingle( ushort code, int a, int b, int c, int d, byte[] data )
+		private byte[] BuildWriteSingle( ushort mode, ushort code, int a, int b, int c, int d, byte[] data )
 		{
 			byte[] buffer = new byte[28 + data.Length];
 			this.ByteTransform.TransByte( (ushort)buffer.Length ).CopyTo( buffer, 0 );
-			buffer[3] = 0x01;
-			buffer[5] = 0x01;
+			this.ByteTransform.TransByte( mode ).CopyTo( buffer, 2 );
+			this.ByteTransform.TransByte( opPath ).CopyTo( buffer, 4 );
 			this.ByteTransform.TransByte( code ).CopyTo( buffer, 6 );
 			this.ByteTransform.TransByte( a ).CopyTo( buffer, 8 );
 			this.ByteTransform.TransByte( b ).CopyTo( buffer, 12 );
@@ -1477,7 +1753,7 @@ namespace HslCommunication.CNC.Fanuc
 			{
 				CreateFromFanucDouble( data[i] ).CopyTo( buffer, 0 );
 			}
-			return BuildWriteSingle( code, a, b, c, d, buffer );
+			return BuildWriteSingle( 0x01, code, a, b, c, d, buffer );
 		}
 
 		/// <summary>
@@ -1495,22 +1771,29 @@ namespace HslCommunication.CNC.Fanuc
 				ms.Write( commands[i], 0, commands[i].Length );
 			}
 			byte[] buffer = ms.ToArray( );
-			ms.Dispose( );
 			this.ByteTransform.TransByte( (ushort)(buffer.Length - 10) ).CopyTo( buffer, 8 );
 			return buffer;
 		}
 
-		private byte[] BulidWriteProgramFilePre( )
+		private byte[] BulidWriteProgramFilePre( string path )
 		{
+			if (!string.IsNullOrEmpty( path ))
+			{
+				if (!path.EndsWith( "/" )) path += "/";
+				if (!path.StartsWith( "N:" )) path = "N:" + path;
+			}
+
 			MemoryStream ms = new MemoryStream( );
 			ms.Write( new byte[] { 0xa0, 0xa0, 0xa0, 0xa0, 0x00, 0x01, 0x11, 0x01, 0x02, 0x04 }, 0, 10 );
 			ms.Write( new byte[] { 0x00, 0x00, 0x00, 0x01 }, 0, 4 );
-			for (int i = 0; i < 512; i++)
-			{
-				ms.WriteByte( 0x00 );
-			}
+			ms.Write( new byte[512], 0, 512 );
+
 			byte[] buffer = ms.ToArray( );
-			ms.Dispose( );
+			if (!string.IsNullOrEmpty( path ))
+			{
+				Encoding.ASCII.GetBytes( path ).CopyTo( buffer, 14 );
+			}
+
 			return buffer;
 		}
 
@@ -1518,19 +1801,22 @@ namespace HslCommunication.CNC.Fanuc
 		/// 创建读取运行程序的报文信息
 		/// </summary>
 		/// <param name="program">程序号</param>
+		/// <param name="path">程序路径信息</param>
 		/// <returns>总报文</returns>
-		private byte[] BuildReadProgramPre( int program )
+		private byte[] BuildReadProgramPre( int program, string path = "" )
 		{
+			if ( !string.IsNullOrEmpty( path ))
+			{
+				if (!path.EndsWith( "/" )) path += "/";
+				if (!path.StartsWith( "N:" )) path = "N:" + path;
+			}
+
 			MemoryStream ms = new MemoryStream( );
 			ms.Write( new byte[] { 0xa0, 0xa0, 0xa0, 0xa0, 0x00, 0x01, 0x15, 0x01, 0x02, 0x04 }, 0, 10 );
 			ms.Write( new byte[] { 0x00, 0x00, 0x00, 0x01 }, 0, 4 );
-			for (int i = 0; i < 512; i++)
-			{
-				ms.WriteByte( 0x00 );
-			}
+			ms.Write( new byte[512], 0, 512 );
 			byte[] buffer = ms.ToArray( );
-			ms.Dispose( );
-			string pro = "O" + program + "-" + "O" + program;
+			string pro = string.IsNullOrEmpty( path ) ? ("O" + program + "-" + "O" + program) : path + "O" + program;
 			Encoding.ASCII.GetBytes( pro ).CopyTo( buffer, 14 );
 			return buffer;
 		}
@@ -1546,7 +1832,6 @@ namespace HslCommunication.CNC.Fanuc
 				ms.Write( new byte[] { 0xa0, 0xa0, 0xa0, 0xa0, 0x00, 0x01, 0x12, 0x04, 0x00, 0x00 }, 0, 10 );
 				ms.Write( program, index, lengths[i] );
 				byte[] buffer = ms.ToArray( );
-				ms.Dispose( );
 				this.ByteTransform.TransByte( (ushort)(buffer.Length - 10) ).CopyTo( buffer, 8 );
 
 				list.Add( buffer );
@@ -1603,11 +1888,21 @@ namespace HslCommunication.CNC.Fanuc
 			return OperateResult.CreateSuccessResult( cutters );
 		}
 
+		private OperateResult CheckSingleResultLeagle( byte[] result )
+		{
+			int status = result[6] * 256 + result[7];
+			if (status != 0x00) return new OperateResult<int>( status, StringResources.Language.UnknownError );
+
+			return OperateResult.CreateSuccessResult( );
+		}
+
 		#endregion
 
 		#region Private Member
 
 		private Encoding encoding;
+		private FanucSysInfo fanucSysInfo;
+		private short opPath = 1;
 
 		#endregion
 

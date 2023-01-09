@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HslCommunication.Reflection;
-using KpCommon.Hsl.Profinet.Omron.InterFace;
+using System.IO;
 
 namespace HslCommunication.Profinet.Omron
 {
@@ -25,8 +25,8 @@ namespace HslCommunication.Profinet.Omron
 	/// <example>
 	/// <inheritdoc cref="OmronHostLinkOverTcp" path="example"/>
 	/// </example>
-	public class OmronHostLink : SerialDeviceBase, IHostLink
-    {
+	public class OmronHostLink : SerialDeviceBase, Helper.IHostLink
+	{
 		#region Constructor
 
 		/// <inheritdoc cref="OmronFinsNet()"/>
@@ -37,6 +37,7 @@ namespace HslCommunication.Profinet.Omron
 			this.ByteTransform.DataFormat              = DataFormat.CDAB;
 			this.ByteTransform.IsStringReverseByteWord = true;
 			this.LogMsgFormatBinary                    = false;
+			this.ReceiveEmptyDataCount                 = 5;         // 多接收5个周期的空白数据才认为是结束，防止数据不完整即返回
 		}
 
 		#endregion
@@ -69,9 +70,17 @@ namespace HslCommunication.Profinet.Omron
 		#region Pack Unpack Override
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
 		{
-			return OmronHostLinkOverTcp.ResponseValidAnalysis( send, response );
+			return Helper.OmronHostLinkHelper.ResponseValidAnalysis( send, response );
+		}
+
+		/// <inheritdoc/>
+		protected override bool CheckReceiveDataComplete( MemoryStream ms )
+		{
+			byte[] buffer = ms.ToArray( );
+			if (buffer.Length > 1) return buffer[buffer.Length - 1] == 0x0D;
+			return false;
 		}
 
 		/// <summary>
@@ -100,43 +109,14 @@ namespace HslCommunication.Profinet.Omron
 
 		/// <inheritdoc cref="OmronFinsNet.Read(string, ushort)"/>
 		[HslMqttApi( "ReadByteArray", "" )]
-		public override OperateResult<byte[]> Read( string address, ushort length )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.UnitNumber );
-
-			// 解析地址
-			var command = OmronFinsNetHelper.BuildReadCommand( address, length, false, ReadSplits );
-			if (!command.IsSuccess) return command.ConvertFailed<byte[]>( );
-
-			List<byte> contentArray = new List<byte>( );
-			for (int i = 0; i < command.Content.Count; i++)
-			{
-				// 核心交互
-				OperateResult<byte[]> read = ReadFromCoreServer( PackCommand( station, command.Content[i] ) );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
-
-				// 读取到了正确的数据
-				contentArray.AddRange( read.Content );
-			}
-			return OperateResult.CreateSuccessResult( contentArray.ToArray( ) );
-		}
+		public override OperateResult<byte[]> Read( string address, ushort length ) => Helper.OmronHostLinkHelper.Read( this, address, length );
 
 		/// <inheritdoc cref="OmronFinsNet.Write(string, byte[])"/>
 		[HslMqttApi( "WriteByteArray", "" )]
-		public override OperateResult Write( string address, byte[] value )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.UnitNumber );
-			// 获取指令
-			var command = OmronFinsNetHelper.BuildWriteWordCommand( address, value, false ); ;
-			if (!command.IsSuccess) return command;
+		public override OperateResult Write( string address, byte[] value ) => Helper.OmronHostLinkHelper.Write( this, address, value );
 
-			// 核心数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( PackCommand( station, command.Content ) );
-			if (!read.IsSuccess) return read;
-
-			// 成功
-			return OperateResult.CreateSuccessResult( );
-		}
+		/// <inheritdoc cref="Helper.OmronHostLinkHelper.Read(Helper.IHostLink, string[])"/>
+		public OperateResult<byte[]> Read( string[] address ) => Helper.OmronHostLinkHelper.Read( this, address );
 
 		#endregion
 
@@ -144,42 +124,11 @@ namespace HslCommunication.Profinet.Omron
 
 		/// <inheritdoc cref="OmronFinsNet.ReadBool(string, ushort)"/>
 		[HslMqttApi( "ReadBoolArray", "" )]
-		public override OperateResult<bool[]> ReadBool( string address, ushort length )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.UnitNumber );
-			// 获取指令
-			var command = OmronFinsNetHelper.BuildReadCommand( address, length, true );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
-
-			List<bool> contentArray = new List<bool>( );
-			for (int i = 0; i < command.Content.Count; i++)
-			{
-				// 核心交互
-				OperateResult<byte[]> read = ReadFromCoreServer( PackCommand( station, command.Content[i] ) );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
-
-				// 返回正确的数据信息
-				contentArray.AddRange( read.Content.Select( m => m != 0x00 ? true : false ) );
-			}
-			return OperateResult.CreateSuccessResult( contentArray.ToArray( ) );
-		}
+		public override OperateResult<bool[]> ReadBool( string address, ushort length ) => Helper.OmronHostLinkHelper.ReadBool( this, address, length );
 
 		/// <inheritdoc cref="OmronFinsNet.Write(string, bool[])"/>
 		[HslMqttApi( "WriteBoolArray", "" )]
-		public override OperateResult Write( string address, bool[] values )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.UnitNumber );
-			// 获取指令
-			var command = OmronFinsNetHelper.BuildWriteWordCommand( address, values.Select( m => m ? (byte)0x01 : (byte)0x00 ).ToArray( ), true ); ;
-			if (!command.IsSuccess) return command;
-
-			// 核心数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( PackCommand( station, command.Content ) );
-			if (!read.IsSuccess) return read;
-
-			// 成功
-			return OperateResult.CreateSuccessResult( );
-		}
+		public override OperateResult Write( string address, bool[] values ) => Helper.OmronHostLinkHelper.Write( this, address, values );
 
 		#endregion
 
@@ -190,48 +139,5 @@ namespace HslCommunication.Profinet.Omron
 
 		#endregion
 
-		#region Build Command
-
-		/// <summary>
-		/// 将普通的指令打包成完整的指令
-		/// </summary>
-		/// <param name="station">PLC的站号信息</param>
-		/// <param name="cmd">fins指令</param>
-		/// <returns>完整的质量</returns>
-		private byte[] PackCommand( byte station, byte[] cmd )
-		{
-			cmd = BasicFramework.SoftBasic.BytesToAsciiBytes( cmd );
-
-			byte[] buffer = new byte[18 + cmd.Length];
-
-			buffer[ 0] = (byte)'@';
-			buffer[ 1] = SoftBasic.BuildAsciiBytesFrom( station )[0];
-			buffer[ 2] = SoftBasic.BuildAsciiBytesFrom( station )[1];
-			buffer[ 3] = (byte)'F';
-			buffer[ 4] = (byte)'A';
-			buffer[ 5] = ResponseWaitTime;
-			buffer[ 6] = SoftBasic.BuildAsciiBytesFrom( this.ICF )[0];
-			buffer[ 7] = SoftBasic.BuildAsciiBytesFrom( this.ICF )[1];
-			buffer[ 8] = SoftBasic.BuildAsciiBytesFrom( this.DA2 )[0];
-			buffer[ 9] = SoftBasic.BuildAsciiBytesFrom( this.DA2 )[1];
-			buffer[10] = SoftBasic.BuildAsciiBytesFrom( this.SA2 )[0];
-			buffer[11] = SoftBasic.BuildAsciiBytesFrom( this.SA2 )[1];
-			buffer[12] = SoftBasic.BuildAsciiBytesFrom( this.SID )[0];
-			buffer[13] = SoftBasic.BuildAsciiBytesFrom( this.SID )[1];
-			buffer[buffer.Length - 2] = (byte)'*';
-			buffer[buffer.Length - 1] = 0x0D;
-			cmd.CopyTo( buffer, 14 );
-			// 计算FCS
-			int tmp = buffer[0];
-			for (int i = 1; i < buffer.Length - 4; i++)
-			{
-				tmp = (tmp ^ buffer[i]);
-			}
-			buffer[buffer.Length - 4] = SoftBasic.BuildAsciiBytesFrom( (byte)tmp )[0];
-			buffer[buffer.Length - 3] = SoftBasic.BuildAsciiBytesFrom( (byte)tmp )[1];
-			return buffer;
-		}
-
-		#endregion
 	}
 }

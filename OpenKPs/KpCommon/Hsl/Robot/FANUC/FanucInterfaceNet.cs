@@ -20,7 +20,15 @@ namespace HslCommunication.Robot.FANUC
 	/// Improper writing of data will cause loss of life and property. The author is not responsible. Read and write arbitrary addresses see api documentation information
 	/// </summary>
 	/// <remarks>
-	/// 如果使用绝对地址进行访问的话，支持的地址格式如下：
+	/// 注意：如果再读取机器人的数据时，发生了GB2312编码获取的异常的时候(通常是基于.net core的项目会报错)，使用如下的方法进行解决<br />
+	/// 1. 从nuget安装组件 <b>System.Text.Encoding.CodePages</b><br />
+	/// 2. 刚进入系统的时候，调用一行代码： System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);<br />
+	/// Note: If you read the data of the robot again, when an exception occurs in the GB2312 code acquisition (usually a project based on .net core will report an error), use the following method to solve it.<br />
+	/// 1. Install the component <b>System.Text.Encoding.CodePages</b> from nuget<br />
+	/// 2. When you first enter the system, call a line of code: System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);<br />
+	/// </remarks>
+	/// <example>
+	/// 我们看看实际的地址支持的情况，如果使用绝对地址进行访问的话，支持的地址格式如下：
 	/// <list type="table">
 	///   <listheader>
 	///     <term>地址名称</term>
@@ -95,8 +103,6 @@ namespace HslCommunication.Robot.FANUC
 	///     <term></term>
 	///   </item>
 	/// </list>
-	/// </remarks>
-	/// <example>
 	/// 我们先来看看简单的情况
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Robot\FANUC\FanucInterfaceNetSample.cs" region="Sample1" title="简单的读取" />
 	/// 读取fanuc部分数据
@@ -306,76 +312,88 @@ namespace HslCommunication.Robot.FANUC
 		/// 按照字为单位批量读取设备的原始数据，需要指定地址及长度，地址示例：D1，AI1，AQ1，共计3个区的数据，注意地址的起始为1<br />
 		/// Read the raw data of the device in batches in units of words. You need to specify the address and length. Example addresses: D1, AI1, AQ1, a total of 3 areas of data. Note that the start of the address is 1.
 		/// </summary>
+		/// <remarks>
+		/// 地址也支持直接使用 GO100, GI100
+		/// </remarks>
 		/// <param name="address">起始地址，地址示例：D1，AI1，AQ1，共计3个区的数据，注意起始的起始为1</param>
 		/// <param name="length">读取的长度，字为单位</param>
 		/// <returns>返回的数据信息结果</returns>
 		[HslMqttApi( "ReadByteArray", "" )]
 		public override OperateResult<byte[]> Read( string address, ushort length )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, false );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
 			if (analysis.Content1 == FanucHelper.SELECTOR_D || analysis.Content1 == FanucHelper.SELECTOR_AI || analysis.Content1 == FanucHelper.SELECTOR_AQ)
 				return Read( analysis.Content1, analysis.Content2, length );
 			else
-				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedWord );
 		}
 
 		/// <summary>
 		/// 写入原始的byte数组数据到指定的地址，返回是否写入成功，地址示例：D1，AI1，AQ1，共计3个区的数据，注意起始的起始为1<br />
 		/// Write the original byte array data to the specified address, and return whether the write was successful. Example addresses: D1, AI1, AQ1, a total of 3 areas of data. Note that the start of the address is 1.
 		/// </summary>
+		/// <remarks>
+		/// 地址也支持直接使用 GO100, GI100
+		/// </remarks>
 		/// <param name="address">起始地址，地址示例：D1，AI1，AQ1，共计3个区的数据，注意起始的起始为1</param>
 		/// <param name="value">写入值</param>
 		/// <returns>带有成功标识的结果类对象</returns>
 		[HslMqttApi( "WriteByteArray", "" )]
 		public override OperateResult Write( string address, byte[] value )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, false );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
 			if (analysis.Content1 == FanucHelper.SELECTOR_D || analysis.Content1 == FanucHelper.SELECTOR_AI || analysis.Content1 == FanucHelper.SELECTOR_AQ)
 				return Write( analysis.Content1, analysis.Content2, value );
 			else
-				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedWord );
 		}
 
 		/// <summary>
 		/// 按照位为单位批量读取设备的原始数据，需要指定地址及长度，地址示例：M1，I1，Q1，共计3个区的数据，注意地址的起始为1<br />
 		/// Read the raw data of the device in batches in units of boolean. You need to specify the address and length. Example addresses: M1，I1，Q1, a total of 3 areas of data. Note that the start of the address is 1.
 		/// </summary>
+		/// <remarks>
+		/// 地址也支持直接使用 SDO100, SDI100, RDI100, RDO100, UI100, UO100, SI100, SO100
+		/// </remarks>
 		/// <param name="address">起始地址，地址示例：M1，I1，Q1，共计3个区的数据，注意地址的起始为1</param>
 		/// <param name="length">读取的长度，位为单位</param>
 		/// <returns>返回的数据信息结果</returns>
 		[HslMqttApi( "ReadBoolArray", "" )]
 		public override OperateResult<bool[]> ReadBool( string address, ushort length )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, true );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
 
 			if (analysis.Content1 == FanucHelper.SELECTOR_I || analysis.Content1 == FanucHelper.SELECTOR_Q || analysis.Content1 == FanucHelper.SELECTOR_M)
 				return ReadBool( analysis.Content1, analysis.Content2, length );
 			else
-				return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType );
+				return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedBool );
 		}
 
 		/// <summary>
 		/// 批量写入<see cref="bool"/>数组数据，返回是否写入成功，需要指定起始地址，地址示例：M1，I1，Q1，共计3个区的数据，注意地址的起始为1<br />
 		/// Write <see cref="bool"/> array data in batches. If the write success is returned, you need to specify the starting address. Example address: M1, I1, Q1, a total of 3 areas of data. Note that the starting address is 1.
 		/// </summary>
+		/// <remarks>
+		/// 地址也支持直接使用 SDO100, SDI100, RDI100, RDO100, UI100, UO100, SI100, SO100
+		/// </remarks>
 		/// <param name="address">起始地址，地址示例：M1，I1，Q1，共计3个区的数据，注意地址的起始为1</param>
 		/// <param name="value">等待写入的数据值</param>
 		/// <returns>是否写入成功</returns>
 		[HslMqttApi( "WriteBoolArray", "" )]
 		public override OperateResult Write( string address, bool[] value )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, true );
 			if (!analysis.IsSuccess) return analysis;
 
 			if (analysis.Content1 == FanucHelper.SELECTOR_I || analysis.Content1 == FanucHelper.SELECTOR_Q || analysis.Content1 == FanucHelper.SELECTOR_M)
 				return WriteBool( analysis.Content1, analysis.Content2, value );
 			else
-				return new OperateResult( StringResources.Language.NotSupportedDataType );
+				return new OperateResult( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedBool );
 		}
 
 		#endregion
@@ -385,49 +403,49 @@ namespace HslCommunication.Robot.FANUC
 		/// <inheritdoc cref="Read(string, ushort)"/>
 		public async override Task<OperateResult<byte[]>> ReadAsync( string address, ushort length )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, false );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
 			if (analysis.Content1 == FanucHelper.SELECTOR_D || analysis.Content1 == FanucHelper.SELECTOR_AI || analysis.Content1 == FanucHelper.SELECTOR_AQ)
 				return await ReadAsync( analysis.Content1, analysis.Content2, length );
 			else
-				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedWord );
 		}
 
 		/// <inheritdoc cref="Write(string, byte[])"/>
 		public async override Task<OperateResult> WriteAsync( string address, byte[] value )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, false );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
 			if (analysis.Content1 == FanucHelper.SELECTOR_D || analysis.Content1 == FanucHelper.SELECTOR_AI || analysis.Content1 == FanucHelper.SELECTOR_AQ)
 				return await WriteAsync( analysis.Content1, analysis.Content2, value );
 			else
-				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedWord );
 		}
 
 		/// <inheritdoc cref="ReadBool(string, ushort)"/>
 		public async override Task<OperateResult<bool[]>> ReadBoolAsync( string address, ushort length )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, true );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
 
 			if (analysis.Content1 == FanucHelper.SELECTOR_I || analysis.Content1 == FanucHelper.SELECTOR_Q || analysis.Content1 == FanucHelper.SELECTOR_M)
 				return await ReadBoolAsync( analysis.Content1, analysis.Content2, length );
 			else
-				return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType );
+				return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedBool );
 		}
 
 		/// <inheritdoc cref="Write(string, bool[])"/>
 		public async override Task<OperateResult> WriteAsync( string address, bool[] value )
 		{
-			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address );
+			OperateResult<byte, ushort> analysis = FanucHelper.AnalysisFanucAddress( address, true );
 			if (!analysis.IsSuccess) return analysis;
 
 			if (analysis.Content1 == FanucHelper.SELECTOR_I || analysis.Content1 == FanucHelper.SELECTOR_Q || analysis.Content1 == FanucHelper.SELECTOR_M)
 				return await WriteBoolAsync( analysis.Content1, analysis.Content2, value );
 			else
-				return new OperateResult( StringResources.Language.NotSupportedDataType );
+				return new OperateResult( StringResources.Language.NotSupportedDataType + FanucHelper.NotAllowedBool );
 		}
 #endif
 		#endregion
@@ -489,12 +507,10 @@ namespace HslCommunication.Robot.FANUC
 			int byteLength = (byteEndIndex - byteStartIndex + 1) / 8;
 
 			byte[] send = FanucHelper.BulidReadData( select, address, (ushort)(byteLength * 8) );
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Send + SoftBasic.ByteToHexString( send ) );
 
 			OperateResult<byte[]> read = ReadFromCoreServer( send );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
 
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + SoftBasic.ByteToHexString( read.Content ) );
 			if (read.Content[31] == 148)
 			{
 				bool[] array = SoftBasic.ByteToBoolArray( SoftBasic.ArrayRemoveBegin( read.Content, 56 ) );
@@ -583,12 +599,10 @@ namespace HslCommunication.Robot.FANUC
 			int byteLength = (byteEndIndex - byteStartIndex + 1) / 8;
 
 			byte[] send = FanucHelper.BulidReadData( select, address, (ushort)(byteLength * 8) );
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Send + SoftBasic.ByteToHexString( send ) );
 
 			OperateResult<byte[]> read = await ReadFromCoreServerAsync( send );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
 
-			LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + SoftBasic.ByteToHexString( read.Content ) );
 			if (read.Content[31] == 148)
 			{
 				bool[] array = SoftBasic.ByteToBoolArray( SoftBasic.ArrayRemoveBegin( read.Content, 56 ) );
@@ -656,13 +670,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="length">读取的长度</param>
 		/// <returns>结果数据</returns>
 		[HslMqttApi( Description = "Read the SDO information of the robot" )]
-		public OperateResult<bool[]> ReadSDO( ushort address, ushort length )
-		{
-			if (address < 11001)
-				return ReadBool( FanucHelper.SELECTOR_I, address, length );
-			else
-				return ReadPMCR2( (ushort)(address - 11000), length );
-		}
+		public OperateResult<bool[]> ReadSDO( ushort address, ushort length ) => ReadBool( "SDO" + address, length );
 
 		/// <summary>
 		/// 写入机器人的SDO信息<br />
@@ -672,13 +680,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="value">数据值</param>
 		/// <returns>是否写入成功</returns>
 		[HslMqttApi( Description = "Write the SDO information of the robot" )]
-		public OperateResult WriteSDO( ushort address, bool[] value )
-		{
-			if (address < 11001)
-				return WriteBool( FanucHelper.SELECTOR_I, address, value );
-			else
-				return WritePMCR2( (ushort)(address - 11000), value );
-		}
+		public OperateResult WriteSDO( ushort address, bool[] value ) => Write( "SDO" + address, value );
 
 		/// <summary>
 		/// 读取机器人的SDI信息<br />
@@ -688,7 +690,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="length">读取长度</param>
 		/// <returns>结果内容</returns>
 		[HslMqttApi( Description = "Read the SDI information of the robot" )]
-		public OperateResult<bool[]> ReadSDI( ushort address, ushort length ) => ReadBool( FanucHelper.SELECTOR_Q, address, length );
+		public OperateResult<bool[]> ReadSDI( ushort address, ushort length ) => ReadBool( "SDI" + address, length );
 
 		/// <summary>
 		/// 写入机器人的SDI信息<br />
@@ -698,7 +700,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="value">数据值</param>
 		/// <returns>是否写入成功</returns>
 		[HslMqttApi( Description = "Write the SDI information of the robot" )]
-		public OperateResult WriteSDI( ushort address, bool[] value ) => WriteBool( FanucHelper.SELECTOR_Q, address, value );
+		public OperateResult WriteSDI( ushort address, bool[] value ) => Write( "SDI" + address, value );
 
 		/// <summary>
 		/// 读取机器人的RDI信息
@@ -707,7 +709,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="length">读取长度</param>
 		/// <returns>结果信息</returns>
 		[HslMqttApi]
-		public OperateResult<bool[]> ReadRDI( ushort address, ushort length ) => ReadBool( FanucHelper.SELECTOR_Q, (ushort)(address + 5000), length );
+		public OperateResult<bool[]> ReadRDI( ushort address, ushort length ) => ReadBool( "RDI" + address, length );
 
 		/// <summary>
 		/// 写入机器人的RDI信息
@@ -716,7 +718,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="value">数据值</param>
 		/// <returns>是否写入成功</returns>
 		[HslMqttApi]
-		public OperateResult WriteRDI( ushort address, bool[] value ) => WriteBool( FanucHelper.SELECTOR_Q, (ushort)(address + 5000), value );
+		public OperateResult WriteRDI( ushort address, bool[] value ) => Write( "RDI" + address, value );
 
 		/// <summary>
 		/// 读取机器人的UI信息
@@ -725,7 +727,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="length">读取长度</param>
 		/// <returns>结果信息</returns>
 		[HslMqttApi]
-		public OperateResult<bool[]> ReadUI( ushort address, ushort length ) => ReadBool( FanucHelper.SELECTOR_Q, (ushort)(address + 6000), length );
+		public OperateResult<bool[]> ReadUI( ushort address, ushort length ) => ReadBool( "UI" + address, length );
 
 		/// <summary>
 		/// 读取机器人的UO信息
@@ -734,7 +736,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="length">读取长度</param>
 		/// <returns>结果信息</returns>
 		[HslMqttApi]
-		public OperateResult<bool[]> ReadUO( ushort address, ushort length ) => ReadBool( FanucHelper.SELECTOR_I, (ushort)(address + 6000), length );
+		public OperateResult<bool[]> ReadUO( ushort address, ushort length ) => ReadBool( "UO" + address, length );
 
 		/// <summary>
 		/// 写入机器人的UO信息
@@ -743,7 +745,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="value">数据值</param>
 		/// <returns>是否写入成功</returns>
 		[HslMqttApi]
-		public OperateResult WriteUO( ushort address, bool[] value ) => WriteBool( FanucHelper.SELECTOR_I, (ushort)(address + 6000), value );
+		public OperateResult WriteUO( ushort address, bool[] value ) => Write( "UO" + address, value );
 
 		/// <summary>
 		/// 读取机器人的SI信息
@@ -752,7 +754,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="length">读取长度</param>
 		/// <returns>结果信息</returns>
 		[HslMqttApi]
-		public OperateResult<bool[]> ReadSI( ushort address, ushort length ) => ReadBool( FanucHelper.SELECTOR_Q, (ushort)(address + 7000), length );
+		public OperateResult<bool[]> ReadSI( ushort address, ushort length ) => ReadBool( "SI" + address, length );
 
 		/// <summary>
 		/// 读取机器人的SO信息
@@ -761,7 +763,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="length">读取长度</param>
 		/// <returns>结果信息</returns>
 		[HslMqttApi]
-		public OperateResult<bool[]> ReadSO( ushort address, ushort length ) => ReadBool( FanucHelper.SELECTOR_I, (ushort)(address + 7000), length );
+		public OperateResult<bool[]> ReadSO( ushort address, ushort length ) => ReadBool( "SO" + address, length );
 
 		/// <summary>
 		/// 写入机器人的SO信息
@@ -770,7 +772,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="value">数据值</param>
 		/// <returns>是否写入成功</returns>
 		[HslMqttApi]
-		public OperateResult WriteSO( ushort address, bool[] value ) => WriteBool( FanucHelper.SELECTOR_I, (ushort)(address + 7000), value );
+		public OperateResult WriteSO( ushort address, bool[] value ) => Write( "SO" + address, value );
 
 		/// <summary>
 		/// 读取机器人的GI信息
@@ -779,7 +781,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="length">数据长度</param>
 		/// <returns>结果信息</returns>
 		[HslMqttApi]
-		public OperateResult<ushort[]> ReadGI( ushort address, ushort length ) => ByteTransformHelper.GetSuccessResultFromOther( Read( FanucHelper.SELECTOR_AQ, address, length ), m => ByteTransform.TransUInt16( m, 0, length ) );
+		public OperateResult<ushort[]> ReadGI( ushort address, ushort length ) => ReadUInt16( "GI" + address, length );
 
 		/// <summary>
 		/// 写入机器人的GI信息
@@ -788,7 +790,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="value">数据值</param>
 		/// <returns>是否写入成功</returns>
 		[HslMqttApi]
-		public OperateResult WriteGI( ushort address, ushort[] value ) => Write( FanucHelper.SELECTOR_AQ, address, ByteTransform.TransByte( value ) );
+		public OperateResult WriteGI( ushort address, ushort[] value ) => Write( "GI" + address, value );
 
 		/// <summary>
 		/// 读取机器人的GO信息
@@ -797,12 +799,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="length">读取长度</param>
 		/// <returns>结果信息</returns>
 		[HslMqttApi]
-		public OperateResult<ushort[]> ReadGO( ushort address, ushort length )
-		{
-			if (address >= 10001) address -= 6000;
-
-			return ByteTransformHelper.GetSuccessResultFromOther( Read( FanucHelper.SELECTOR_AI, address, length ), m => ByteTransform.TransUInt16( m, 0, length ) );
-		}
+		public OperateResult<ushort[]> ReadGO( ushort address, ushort length ) => ReadUInt16( "GO" + address, length );
 
 		/// <summary>
 		/// 写入机器人的GO信息
@@ -811,11 +808,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="value">数据值</param>
 		/// <returns>写入结果</returns>
 		[HslMqttApi]
-		public OperateResult WriteGO( ushort address, ushort[] value )
-		{
-			if (address >= 10001) address -= 6000;
-			return Write( FanucHelper.SELECTOR_AI, address, ByteTransform.TransByte( value ) );
-		}
+		public OperateResult WriteGO( ushort address, ushort[] value ) => Write( "GO" + address, value );
 
 		/// <summary>
 		/// 读取机器人的PMCR2信息
@@ -842,7 +835,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="length">读取长度</param>
 		/// <returns>结果信息</returns>
 		[HslMqttApi]
-		public OperateResult<bool[]> ReadRDO( ushort address, ushort length ) => ReadBool( FanucHelper.SELECTOR_I, (ushort)(address + 5000), length );
+		public OperateResult<bool[]> ReadRDO( ushort address, ushort length ) => ReadBool( "RDO" + address, length );
 
 		/// <summary>
 		/// 写入机器人的RDO信息
@@ -851,7 +844,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <param name="value">数据值</param>
 		/// <returns>是否写入成功</returns>
 		[HslMqttApi]
-		public OperateResult WriteRDO( ushort address, bool[] value ) => WriteBool( FanucHelper.SELECTOR_I, (ushort)(address + 5000), value );
+		public OperateResult WriteRDO( ushort address, bool[] value ) => Write( "RDO" + address, value );
 
 		/// <summary>
 		/// 写入机器人的Rxyzwpr信息，谨慎调用，
@@ -948,73 +941,52 @@ namespace HslCommunication.Robot.FANUC
 		}
 
 		/// <inheritdoc cref="ReadSDO(ushort, ushort)"/>
-		public async Task<OperateResult<bool[]>> ReadSDOAsync( ushort address, ushort length )
-		{
-			if (address < 11001)
-				return ReadBool( FanucHelper.SELECTOR_I, address, length );
-			else
-				return await ReadPMCR2Async( (ushort)(address - 11000), length );
-		}
+		public async Task<OperateResult<bool[]>> ReadSDOAsync( ushort address, ushort length ) => await ReadBoolAsync( "SDO" + address, length );
 
 		/// <inheritdoc cref="WriteSDO(ushort, bool[])"/>
-		public async Task<OperateResult> WriteSDOAsync( ushort address, bool[] value )
-		{
-			if (address < 11001)
-				return WriteBool( FanucHelper.SELECTOR_I, address, value );
-			else
-				return await WritePMCR2Async( (ushort)(address - 11000), value );
-		}
+		public async Task<OperateResult> WriteSDOAsync( ushort address, bool[] value ) => await WriteAsync( "SDO" + address, value );
 
 		/// <inheritdoc cref="ReadSDI(ushort, ushort)"/>
-		public async Task<OperateResult<bool[]>> ReadSDIAsync( ushort address, ushort length ) => await ReadBoolAsync( FanucHelper.SELECTOR_Q, address, length );
+		public async Task<OperateResult<bool[]>> ReadSDIAsync( ushort address, ushort length ) => await ReadBoolAsync( "SDI" + address, length );
 
 		/// <inheritdoc cref="WriteSDI(ushort, bool[])"/>
-		public async Task<OperateResult> WriteSDIAsync( ushort address, bool[] value ) => await WriteBoolAsync( FanucHelper.SELECTOR_Q, address, value );
+		public async Task<OperateResult> WriteSDIAsync( ushort address, bool[] value ) => await WriteAsync( "SDI" + address, value );
 
 		/// <inheritdoc cref="ReadRDI(ushort, ushort)"/>
-		public async Task<OperateResult<bool[]>> ReadRDIAsync( ushort address, ushort length ) => await ReadBoolAsync( FanucHelper.SELECTOR_Q, (ushort)(address + 5000), length );
+		public async Task<OperateResult<bool[]>> ReadRDIAsync( ushort address, ushort length ) => await ReadBoolAsync( "RDI" + address, length );
 
 		/// <inheritdoc cref="WriteRDI(ushort, bool[])"/>
-		public async Task<OperateResult> WriteRDIAsync( ushort address, bool[] value ) => await WriteBoolAsync( FanucHelper.SELECTOR_Q, (ushort)(address + 5000), value );
+		public async Task<OperateResult> WriteRDIAsync( ushort address, bool[] value ) => await WriteAsync( "RDI" + address, value );
 
 		/// <inheritdoc cref="ReadUI(ushort, ushort)"/>
-		public async Task<OperateResult<bool[]>> ReadUIAsync( ushort address, ushort length ) => await ReadBoolAsync( FanucHelper.SELECTOR_Q, (ushort)(address + 6000), length );
+		public async Task<OperateResult<bool[]>> ReadUIAsync( ushort address, ushort length ) => await ReadBoolAsync( "UI" + address, length );
 
 		/// <inheritdoc cref="ReadUO(ushort, ushort)"/>
-		public async Task<OperateResult<bool[]>> ReadUOAsync( ushort address, ushort length ) => await ReadBoolAsync( FanucHelper.SELECTOR_I, (ushort)(address + 6000), length );
+		public async Task<OperateResult<bool[]>> ReadUOAsync( ushort address, ushort length ) => await ReadBoolAsync( "UO" + address, length );
 
 		/// <inheritdoc cref="WriteUO(ushort, bool[])"/>
-		public async Task<OperateResult> WriteUOAsync( ushort address, bool[] value ) => await WriteBoolAsync( FanucHelper.SELECTOR_I, (ushort)(address + 6000), value );
+		public async Task<OperateResult> WriteUOAsync( ushort address, bool[] value ) => await WriteAsync( "UO" + address, value );
 
 		/// <inheritdoc cref="ReadSI(ushort, ushort)"/>
-		public async Task<OperateResult<bool[]>> ReadSIAsync( ushort address, ushort length ) => await ReadBoolAsync( FanucHelper.SELECTOR_Q, (ushort)(address + 7000), length );
+		public async Task<OperateResult<bool[]>> ReadSIAsync( ushort address, ushort length ) => await ReadBoolAsync( "SI" + address, length );
 
 		/// <inheritdoc cref="ReadSO(ushort, ushort)"/>
-		public async Task<OperateResult<bool[]>> ReadSOAsync( ushort address, ushort length ) => await ReadBoolAsync( FanucHelper.SELECTOR_I, (ushort)(address + 7000), length );
+		public async Task<OperateResult<bool[]>> ReadSOAsync( ushort address, ushort length ) => await ReadBoolAsync( "SO" + address, length );
 
 		/// <inheritdoc cref="WriteSO(ushort, bool[])"/>
-		public async Task<OperateResult> WriteSOAsync( ushort address, bool[] value ) => await WriteBoolAsync( FanucHelper.SELECTOR_I, (ushort)(address + 7000), value );
+		public async Task<OperateResult> WriteSOAsync( ushort address, bool[] value ) => await WriteAsync( "SO" + address, value );
 
 		/// <inheritdoc cref="ReadGI(ushort, ushort)"/>
-		public async Task<OperateResult<ushort[]>> ReadGIAsync( ushort address, ushort length ) => ByteTransformHelper.GetSuccessResultFromOther( await ReadAsync( FanucHelper.SELECTOR_AQ, address, length ), m => ByteTransform.TransUInt16( m, 0, length ) );
+		public async Task<OperateResult<ushort[]>> ReadGIAsync( ushort address, ushort length ) => await ReadUInt16Async( "GI" + address, length );
 
 		/// <inheritdoc cref="WriteGI(ushort, ushort[])"/>
-		public async Task<OperateResult> WriteGIAsync( ushort address, ushort[] value ) => await WriteAsync( FanucHelper.SELECTOR_AQ, address, ByteTransform.TransByte( value ) );
+		public async Task<OperateResult> WriteGIAsync( ushort address, ushort[] value ) => await WriteAsync( "GI" + address, value );
 
 		/// <inheritdoc cref="ReadGO(ushort, ushort)"/>
-		public async Task<OperateResult<ushort[]>> ReadGOAsync( ushort address, ushort length )
-		{
-			if (address >= 10001) address -= 6000;
-
-			return ByteTransformHelper.GetSuccessResultFromOther( await ReadAsync( FanucHelper.SELECTOR_AI, address, length ), m => ByteTransform.TransUInt16( m, 0, length ) );
-		}
+		public async Task<OperateResult<ushort[]>> ReadGOAsync( ushort address, ushort length ) => await ReadUInt16Async( "GO" + address, length );
 
 		/// <inheritdoc cref="WriteGO(ushort, ushort[])"/>
-		public async Task<OperateResult> WriteGOAsync( ushort address, ushort[] value )
-		{
-			if (address >= 10001) address -= 6000;
-			return await WriteAsync( FanucHelper.SELECTOR_AI, address, ByteTransform.TransByte( value ) );
-		}
+		public async Task<OperateResult> WriteGOAsync( ushort address, ushort[] value ) => await WriteAsync( "GO" + address, value );
 
 		/// <inheritdoc cref="ReadPMCR2(ushort, ushort)"/>
 		public async Task<OperateResult<bool[]>> ReadPMCR2Async( ushort address, ushort length ) => await ReadBoolAsync( FanucHelper.SELECTOR_M, address, length );
@@ -1023,10 +995,10 @@ namespace HslCommunication.Robot.FANUC
 		public async Task<OperateResult> WritePMCR2Async( ushort address, bool[] value ) => await WriteBoolAsync( FanucHelper.SELECTOR_M, address, value );
 
 		/// <inheritdoc cref="ReadRDO(ushort, ushort)"/>
-		public async Task<OperateResult<bool[]>> ReadRDOAsync( ushort address, ushort length ) => await ReadBoolAsync( FanucHelper.SELECTOR_I, (ushort)(address + 5000), length );
+		public async Task<OperateResult<bool[]>> ReadRDOAsync( ushort address, ushort length ) => await ReadBoolAsync( "RDO" + address, length );
 
 		/// <inheritdoc cref="WriteRDO(ushort, bool[])"/>
-		public async Task<OperateResult> WriteRDOAsync( ushort address, bool[] value ) => await WriteBoolAsync( FanucHelper.SELECTOR_I, (ushort)(address + 5000), value );
+		public async Task<OperateResult> WriteRDOAsync( ushort address, bool[] value ) => await WriteAsync( "RDO" + address, value );
 
 		/// <inheritdoc cref="WriteRXyzwpr(ushort, float[], short[], short, short)"/>
 		public async Task<OperateResult> WriteRXyzwprAsync( ushort Address, float[] Xyzwpr, short[] Config, short UserFrame, short UserTool )

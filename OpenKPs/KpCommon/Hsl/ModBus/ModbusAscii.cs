@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -32,13 +33,15 @@ namespace HslCommunication.ModBus
 		/// </summary>
 		public ModbusAscii( )
 		{
-			LogMsgFormatBinary = false;
+			this.LogMsgFormatBinary    = false;
+			this.ReceiveEmptyDataCount = 5;
 		}
 
 		/// <inheritdoc cref="ModbusRtu(byte)"/>
 		public ModbusAscii( byte station = 0x01 ) : base( station )
 		{
-			LogMsgFormatBinary = false;
+			this.LogMsgFormatBinary    = false;
+			this.ReceiveEmptyDataCount = 5;
 		}
 
 		#endregion
@@ -46,10 +49,10 @@ namespace HslCommunication.ModBus
 		#region Modbus Rtu Override
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command ) => ModbusInfo.TransModbusCoreToAsciiPackCommand( command );
+		public override byte[] PackCommandWithHeader( byte[] command ) => ModbusInfo.TransModbusCoreToAsciiPackCommand( command );
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response )
 		{
 			// 还原modbus报文
 			OperateResult<byte[]> modbus_core = ModbusInfo.TransAsciiPackCommandToCore( response );
@@ -60,6 +63,12 @@ namespace HslCommunication.ModBus
 
 			// 成功的消息
 			return ModbusInfo.ExtractActualData( modbus_core.Content );
+		}
+
+		/// <inheritdoc/>
+		protected override bool CheckReceiveDataComplete( MemoryStream ms )
+		{
+			return ModbusInfo.CheckAsciiReceiveDataComplete( ms.ToArray( ) );
 		}
 
 		#endregion

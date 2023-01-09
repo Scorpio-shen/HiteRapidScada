@@ -263,13 +263,16 @@ namespace HslCommunication.LogNet
 
             if (listPaint.Count <= 5)
             {
-                g.DrawString("数据太少了", font12, Brushes.DeepSkyBlue, new Rectangle(0,0,width, height), sf);
+                using (StringFormat center = new StringFormat
+                {
+                    Alignment = StringAlignment.Center,
+                    LineAlignment = StringAlignment.Center,
+                })
+                    g.DrawString( "数据太少了", font12, Brushes.DeepSkyBlue, new Rectangle( 0, 0, width, height ), center );
                 goto P1;
             }
 
-
             int count = (width - 60) / 6;
-
             TimeSpan sp = listPaint.Max() - listPaint.Min();
             DateTime datetime_min= listPaint.Min();
             double sep = sp.TotalSeconds / count;

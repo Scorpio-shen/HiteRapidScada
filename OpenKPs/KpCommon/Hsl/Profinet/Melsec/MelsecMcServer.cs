@@ -9,6 +9,7 @@ using HslCommunication.Core.Net;
 using HslCommunication.Core.IMessage;
 using HslCommunication.Core.Address;
 using HslCommunication.Reflection;
+using System.IO;
 
 namespace HslCommunication.Profinet.Melsec
 {
@@ -94,15 +95,17 @@ namespace HslCommunication.Profinet.Melsec
 			xBuffer  = new SoftBuffer( DataPoolLength );
 			yBuffer  = new SoftBuffer( DataPoolLength );
 			mBuffer  = new SoftBuffer( DataPoolLength );
-			dBuffer  = new SoftBuffer( DataPoolLength * 2 );
+			lBuffer  = new SoftBuffer( DataPoolLength );
+			dBuffer  = new SoftBuffer( DataPoolLength * 4 );
 			wBuffer  = new SoftBuffer( DataPoolLength * 2 );
 			bBuffer  = new SoftBuffer( DataPoolLength );
 			rBuffer  = new SoftBuffer( DataPoolLength * 2 );
-			zrBuffer = new SoftBuffer( DataPoolLength * 2 );
+			zrBuffer = new SoftBuffer( DataPoolLength * 4 );
 
-			WordLength = 1;
-			ByteTransform = new RegularByteTransform( );
-			this.isBinary = isBinary;
+			this.WordLength         = 1;
+			this.ByteTransform      = new RegularByteTransform( );
+			this.isBinary           = isBinary;
+			this.LogMsgFormatBinary = isBinary;
 		}
 
 		#endregion
@@ -130,6 +133,11 @@ namespace HslCommunication.Profinet.Melsec
 			else if (analysis.Content.McDataType.DataCode == MelsecMcDataType.Y.DataCode)
 			{
 				bool[] buffer = yBuffer.GetBytes( analysis.Content.AddressStart, length * 16 ).Select( m => m != 0x00 ).ToArray( );
+				return OperateResult.CreateSuccessResult( SoftBasic.BoolArrayToByte( buffer ) );
+			}
+			else if (analysis.Content.McDataType.DataCode == MelsecMcDataType.L.DataCode)
+			{
+				bool[] buffer = lBuffer.GetBytes( analysis.Content.AddressStart, length * 16 ).Select( m => m != 0x00 ).ToArray( );
 				return OperateResult.CreateSuccessResult( SoftBasic.BoolArrayToByte( buffer ) );
 			}
 			else if (analysis.Content.McDataType.DataCode == MelsecMcDataType.B.DataCode)
@@ -185,6 +193,12 @@ namespace HslCommunication.Profinet.Melsec
 				yBuffer.SetBytes( buffer, analysis.Content.AddressStart );
 				return OperateResult.CreateSuccessResult( );
 			}
+			else if (analysis.Content.McDataType.DataCode == MelsecMcDataType.L.DataCode)
+			{
+				byte[] buffer = SoftBasic.ByteToBoolArray( value ).Select( m => m ? (byte)1 : (byte)0 ).ToArray( );
+				lBuffer.SetBytes( buffer, analysis.Content.AddressStart );
+				return OperateResult.CreateSuccessResult( );
+			}
 			else if (analysis.Content.McDataType.DataCode == MelsecMcDataType.B.DataCode)
 			{
 				byte[] buffer = SoftBasic.ByteToBoolArray( value ).Select( m => m ? (byte)1 : (byte)0 ).ToArray( );
@@ -237,6 +251,8 @@ namespace HslCommunication.Profinet.Melsec
 				return OperateResult.CreateSuccessResult( xBuffer.GetBytes( analysis.Content.AddressStart, length ).Select( m => m != 0x00 ).ToArray( ) );
 			else if (analysis.Content.McDataType.DataCode == MelsecMcDataType.Y.DataCode)
 				return OperateResult.CreateSuccessResult( yBuffer.GetBytes( analysis.Content.AddressStart, length ).Select( m => m != 0x00 ).ToArray( ) );
+			else if (analysis.Content.McDataType.DataCode == MelsecMcDataType.L.DataCode)
+				return OperateResult.CreateSuccessResult( lBuffer.GetBytes( analysis.Content.AddressStart, length ).Select( m => m != 0x00 ).ToArray( ) );
 			else if (analysis.Content.McDataType.DataCode == MelsecMcDataType.B.DataCode)
 				return OperateResult.CreateSuccessResult( bBuffer.GetBytes( analysis.Content.AddressStart, length ).Select( m => m != 0x00 ).ToArray( ) );
 			else
@@ -268,6 +284,11 @@ namespace HslCommunication.Profinet.Melsec
 				yBuffer.SetBytes( value.Select( m => m ? (byte)1 : (byte)0 ).ToArray( ), analysis.Content.AddressStart );
 				return OperateResult.CreateSuccessResult( );
 			}
+			else if (analysis.Content.McDataType.DataCode == MelsecMcDataType.L.DataCode)
+			{
+				lBuffer.SetBytes( value.Select( m => m ? (byte)1 : (byte)0 ).ToArray( ), analysis.Content.AddressStart );
+				return OperateResult.CreateSuccessResult( );
+			}
 			else if (analysis.Content.McDataType.DataCode == MelsecMcDataType.B.DataCode)
 			{
 				bBuffer.SetBytes( value.Select( m => m ? (byte)1 : (byte)0 ).ToArray( ), analysis.Content.AddressStart );
@@ -284,84 +305,21 @@ namespace HslCommunication.Profinet.Melsec
 		#region NetServer Override
 
 		/// <inheritdoc/>
-		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
+		protected override INetMessage GetNewNetMessage( )
 		{
-			// 开始接收数据信息
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-			try
-			{
-				socket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), appSession );
-				AddClient( appSession );
-			}
-			catch
-			{
-				socket.Close( );
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-			}
+			if (isBinary)
+				return new MelsecQnA3EBinaryMessage( );
+			else
+				return new MelsecQnA3EAsciiMessage( );
 		}
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
+
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			if (ar.AsyncState is AppSession session)
-			{
-				try
-				{
-					int receiveCount = session.WorkSocket.EndReceive( ar );
-					byte[] back = null;
-					OperateResult<byte[]> read1;
-
-					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-					if (isBinary)
-					{
-#if NET20 || NET35
-						read1 = ReceiveByMessage( session.WorkSocket, 5000, new MelsecQnA3EBinaryMessage( ) );
-#else
-						read1 = await ReceiveByMessageAsync( session.WorkSocket, 5000, new MelsecQnA3EBinaryMessage( ) );
-#endif
-						if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-						back = ReadFromMcCore( read1.Content.RemoveBegin( 11 ) );
-					}
-					else
-					{
-#if NET20 || NET35
-						read1 = ReceiveByMessage( session.WorkSocket, 5000, new MelsecQnA3EAsciiMessage( ) );
-#else
-						read1 = await ReceiveByMessageAsync( session.WorkSocket, 5000, new MelsecQnA3EAsciiMessage( ) );
-#endif
-						if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-						back = ReadFromMcAsciiCore( read1.Content.RemoveBegin( 22 ) );
-					}
-
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{(this.isBinary ? read1.Content.ToHexString( ' ' ) : Encoding.ASCII.GetString( read1.Content ))}" );
-
-					if (back != null)
-					{
-						session.WorkSocket.Send( back );
-						LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{(this.isBinary ? back.ToHexString( ' ' ) : Encoding.ASCII.GetString( back ))}" );
-					}
-					else
-					{
-						RemoveClient( session );
-						return;
-					}
-
-					session.HeartTime = DateTime.Now;
-					RaiseDataReceived( session, read1.Content );
-					session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), session );
-				}
-				catch( Exception ex )
-				{
-					RemoveClient( session, $"SocketAsyncCallBack -> {ex.Message}" );
-				}
-			}
+			if (isBinary)
+				return OperateResult.CreateSuccessResult( ReadFromMcCore( receive.RemoveBegin( 11 ) ) );
+			else
+				return OperateResult.CreateSuccessResult( ReadFromMcAsciiCore( receive.RemoveBegin( 22 ) ) );
 		}
 
 		/// <summary>
@@ -376,6 +334,14 @@ namespace HslCommunication.Profinet.Melsec
 			if (mcCore[0] == 0x01 && mcCore[1] == 0x04)
 			{
 				return ReadByCommand( mcCore ); // 读数据
+			}
+			else if (mcCore[0] == 0x03 && mcCore[1] == 0x04)
+			{
+				return ReadRandomByCommand( mcCore );
+			}
+			else if (mcCore[0] == 0x06 && mcCore[1] == 0x04)
+			{
+				return ReadBlockByCommand( mcCore );
 			}
 			else if (mcCore[0] == 0x01 && mcCore[1] == 0x14)
 			{
@@ -451,30 +417,80 @@ namespace HslCommunication.Profinet.Melsec
 				else if (command[7] == MelsecMcDataType.X.DataCode) return PackCommand( 0, MelsecHelper.TransBoolArrayToByteData( xBuffer.GetBytes( startIndex, length ) ) );
 				else if (command[7] == MelsecMcDataType.Y.DataCode) return PackCommand( 0, MelsecHelper.TransBoolArrayToByteData( yBuffer.GetBytes( startIndex, length ) ) );
 				else if (command[7] == MelsecMcDataType.B.DataCode) return PackCommand( 0, MelsecHelper.TransBoolArrayToByteData( bBuffer.GetBytes( startIndex, length ) ) );
+				else if (command[7] == MelsecMcDataType.L.DataCode) return PackCommand( 0, MelsecHelper.TransBoolArrayToByteData( lBuffer.GetBytes( startIndex, length ) ) );
 				else return PackCommand( 0xC05A, null );
 			}
 			else
 			{
 				// 字读取
 				if (length > 960) return PackCommand( 0xC051, null );
-				if (command[7] == MelsecMcDataType.M.DataCode)
-					return PackCommand( 0, mBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
-				else if (command[7] == MelsecMcDataType.X.DataCode)
-					return PackCommand( 0, xBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
-				else if (command[7] == MelsecMcDataType.Y.DataCode)
-					return PackCommand( 0, yBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
-				else if (command[7] == MelsecMcDataType.B.DataCode)
-					return PackCommand( 0, bBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
-				else if (command[7] == MelsecMcDataType.D.DataCode)
-					return PackCommand( 0, dBuffer.GetBytes( startIndex * 2, length * 2 ) );
-				else if (command[7] == MelsecMcDataType.W.DataCode)
-					return PackCommand( 0, wBuffer.GetBytes( startIndex * 2, length * 2 ) );
-				else if (command[7] == MelsecMcDataType.R.DataCode)
-					return PackCommand( 0, rBuffer.GetBytes( startIndex * 2, length * 2 ) );
-				else if (command[7] == MelsecMcDataType.ZR.DataCode)
-					return PackCommand( 0, zrBuffer.GetBytes( startIndex * 2, length * 2 ) );
-				else
-					return PackCommand( 0xC05A, null );
+				if (command[7] == MelsecMcDataType.M.DataCode)       return PackCommand( 0, mBuffer.GetBytes(  startIndex,     length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
+				else if (command[7] == MelsecMcDataType.X.DataCode)  return PackCommand( 0, xBuffer.GetBytes(  startIndex,     length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
+				else if (command[7] == MelsecMcDataType.Y.DataCode)  return PackCommand( 0, yBuffer.GetBytes(  startIndex,     length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
+				else if (command[7] == MelsecMcDataType.B.DataCode)  return PackCommand( 0, bBuffer.GetBytes(  startIndex,     length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
+				else if (command[7] == MelsecMcDataType.L.DataCode)  return PackCommand( 0, lBuffer.GetBytes(  startIndex,     length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
+				else if (command[7] == MelsecMcDataType.D.DataCode)  return PackCommand( 0, dBuffer.GetBytes(  startIndex * 2, length * 2 ) );
+				else if (command[7] == MelsecMcDataType.W.DataCode)  return PackCommand( 0, wBuffer.GetBytes(  startIndex * 2, length * 2 ) );
+				else if (command[7] == MelsecMcDataType.R.DataCode)  return PackCommand( 0, rBuffer.GetBytes(  startIndex * 2, length * 2 ) );
+				else if (command[7] == MelsecMcDataType.ZR.DataCode) return PackCommand( 0, zrBuffer.GetBytes( startIndex * 2, length * 2 ) );
+				else return PackCommand( 0xC05A, null );
+			}
+		}
+
+		private byte[] ReadRandomByCommand( byte[] command )
+		{
+			int count = command[4];
+			byte[] buffer = new byte[count * 2];
+
+			for (int i = 0; i < count; i++)
+			{
+				int startIndex = command[8 + 4 * i] * 65536 + command[7 + 4 * i] * 256 + command[6 + 4 * i];
+				if      (command[9 + 4 * i] == MelsecMcDataType.M.DataCode) mBuffer.GetBytes( startIndex, 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ).CopyTo( buffer, i * 2 );
+				else if (command[9 + 4 * i] == MelsecMcDataType.X.DataCode) xBuffer.GetBytes( startIndex, 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ).CopyTo( buffer, i * 2 );
+				else if (command[9 + 4 * i] == MelsecMcDataType.Y.DataCode) yBuffer.GetBytes( startIndex, 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ).CopyTo( buffer, i * 2 );
+				else if (command[9 + 4 * i] == MelsecMcDataType.B.DataCode) bBuffer.GetBytes( startIndex, 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ).CopyTo( buffer, i * 2 );
+				else if (command[9 + 4 * i] == MelsecMcDataType.L.DataCode) lBuffer.GetBytes( startIndex, 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ).CopyTo( buffer, i * 2 );
+				else if (command[9 + 4 * i] == MelsecMcDataType.D.DataCode) dBuffer.GetBytes( startIndex * 2, 2 ).CopyTo( buffer, i * 2 );
+				else if (command[9 + 4 * i] == MelsecMcDataType.W.DataCode) wBuffer.GetBytes( startIndex * 2, 2 ).CopyTo( buffer, i * 2 );
+				else if (command[9 + 4 * i] == MelsecMcDataType.R.DataCode) rBuffer.GetBytes( startIndex * 2, 2 ).CopyTo( buffer, i * 2 );
+				else if (command[9 + 4 * i] == MelsecMcDataType.ZR.DataCode) zrBuffer.GetBytes( startIndex * 2, 2 ).CopyTo( buffer, i * 2 );
+			}
+			return PackCommand( 0, buffer );
+		}
+
+		private byte[] ReadBlockByCommand( byte[] command )
+		{
+			int count = command[4];
+			MemoryStream ms = new MemoryStream( );
+
+			for (int i = 0; i < count; i++)
+			{
+				int startIndex = command[8 + 6 * i] * 65536 + command[7 + 6 * i] * 256 + command[6 + 6 * i];
+				ushort length = ByteTransform.TransUInt16( command, 10 + 6 * i );
+
+				if      (command[9 + 6 * i] == MelsecMcDataType.M.DataCode) ms.Write( mBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
+				else if (command[9 + 6 * i] == MelsecMcDataType.X.DataCode) ms.Write( xBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
+				else if (command[9 + 6 * i] == MelsecMcDataType.Y.DataCode) ms.Write( yBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
+				else if (command[9 + 6 * i] == MelsecMcDataType.B.DataCode) ms.Write( bBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
+				else if (command[9 + 6 * i] == MelsecMcDataType.L.DataCode) ms.Write( lBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( ).ToByteArray( ) );
+				else if (command[9 + 6 * i] == MelsecMcDataType.D.DataCode) ms.Write( dBuffer.GetBytes( startIndex * 2, length * 2 ) );
+				else if (command[9 + 6 * i] == MelsecMcDataType.W.DataCode) ms.Write( wBuffer.GetBytes( startIndex * 2, length * 2 ) );
+				else if (command[9 + 6 * i] == MelsecMcDataType.R.DataCode) ms.Write( rBuffer.GetBytes( startIndex * 2, length * 2 ) );
+				else if (command[9 + 6 * i] == MelsecMcDataType.ZR.DataCode) ms.Write( zrBuffer.GetBytes( startIndex * 2, length * 2 ) );
+			}
+			return PackCommand( 0, ms.ToArray( ) );
+		}
+
+		private byte[] ReadAsciiPackCommand( SoftBuffer softBuffer, int startIndex, ushort length, bool isBool )
+		{
+			if (isBool)
+			{
+				bool[] buffer = softBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( );
+				return PackCommand( 0, MelsecHelper.TransByteArrayToAsciiByteArray( SoftBasic.BoolArrayToByte( buffer ) ) );
+			}
+			else
+			{
+				return PackCommand( 0, MelsecHelper.TransByteArrayToAsciiByteArray( dBuffer.GetBytes( startIndex * 2, length * 2 ) ) );
 			}
 		}
 
@@ -483,54 +499,39 @@ namespace HslCommunication.Profinet.Melsec
 			ushort length = Convert.ToUInt16( Encoding.ASCII.GetString( command, 16, 4 ), 16 );
 			string typeCode = Encoding.ASCII.GetString( command, 8, 2 );
 			int startIndex = 0;
-			if(typeCode == MelsecMcDataType.X.AsciiCode || typeCode == MelsecMcDataType.Y.AsciiCode || typeCode == MelsecMcDataType.W.AsciiCode)
-				startIndex = Convert.ToUInt16( Encoding.ASCII.GetString( command, 10, 6 ), 16 );
+			if( typeCode == MelsecMcDataType.X.AsciiCode || 
+				typeCode == MelsecMcDataType.Y.AsciiCode || 
+				typeCode == MelsecMcDataType.W.AsciiCode ||
+				typeCode == MelsecMcDataType.B.AsciiCode ||
+				typeCode == MelsecMcDataType.L.AsciiCode)
+				startIndex = Convert.ToInt32( Encoding.ASCII.GetString( command, 10, 6 ), 16 );
 			else
-				startIndex = Convert.ToUInt16( Encoding.ASCII.GetString( command, 10, 6 ) );
+				startIndex = Convert.ToInt32( Encoding.ASCII.GetString( command, 10, 6 ) );
 
 			if (command[7] == 0x31)
 			{
 				if (length > 3584) return PackCommand( 0xC051, null );
 				// 位读取
-				if (typeCode == MelsecMcDataType.M.AsciiCode)
-					return PackCommand( 0, mBuffer.GetBytes( startIndex, length ).Select( m => m != 0x00 ? (byte)0x31 : (byte)0x30 ).ToArray( ) );
-				else if (typeCode == MelsecMcDataType.X.AsciiCode)
-					return PackCommand( 0, xBuffer.GetBytes( startIndex, length ).Select( m => m != 0x00 ? (byte)0x31 : (byte)0x30 ).ToArray( ) );
-				else if (typeCode == MelsecMcDataType.Y.AsciiCode)
-					return PackCommand( 0, yBuffer.GetBytes( startIndex, length ).Select( m => m != 0x00 ? (byte)0x31 : (byte)0x30 ).ToArray( ) );
-				else if (typeCode == MelsecMcDataType.B.AsciiCode)
-					return PackCommand( 0, bBuffer.GetBytes( startIndex, length ).Select( m => m != 0x00 ? (byte)0x31 : (byte)0x30 ).ToArray( ) );
-				else
-					return PackCommand( 0xC05A, null );
+				if (typeCode == MelsecMcDataType.M.AsciiCode)      return PackCommand( 0, mBuffer.GetBytes( startIndex, length ).Select( m => m != 0x00 ? (byte)0x31 : (byte)0x30 ).ToArray( ) );
+				else if (typeCode == MelsecMcDataType.X.AsciiCode) return PackCommand( 0, xBuffer.GetBytes( startIndex, length ).Select( m => m != 0x00 ? (byte)0x31 : (byte)0x30 ).ToArray( ) );
+				else if (typeCode == MelsecMcDataType.Y.AsciiCode) return PackCommand( 0, yBuffer.GetBytes( startIndex, length ).Select( m => m != 0x00 ? (byte)0x31 : (byte)0x30 ).ToArray( ) );
+				else if (typeCode == MelsecMcDataType.B.AsciiCode) return PackCommand( 0, bBuffer.GetBytes( startIndex, length ).Select( m => m != 0x00 ? (byte)0x31 : (byte)0x30 ).ToArray( ) );
+				else if (typeCode == MelsecMcDataType.L.AsciiCode) return PackCommand( 0, lBuffer.GetBytes( startIndex, length ).Select( m => m != 0x00 ? (byte)0x31 : (byte)0x30 ).ToArray( ) );
+				else return PackCommand( 0xC05A, null );
 			}
 			else
 			{
 				// 字读取
 				if (length > 960) return PackCommand( 0xC051, null );
-				if (typeCode == MelsecMcDataType.M.AsciiCode)
-				{
-					bool[] buffer = mBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( );
-					return PackCommand( 0, MelsecHelper.TransByteArrayToAsciiByteArray( SoftBasic.BoolArrayToByte( buffer ) ) );
-				}
-				else if (typeCode == MelsecMcDataType.X.AsciiCode)
-				{
-					bool[] buffer = xBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( );
-					return PackCommand( 0, MelsecHelper.TransByteArrayToAsciiByteArray( SoftBasic.BoolArrayToByte( buffer ) ) );
-				}
-				else if (typeCode == MelsecMcDataType.Y.AsciiCode)
-				{
-					bool[] buffer = yBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( );
-					return PackCommand( 0, MelsecHelper.TransByteArrayToAsciiByteArray( SoftBasic.BoolArrayToByte( buffer ) ) );
-				}
-				else if (typeCode == MelsecMcDataType.B.AsciiCode)
-				{
-					bool[] buffer = bBuffer.GetBytes( startIndex, length * 16 ).Select( m => m != 0x00 ).ToArray( );
-					return PackCommand( 0, MelsecHelper.TransByteArrayToAsciiByteArray( SoftBasic.BoolArrayToByte( buffer ) ) );
-				}
-				else if (typeCode == MelsecMcDataType.D.AsciiCode) return PackCommand( 0, MelsecHelper.TransByteArrayToAsciiByteArray( dBuffer.GetBytes( startIndex * 2, length * 2 ) ) );
-				else if (typeCode == MelsecMcDataType.W.AsciiCode) return PackCommand( 0, MelsecHelper.TransByteArrayToAsciiByteArray( wBuffer.GetBytes( startIndex * 2, length * 2 ) ) );
-				else if (typeCode == MelsecMcDataType.R.AsciiCode) return PackCommand( 0, MelsecHelper.TransByteArrayToAsciiByteArray( rBuffer.GetBytes( startIndex * 2, length * 2 ) ) );
-				else if (typeCode == MelsecMcDataType.ZR.AsciiCode) return PackCommand( 0, MelsecHelper.TransByteArrayToAsciiByteArray( zrBuffer.GetBytes( startIndex * 2, length * 2 ) ) );
+				if (typeCode == MelsecMcDataType.M.AsciiCode)      return ReadAsciiPackCommand( mBuffer, startIndex, length, true );
+				else if (typeCode == MelsecMcDataType.X.AsciiCode) return ReadAsciiPackCommand( xBuffer, startIndex, length, true );
+				else if (typeCode == MelsecMcDataType.Y.AsciiCode) return ReadAsciiPackCommand( yBuffer, startIndex, length, true );
+				else if (typeCode == MelsecMcDataType.B.AsciiCode) return ReadAsciiPackCommand( bBuffer, startIndex, length, true );
+				else if (typeCode == MelsecMcDataType.L.AsciiCode) return ReadAsciiPackCommand( lBuffer, startIndex, length, true );
+				else if (typeCode == MelsecMcDataType.D.AsciiCode) return ReadAsciiPackCommand( dBuffer, startIndex, length, false );
+				else if (typeCode == MelsecMcDataType.W.AsciiCode) return ReadAsciiPackCommand( wBuffer, startIndex, length, false );
+				else if (typeCode == MelsecMcDataType.R.AsciiCode) return ReadAsciiPackCommand( rBuffer, startIndex, length, false );
+				else if (typeCode == MelsecMcDataType.ZR.AsciiCode) return ReadAsciiPackCommand( zrBuffer, startIndex, length, false );
 				else return PackCommand( 0xC05A, null );
 			}
 		}
@@ -551,6 +552,7 @@ namespace HslCommunication.Profinet.Melsec
 				else if (command[7] == MelsecMcDataType.X.DataCode) xBuffer.SetBytes( buffer.Take( length ).ToArray( ), startIndex );
 				else if (command[7] == MelsecMcDataType.Y.DataCode) yBuffer.SetBytes( buffer.Take( length ).ToArray( ), startIndex );
 				else if (command[7] == MelsecMcDataType.B.DataCode) bBuffer.SetBytes( buffer.Take( length ).ToArray( ), startIndex );
+				else if (command[7] == MelsecMcDataType.L.DataCode) lBuffer.SetBytes( buffer.Take( length ).ToArray( ), startIndex );
 				else throw new Exception( StringResources.Language.NotSupportedDataType );
 
 				return new byte[0];
@@ -580,6 +582,12 @@ namespace HslCommunication.Profinet.Melsec
 				{
 					byte[] buffer = SoftBasic.ByteToBoolArray( SoftBasic.ArrayRemoveBegin( command, 10 ) ).Select( m => m ? (byte)1 : (byte)0 ).ToArray( );
 					bBuffer.SetBytes( buffer, startIndex );
+					return new byte[0];
+				}
+				else if (command[7] == MelsecMcDataType.L.DataCode)
+				{
+					byte[] buffer = SoftBasic.ByteToBoolArray( SoftBasic.ArrayRemoveBegin( command, 10 ) ).Select( m => m ? (byte)1 : (byte)0 ).ToArray( );
+					lBuffer.SetBytes( buffer, startIndex );
 					return new byte[0];
 				}
 				else if (command[7] == MelsecMcDataType.D.DataCode)
@@ -614,10 +622,14 @@ namespace HslCommunication.Profinet.Melsec
 			ushort length = Convert.ToUInt16( Encoding.ASCII.GetString( command, 16, 4 ), 16 );
 			string typeCode = Encoding.ASCII.GetString( command, 8, 2 );
 			int startIndex = 0;
-			if (typeCode == MelsecMcDataType.X.AsciiCode || typeCode == MelsecMcDataType.Y.AsciiCode || typeCode == MelsecMcDataType.W.AsciiCode)
-				startIndex = Convert.ToUInt16( Encoding.ASCII.GetString( command, 10, 6 ), 16 );
+			if (typeCode == MelsecMcDataType.X.AsciiCode || 
+				typeCode == MelsecMcDataType.Y.AsciiCode || 
+				typeCode == MelsecMcDataType.W.AsciiCode ||
+				typeCode == MelsecMcDataType.B.AsciiCode ||
+				typeCode == MelsecMcDataType.L.AsciiCode)
+				startIndex = Convert.ToInt32( Encoding.ASCII.GetString( command, 10, 6 ), 16 );
 			else
-				startIndex = Convert.ToUInt16( Encoding.ASCII.GetString( command, 10, 6 ) );
+				startIndex = Convert.ToInt32( Encoding.ASCII.GetString( command, 10, 6 ) );
 
 			if (command[7] == 0x31)
 			{
@@ -628,6 +640,7 @@ namespace HslCommunication.Profinet.Melsec
 				else if (typeCode == MelsecMcDataType.X.AsciiCode) xBuffer.SetBytes( buffer.Take( length ).ToArray( ), startIndex );
 				else if (typeCode == MelsecMcDataType.Y.AsciiCode) yBuffer.SetBytes( buffer.Take( length ).ToArray( ), startIndex );
 				else if (typeCode == MelsecMcDataType.B.AsciiCode) bBuffer.SetBytes( buffer.Take( length ).ToArray( ), startIndex );
+				else if (typeCode == MelsecMcDataType.L.AsciiCode) lBuffer.SetBytes( buffer.Take( length ).ToArray( ), startIndex );
 				else throw new Exception( StringResources.Language.NotSupportedDataType );
 
 				return new byte[0];
@@ -657,6 +670,12 @@ namespace HslCommunication.Profinet.Melsec
 				{
 					byte[] buffer = SoftBasic.ByteToBoolArray( MelsecHelper.TransAsciiByteArrayToByteArray( command.RemoveBegin( 20 ) ) ).Select( m => m ? (byte)1 : (byte)0 ).ToArray( );
 					bBuffer.SetBytes( buffer, startIndex );
+					return new byte[0];
+				}
+				else if (typeCode == MelsecMcDataType.L.AsciiCode)
+				{
+					byte[] buffer = SoftBasic.ByteToBoolArray( MelsecHelper.TransAsciiByteArrayToByteArray( command.RemoveBegin( 20 ) ) ).Select( m => m ? (byte)1 : (byte)0 ).ToArray( );
+					lBuffer.SetBytes( buffer, startIndex );
 					return new byte[0];
 				}
 				else if (typeCode == MelsecMcDataType.D.AsciiCode)
@@ -707,13 +726,18 @@ namespace HslCommunication.Profinet.Melsec
 				rBuffer.SetBytes( content, DataPoolLength * 8, 0, DataPoolLength * 2 );
 				zrBuffer.SetBytes( content, DataPoolLength * 10, 0, DataPoolLength * 2 );
 			}
+			if (content.Length >= 15)
+			{
+				dBuffer.SetBytes( content, DataPoolLength * 12, DataPoolLength * 2, DataPoolLength * 2 );
+				lBuffer.SetBytes( content, DataPoolLength * 14, 0, DataPoolLength );
+			}
 		}
 
 		/// <inheritdoc/>
 		[HslMqttApi]
 		protected override byte[] SaveToBytes( )
 		{
-			byte[] buffer = new byte[DataPoolLength * 12];
+			byte[] buffer = new byte[DataPoolLength * 15];
 			Array.Copy( mBuffer.GetBytes( ), 0, buffer, DataPoolLength * 0, DataPoolLength );
 			Array.Copy( xBuffer.GetBytes( ), 0, buffer, DataPoolLength * 1, DataPoolLength );
 			Array.Copy( yBuffer.GetBytes( ), 0, buffer, DataPoolLength * 2, DataPoolLength );
@@ -722,6 +746,8 @@ namespace HslCommunication.Profinet.Melsec
 			Array.Copy( bBuffer.GetBytes( ), 0, buffer, DataPoolLength * 7, DataPoolLength );
 			Array.Copy( rBuffer.GetBytes( ), 0, buffer, DataPoolLength * 8, DataPoolLength * 2 );
 			Array.Copy( zrBuffer.GetBytes( ), 0, buffer, DataPoolLength * 10, DataPoolLength * 2 );
+			Array.Copy( dBuffer.GetBytes( ), DataPoolLength * 2, buffer, DataPoolLength * 12, DataPoolLength * 2 );
+			Array.Copy( lBuffer.GetBytes( ), 0, buffer, DataPoolLength * 14, DataPoolLength );
 			return buffer;
 		}
 
@@ -767,6 +793,7 @@ namespace HslCommunication.Profinet.Melsec
 		private SoftBuffer xBuffer;                    // x寄存器的数据池
 		private SoftBuffer yBuffer;                    // y寄存器的数据池
 		private SoftBuffer mBuffer;                    // m寄存器的数据池
+		private SoftBuffer lBuffer;                    // l寄存器的数据池
 		private SoftBuffer dBuffer;                    // d寄存器的数据池
 		private SoftBuffer wBuffer;                    // w寄存器的数据池
 		private SoftBuffer bBuffer;                    // b继电器的数据池

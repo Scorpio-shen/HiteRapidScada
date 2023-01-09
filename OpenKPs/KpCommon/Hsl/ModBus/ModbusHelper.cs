@@ -16,14 +16,17 @@ namespace HslCommunication.ModBus
 	/// </summary>
 	internal class ModbusHelper
 	{
-		public static OperateResult<byte[]> ExtraRtuResponseContent( byte[] send, byte[] response )
+		public static OperateResult<byte[]> ExtraRtuResponseContent( byte[] send, byte[] response, bool crcCheck = true )
 		{
 			// 长度校验
 			if (response.Length < 5) return new OperateResult<byte[]>( StringResources.Language.ReceiveDataLengthTooShort + "5" );
 
 			// 检查crc
-			if (!SoftCRC16.CheckCRC16( response )) return new OperateResult<byte[]>( StringResources.Language.ModbusCRCCheckFailed +
+			if (crcCheck && !SoftCRC16.CheckCRC16( response )) return new OperateResult<byte[]>( StringResources.Language.ModbusCRCCheckFailed +
 				SoftBasic.ByteToHexString( response, ' ' ) );
+
+			// 站号检查
+			if (send[0] != response[0]) return new OperateResult<byte[]>( $"Station not match, request: {send[0]}, but response is {response[0]}" );
 
 			// 发生了错误
 			if ((send[1] + 0x80) == response[1]) return new OperateResult<byte[]>( response[2], ModbusInfo.GetDescriptionByErrorCode( response[2] ) );
@@ -44,16 +47,7 @@ namespace HslCommunication.ModBus
 			OperateResult<byte[][]> command = ModbusInfo.BuildReadModbusCommand( modbusAddress.Content, length, modbus.Station, modbus.AddressStartWithZero, ModbusInfo.ReadRegister );
 			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
 
-			List<byte> resultArray = new List<byte>( );
-			for (int i = 0; i < command.Content.Length; i++)
-			{
-				OperateResult<byte[]> read = modbus.ReadFromCoreServer( command.Content[i] );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
-
-				resultArray.AddRange( read.Content );
-			}
-
-			return OperateResult.CreateSuccessResult( resultArray.ToArray( ) );
+			return modbus.ReadFromCoreServer( command.Content );
 		}
 
 #if !NET20 && !NET35
@@ -66,16 +60,7 @@ namespace HslCommunication.ModBus
 			OperateResult<byte[][]> command = ModbusInfo.BuildReadModbusCommand( modbusAddress.Content, length, modbus.Station, modbus.AddressStartWithZero, ModbusInfo.ReadRegister );
 			if (!command.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( command );
 
-			List<byte> resultArray = new List<byte>( );
-			for (int i = 0; i < command.Content.Length; i++)
-			{
-				OperateResult<byte[]> read = await modbus.ReadFromCoreServerAsync( command.Content[i] );
-				if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
-
-				resultArray.AddRange( read.Content );
-			}
-
-			return OperateResult.CreateSuccessResult( resultArray.ToArray( ) );
+			return await modbus.ReadFromCoreServerAsync( command.Content );
 		}
 #endif
 		/// <inheritdoc cref="ModbusTcpNet.Write(string, byte[])"/>
@@ -179,13 +164,17 @@ namespace HslCommunication.ModBus
 #endif
 		public static OperateResult<bool[]> ReadBoolHelper( IModbus modbus, string address, ushort length, byte function )
 		{
-			if (address.IndexOf( '.' ) > 0)
+			OperateResult<string> modbusAddress = modbus.TranslateToModbusAddress( address, function );
+			if (!modbusAddress.IsSuccess) return modbusAddress.ConvertFailed<bool[]>( );
+
+			if (modbusAddress.Content.IndexOf( '.' ) > 0)
 			{
 				string[] addressSplits = address.SplitDot( );
 				int bitIndex = 0;
 				try
 				{
-					bitIndex = Convert.ToInt32( addressSplits[1] );
+					string[] modbusSplits = modbusAddress.Content.SplitDot( );
+					bitIndex = Convert.ToInt32( modbusSplits[1] );
 				}
 				catch(Exception ex)
 				{
@@ -200,9 +189,6 @@ namespace HslCommunication.ModBus
 			}
 			else
 			{
-				OperateResult<string> modbusAddress = modbus.TranslateToModbusAddress( address, function );
-				if (!modbusAddress.IsSuccess) return modbusAddress.ConvertFailed<bool[]>( );
-
 				OperateResult<byte[][]> command = ModbusInfo.BuildReadModbusCommand( modbusAddress.Content, length, modbus.Station, modbus.AddressStartWithZero, function );
 				if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
 
@@ -223,13 +209,17 @@ namespace HslCommunication.ModBus
 #if !NET20 && !NET35
 		internal static  async Task<OperateResult<bool[]>> ReadBoolHelperAsync( IModbus modbus, string address, ushort length, byte function )
 		{
-			if (address.IndexOf( '.' ) > 0)
+			OperateResult<string> modbusAddress = modbus.TranslateToModbusAddress( address, function );
+			if (!modbusAddress.IsSuccess) return modbusAddress.ConvertFailed<bool[]>( );
+
+			if (modbusAddress.Content.IndexOf( '.' ) > 0)
 			{
 				string[] addressSplits = address.SplitDot( );
 				int bitIndex = 0;
 				try
 				{
-					bitIndex = Convert.ToInt32( addressSplits[1] );
+					string[] modbusSplits = modbusAddress.Content.SplitDot( );
+					bitIndex = Convert.ToInt32( modbusSplits[1] );
 				}
 				catch (Exception ex)
 				{
@@ -244,9 +234,6 @@ namespace HslCommunication.ModBus
 			}
 			else
 			{
-				OperateResult<string> modbusAddress = modbus.TranslateToModbusAddress( address, function );
-				if (!modbusAddress.IsSuccess) return modbusAddress.ConvertFailed<bool[]>( );
-
 				OperateResult<byte[][]> command = ModbusInfo.BuildReadModbusCommand( modbusAddress.Content, length, modbus.Station, modbus.AddressStartWithZero, function );
 				if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
 

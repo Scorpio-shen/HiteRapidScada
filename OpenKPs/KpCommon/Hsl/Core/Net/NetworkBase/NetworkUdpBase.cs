@@ -7,6 +7,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using HslCommunication.Reflection;
+using HslCommunication.Core.Pipe;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -30,6 +31,7 @@ namespace HslCommunication.Core.Net
 			hybirdLock = new SimpleHybirdLock( );                                          // 当前交互的数据锁
 			ReceiveTimeout = 5000;                                                         // 当前接收的超时时间
 			ConnectionId = SoftBasic.GetUniqueStringByGuidAndRandom( );                    // 设备的唯一的编号
+			this.pipeSocket = new PipeSocket( );
 		}
 
 		#endregion
@@ -40,10 +42,7 @@ namespace HslCommunication.Core.Net
 		public virtual string IpAddress
 		{
 			get => ipAddress;
-			set
-			{
-				ipAddress = HslHelper.GetIpAddressFromInput( value );
-			}
+			set => ipAddress = HslHelper.GetIpAddressFromInput( value );
 		}
 
 		/// <inheritdoc cref="NetworkDoubleBase.Port"/>
@@ -72,16 +71,19 @@ namespace HslCommunication.Core.Net
 		#region Core Read
 
 		/// <inheritdoc cref="NetworkDoubleBase.PackCommandWithHeader(byte[])"/>
-		protected virtual byte[] PackCommandWithHeader( byte[] command ) => command;
+		public virtual byte[] PackCommandWithHeader( byte[] command ) => command;
 
 		/// <inheritdoc cref="NetworkDoubleBase.UnpackResponseContent(byte[], byte[])"/>
-		protected virtual OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => OperateResult.CreateSuccessResult( response );
+		public virtual OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => OperateResult.CreateSuccessResult( response );
 
 		/// <inheritdoc cref="ReadFromCoreServer(byte[], bool, bool)"/>
 		public virtual OperateResult<byte[]> ReadFromCoreServer( byte[] send )
 		{
 			return ReadFromCoreServer( send, true, true );
 		}
+
+		/// <inheritdoc cref="IReadWriteDevice.ReadFromCoreServer(IEnumerable{byte[]})"/>
+		public OperateResult<byte[]> ReadFromCoreServer( IEnumerable<byte[]> send ) => NetSupport.ReadFromCoreServer( send, this.ReadFromCoreServer );
 
 		/// <summary>
 		/// 核心的数据交互读取，发数据发送到通道上去，然后从通道上接收返回的数据<br />
@@ -102,10 +104,14 @@ namespace HslCommunication.Core.Net
 			try
 			{
 				IPEndPoint endPoint = new IPEndPoint( IPAddress.Parse( IpAddress ), Port );
-				Socket server = new Socket( AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp );
-				if (LocalBinding != null) server.Bind( LocalBinding );
+				OperateResult<Socket> socket = GetAvailableSocketAsync( endPoint );
+				if (!socket.IsSuccess)
+				{
+					hybirdLock.Leave( );
+					return OperateResult.CreateFailedResult<byte[]>( socket );
+				}
 
-				server.SendTo( sendValue, sendValue.Length, SocketFlags.None, endPoint );
+				socket.Content.SendTo( sendValue, sendValue.Length, SocketFlags.None, endPoint );
 
 				if (ReceiveTimeout < 0)
 				{
@@ -120,11 +126,11 @@ namespace HslCommunication.Core.Net
 				}
 
 				// 对于不存在的IP地址，加入此行代码后，可以在指定时间内解除阻塞模式限制
-				server.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, ReceiveTimeout );
-				IPEndPoint sender = new IPEndPoint( IPAddress.Any, 0 );
+				socket.Content.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, ReceiveTimeout );
+				IPEndPoint sender = new IPEndPoint( endPoint.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddress.IPv6Any : IPAddress.Any, 0 );
 				EndPoint Remote = (EndPoint)sender;
 				byte[] buffer = new byte[ReceiveCacheLength];
-				int recv = server.ReceiveFrom( buffer, ref Remote );
+				int recv = socket.Content.ReceiveFrom( buffer, ref Remote );
 				byte[] receive = buffer.SelectBegin( recv );
 
 				hybirdLock.Leave( );
@@ -132,11 +138,13 @@ namespace HslCommunication.Core.Net
 					(LogMsgFormatBinary ? SoftBasic.ByteToHexString( receive ) : Encoding.ASCII.GetString( receive )) );
 				connectErrorCount = 0;
 
+				this.pipeSocket.IsSocketError = false;
 				return usePackAndUnpack ? UnpackResponseContent( sendValue, receive ) : OperateResult.CreateSuccessResult( receive );
 			}
 			catch (Exception ex)
 			{
 				hybirdLock.Leave( );
+				this.pipeSocket.IsSocketError = true;
 				if (connectErrorCount < 1_0000_0000) connectErrorCount++;
 				return new OperateResult<byte[]>( -connectErrorCount, ex.Message );
 			}
@@ -148,6 +156,10 @@ namespace HslCommunication.Core.Net
 		{
 			return await Task.Run( ( ) => ReadFromCoreServer( value ) );
 		}
+
+		/// <inheritdoc cref="ReadFromCoreServer(IEnumerable{byte[]})"/>
+		public async Task<OperateResult<byte[]>> ReadFromCoreServerAsync( IEnumerable<byte[]> send ) => await NetSupport.ReadFromCoreServerAsync( send, this.ReadFromCoreServerAsync );
+
 #endif
 		#endregion
 
@@ -164,9 +176,52 @@ namespace HslCommunication.Core.Net
 
 		#region Private Member
 
+
+		private OperateResult<Socket> GetAvailableSocketAsync( IPEndPoint endPoint )
+		{
+			// 长连接模式
+			if (this.pipeSocket.IsConnectitonError( ))
+			{
+				OperateResult connect = null;
+				try
+				{
+					this.pipeSocket.Socket?.Close( );
+					Socket server = new Socket( endPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp );
+					if (LocalBinding != null) server.Bind( LocalBinding );
+
+					this.pipeSocket.Socket = server;
+					connect = OperateResult.CreateSuccessResult( );
+				}
+				catch( Exception ex )
+				{
+					this.pipeSocket.IsSocketError = true;
+					connect = new OperateResult( ex.Message );
+				}
+
+
+				if (!connect.IsSuccess)
+				{
+					this.pipeSocket.IsSocketError = true;
+					return OperateResult.CreateFailedResult<Socket>( connect );
+				}
+				else
+				{
+					this.pipeSocket.IsSocketError = false;
+					return OperateResult.CreateSuccessResult( this.pipeSocket.Socket );
+				}
+			}
+			else
+				return OperateResult.CreateSuccessResult( this.pipeSocket.Socket );
+		}
+
+		#endregion
+
+		#region Private Member
+
 		private SimpleHybirdLock hybirdLock = null;       // 数据锁
 		private int connectErrorCount = 0;                // 连接错误次数
 		private string ipAddress = "127.0.0.1";           // ip地址信息
+		private PipeSocket pipeSocket;                 // 默认的网络管道对象
 
 		#endregion
 

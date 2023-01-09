@@ -53,7 +53,7 @@ namespace HslCommunication.Robot.FANUC
 		/// <summary>
 		/// 从原始数据解析出当前的姿态数据
 		/// </summary>
-		/// <param name="byteTransform">字节变化内容</param>
+		/// <param name="byteTransform">数据解析对象</param>
 		/// <param name="content">原始的内容</param>
 		/// <param name="index">索引位置</param>
 		public void LoadByContent( IByteTransform byteTransform, byte[] content, int index )
@@ -95,11 +95,11 @@ namespace HslCommunication.Robot.FANUC
 		/// <summary>
 		/// 从原始的字节数据创建一个新的姿态数据
 		/// </summary>
-		/// <param name="byteTransform"></param>
+		/// <param name="byteTransform">数据解析对象</param>
 		/// <param name="content">原始的内容</param>
 		/// <param name="index">索引位置</param>
 		/// <returns>姿态数据</returns>
-		public static FanucPose PraseFrom( IByteTransform byteTransform, byte[] content, int index )
+		public static FanucPose ParseFrom( IByteTransform byteTransform, byte[] content, int index )
 		{
 			FanucPose fanucPose = new FanucPose( );
 			fanucPose.LoadByContent( byteTransform, content, index );

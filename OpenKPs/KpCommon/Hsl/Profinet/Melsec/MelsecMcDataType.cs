@@ -16,7 +16,7 @@ namespace HslCommunication.Profinet.Melsec
 		/// Instantiate a Mitsubishi data type object, if you know the type code, you can expand according to the value
 		/// </summary>
 		/// <param name="code">数据类型的代号</param>
-		/// <param name="type">0或1，默认为0</param>
+		/// <param name="type">0或1，默认为0，0代表按字，1代表按位</param>
 		/// <param name="asciiCode">ASCII格式的类型信息</param>
 		/// <param name="fromBase">指示地址的多少进制的，10或是16</param>
 		public MelsecMcDataType( ushort code, byte type, string asciiCode, int fromBase )
@@ -178,7 +178,7 @@ namespace HslCommunication.Profinet.Melsec
 		/// <summary>
 		/// 累计定时器的当前值
 		/// </summary>
-		public readonly static MelsecMcDataType SN = new MelsecMcDataType( 0xC8, 0x00, "SN", 100 );
+		public readonly static MelsecMcDataType SN = new MelsecMcDataType( 0xC8, 0x00, "SN", 10 );
 
 
 		/// <summary>

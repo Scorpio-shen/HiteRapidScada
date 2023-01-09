@@ -21,11 +21,12 @@ namespace HslCommunication.Language
 		public override string TimeDescriptionMinute => " Minute";
 		public override string TimeDescriptionHour => " Hour";
 		public override string TimeDescriptionDay => " Day";
-		public override string AuthorizationFailed => "System authorization failed, need to use activation code authorization, thank you for your support. Active device number：" + Authorization.iahsduiwikaskfhishfdi;
-		public override string InsufficientPrivileges => "The current method interface or class is only open to commercial authorized users with insufficient permissions. Thank you for your support. If you need commercial authorization, please contact QQ200962190, WeChat: 13516702732, Email: hsl200909@163.com";
+		public override string AuthorizationFailed => "System authorization failed, need to use activation code authorization, thank you for your support. Active device number：" + Authorization.iahsduiwikaskfhishfdi + " If you need commercial authorization, please contact " + Contact;
+		public override string InsufficientPrivileges => "The current method interface or class is only open to commercial authorized users with insufficient permissions. Thank you for your support. If you need commercial authorization, please contact " + Contact;
+		public override string DeveloperPrivileges => "The permission of the current session is insufficient to call this service interface. Please set the permission of the current session to the developer permission.";
 		public override string ConnectedFailed => "Connected Failed: ";
 		public override string ConnectedSuccess => "Connect Success!";
-		public override string ConnectTimeout => "Connected Timeout: {0}";
+		public override string ConnectTimeout => "Connected {0} Timeout, timeout is {1}";
 		public override string UnknownError => "Unknown Error";
 		public override string ErrorCode => "Error Code: ";
 		public override string TextDescription => "Description: ";
@@ -53,6 +54,9 @@ namespace HslCommunication.Language
 		public override string Send => "Send";
 		public override string Receive => "Receive";
 		public override string CheckDataTimeout => "When waiting to check the data, a timeout occurred. The timeout period is:";
+		public override string WriteWarning => $"Do you really confirm the write operation? {Environment.NewLine} Please check to make sure the current situation is safe!";
+		public override string AddressFormatWrong => $"An exception occurred during geocoding: ";
+		public override string UserCancelOperate => $"The user canceled the current operation";
 
 		/***********************************************************************************
 		 * 
@@ -239,6 +243,18 @@ namespace HslCommunication.Language
 		public override string MelsecErrorC072 => "The requested content is incorrect. (Request to write to word device in bit units.) ";
 		public override string MelsecErrorC074 => "The target PLC does not execute the request. The network number and PC number need to be corrected.";
 
+
+		// 三菱FxLinks错误代码信息
+		public override string MelsecFxLinksError02 => "Sum check error, the sum check code in the received data is inconsistent with the sum check generated from the received data";
+		public override string MelsecFxLinksError03 => "The communication protocol is abnormal, and the control sequence used for communication is different from the control sequence set with the parameters. " +
+			"Or part of it is different from the specified control order. Or the command specified in the control sequence does not exist.";
+		public override string MelsecFxLinksError06 => $"Error in character A, B, C area {Environment.NewLine} 1. The control sequence set by the parameter is different. {Environment.NewLine}2. " +
+			$"A device number that does not exist in the target PLC is specified. {Environment.NewLine}3. The device number is not specified in the specified number of characters (5 characters, or 7 characters).";
+		public override string MelsecFxLinksError07 => "The data written in the device is not hexadecimal ASCII code.";
+		public override string MelsecFxLinksError0A => "There is no site for this PC number.";
+		public override string MelsecFxLinksError10 => "There is no site for this PC number.";
+		public override string MelsecFxLinksError18 => "Remote RUN/SOP cannot be executed. RUN or STOP is determined in the programmable controller hardware. (For example, using the RUN/STOP switch, etc.)";
+
 		/***********************************************************************************
 		 * 
 		 *    Siemens PLC related
@@ -333,9 +349,17 @@ namespace HslCommunication.Language
 		public override string PanasonicMewStatus61                  => "Data error: Contact number, area number, Data code format (BCD,HEX, etc.) overflow, overflow, and area specified error.";
 		public override string PanasonicMewStatus62                  => "Register ERROR: Excessive logging of data in an unregistered state of operations (Monitoring records, tracking records, etc.). )。";
 		public override string PanasonicMewStatus63                  => "PLC mode error: When an instruction is issued, the run mode is not able to process the instruction.";
+		public override string PanasonicMewStatus64                  => "Bad external record error: 1. Bad hardware. There may be an abnormality in the built-in ROM (FROM)/main memory/SD memory card. \r\n2. The specified content exceeds the specified capacity during ROM transfer. \r\n3. A read/write error occurred.";
 		public override string PanasonicMewStatus65                  => "Protection Error: Performs a write operation to the program area or system register in the storage protection state.";
 		public override string PanasonicMewStatus66                  => "Address Error: Address (program address, absolute address, etc.) Data encoding form (BCD, hex, etc.), overflow, underflow, or specified range error.";
 		public override string PanasonicMewStatus67                  => "Missing data error: The data to be read does not exist. (reads data that is not written to the comment register.)";
+		public override string PanasonicMewStatus68                  => "Can not be rewritten in RUN error: You want to edit the command words (ED, SUB, RET, INT, IRET, SSTP, STPE) that cannot be rewritten in RUN. Nothing is written in the control unit.";
+		public override string PanasonicMewStatus71                  => "Exclusive control error: An instruction that cannot be processed at the same time as the instruction in progress was executed.";
+		public override string PanasonicMewStatus78                  => "No SD Card Error: No SD card installed.";
+		public override string PanasonicMewStatus80                  => "Warranty Data Abnormal Error: Warranty data (CRC code) is abnormal.";
+		public override string PanasonicMewStatus81                  => "No valid data error: No valid data exists.";
+		public override string PanasonicMewStatus90                  => "Error in log trace: An unprocessable command was executed during log trace.";
+		public override string PanasonicMewStatus92                  => "SD card not supported error: A business SD card manufactured by Panasonic is not used.";
 
 		// MC 协议相关的内容
 		public override string PanasonicMc4031 => "Address out of range (starting device + number of writing points)";
@@ -441,6 +465,54 @@ namespace HslCommunication.Language
 		public override string DLTErrorInfoBit7 => "Reserve";
 		public override string DLTErrorWriteReadCheckFailed => "Verify that the data after writing is consistent with the previous data fails";
 
+		public override string DLT1997ErrorInfoBit0 => "Illegal data";
+		public override string DLT1997ErrorInfoBit1 => "Data identification error";
+		public override string DLT1997ErrorInfoBit2 => "The password is wrong";
+		public override string DLT1997ErrorInfoBit4 => "The number of annual time zones is out of range";
+		public override string DLT1997ErrorInfoBit5 => "The number of daily hours is out of range";
+		public override string DLT1997ErrorInfoBit6 => "The number of rates is out of range";
+
+		/***********************************************************************************
+		 * 
+		 *   DLT698 相关
+		 * 
+		 ************************************************************************************/
+		public override string DLT698Error01 => "hardware failure";
+		public override string DLT698Error02 => "temporarily invalid";
+		public override string DLT698Error03 => "refuse to read and write";
+		public override string DLT698Error04 => "object is undefined";
+		public override string DLT698Error05 => "Object interface class does not conform to";
+		public override string DLT698Error06 => "object does not exist";
+		public override string DLT698Error07 => "Type mismatch";
+		public override string DLT698Error08 => "out of bounds";
+		public override string DLT698Error09 => "data block not available";
+		public override string DLT698Error10 => "Framing transfer canceled";
+		public override string DLT698Error11 => "Not in framed transmission state";
+		public override string DLT698Error12 => "Block write cancel";
+		public override string DLT698Error13 => "No block write state exists";
+		public override string DLT698Error14 => "Invalid data block sequence number";
+		public override string DLT698Error15 => "wrong password/unauthorized";
+		public override string DLT698Error16 => "Communication rate cannot be changed";
+		public override string DLT698Error17 => "Year time zone exceeded";
+		public override string DLT698Error18 => "The number of time slots exceeds";
+		public override string DLT698Error19 => "Exceeded rate";
+		public override string DLT698Error20 => "Security authentication mismatch";
+		public override string DLT698Error21 => "Repeat recharge";
+		public override string DLT698Error22 => "ESAM verification failed";
+		public override string DLT698Error23 => "Security authentication failed";
+		public override string DLT698Error24 => "Customer ID does not match";
+		public override string DLT698Error25 => "Wrong number of recharges";
+		public override string DLT698Error26 => "Super hoarding of electricity";
+		public override string DLT698Error27 => "abnormal address";
+		public override string DLT698Error28 => "Symmetric decryption error";
+		public override string DLT698Error29 => "Asymmetric decryption error";
+		public override string DLT698Error30 => "Signature error";
+		public override string DLT698Error31 => "Energy meter hangs";
+		public override string DLT698Error32 => "Invalid time tag";
+		public override string DLT698Error33 => "Request timed out";
+		public override string DLT698Error34 => "Incorrect P1P2 for ESAM";
+		public override string DLT698Error35 => "LC errors for ESAM";
+
 
 		/***********************************************************************************
 		 * 
@@ -540,6 +612,106 @@ namespace HslCommunication.Language
 		public override string LsisCnet1332 => "All the blocks shall be requested of the identical data type in the case of Individual Read/Write";
 		public override string LsisCnet1432 => "Data value unavailable to convert to Hex";
 		public override string LsisCnet7132 => "Request exceeds the area each device supports.";
+
+
+		/***********************************************************************************
+		 * 
+		 *   YASKAWA
+		 * 
+		 ************************************************************************************/
+		public override string YRC1010 => "Command exception";
+		public override string YRC1011 => "Command operand abnormal";
+		public override string YRC1012 => "Command operand value is out of range";
+		public override string YRC1013 => "Command operand length is abnormal";
+		public override string YRC1020 => "Too many device files";
+		public override string YRC2010 => "Robot in action";
+		public override string YRC2020 => "Teaching programmer HOLD is stopping";
+		public override string YRC2030 => "Box HOLD is stopped";
+		public override string YRC2040 => "External HOLD";
+		public override string YRC2050 => "Command HOLD";
+		public override string YRC2060 => "False alarm is occurring";
+		public override string YRC2070 => "Servo ON";
+		public override string YRC2080 => "Different modes";
+		public override string YRC2090 => "He accesses the file through other functions";
+		public override string YRC2100 => "The remote command is not set";
+		public override string YRC2110 => "This data cannot be accessed";
+		public override string YRC2120 => "This data cannot be read";
+		public override string YRC2130 => "Edit";
+		public override string YRC2150 => "Coordinate transformation function is executing";
+		public override string YRC3010 => "Please connect to the servo power";
+		public override string YRC3040 => "Please check the origin position";
+		public override string YRC3050 => "Please confirm location";
+		public override string YRC3070 => "No current value generated";
+		public override string YRC3220 => "Panel lock mode / cycle inhibit signal received information";
+		public override string YRC3230 => "Panel lock, start to prohibit signal to receive information";
+		public override string YRC3350 => "User coordinates cannot be taught";
+		public override string YRC3360 => "The user coordinate file is corrupted";
+		public override string YRC3370 => "Different control axis groups";
+		public override string YRC3380 => "Different base axis data";
+		public override string YRC3390 => "Relative JOB cannot be changed (when CVTRJ)";
+		public override string YRC3400 => "Prohibit calling the main program (parameter)";
+		public override string YRC3410 => "Prohibit calling the main program (lights up during operation)";
+		public override string YRC3420 => "Prohibit calling the main program (teaching)";
+		public override string YRC3430 => "The verification between robots cannot be defined";
+		public override string YRC3450 => "Servo power cannot be switched on";
+		public override string YRC3460 => "Cannot set coordinate system";
+		public override string YRC4010 => "Insufficient storage capacity (program login storage)";
+		public override string YRC4012 => "Insufficient storage capacity (positioner login storage)";
+		public override string YRC4020 => "Prohibit program editing";
+		public override string YRC4030 => "A program with the same name exists";
+		public override string YRC4040 => "No program specified";
+		public override string YRC4060 => "Please set the execution program";
+		public override string YRC4120 => "Corrupted location data";
+		public override string YRC4130 => "No location data";
+		public override string YRC4140 => "Different types of location variables";
+		public override string YRC4150 => "Program END command of non-main program";
+		public override string YRC4170 => "Command data is corrupted";
+		public override string YRC4190 => "Inappropriate text in the program name";
+		public override string YRC4200 => "Inappropriate text in the label name";
+		public override string YRC4230 => "There are commands that cannot be used in this system";
+		public override string YRC4420 => "The transformation procedure has steps";
+		public override string YRC4430 => "This program has been changed";
+		public override string YRC4480 => "Please teach user coordinates";
+		public override string YRC4490 => "Relative JOB/Independent control function is not licensed";
+		public override string YRC5110 => "Syntax error (syntax of command)";
+		public override string YRC5120 => "Positioner data is abnormal";
+		public override string YRC5130 => "No NOP or END command";
+		public override string YRC5170 => "Format error (contrary to writing)";
+		public override string YRC5180 => "Inappropriate number of data";
+		public override string YRC5200 => "Out of data range";
+		public override string YRC5310 => "Syntax error (other than command)";
+		public override string YRC5340 => "The simulation command is specified incorrectly";
+		public override string YRC5370 => "Condition data record has errors";
+		public override string YRC5390 => "There is an error in the program data record";
+		public override string YRC5430 => "System inconsistency";
+		public override string YRC5480 => "Different types of welding functions";
+
+
+		/***********************************************************************************
+		 * 
+		 *   Vigor
+		 * 
+		 ************************************************************************************/
+		public override string Vigor02 => "Communication SUM Check Error";
+		public override string Vigor04 => "The number of data bytes or components is 0";
+		public override string Vigor06 => "Data address is out of range";
+		public override string Vigor08 => "ASCII conversion error";
+		public override string Vigor31 => "No such command";
+
+
+		/***********************************************************************************
+		 * 
+		 *   YASKAWA
+		 * 
+		 ************************************************************************************/
+		public override string Memobus01 => "SFC exception";
+		public override string Memobus02 => "The reference number is abnormal";
+		public override string Memobus03 => "The number of data is abnormal";
+		public override string Memobus40 => "The register type is incorrect";
+		public override string Memobus41 => "The data type is wrong";
+		public override string Memobus42 => "The register type of this site is incorrect";
+
+
 
 #pragma warning restore CS1591 // 缺少对公共可见类型或成员的 XML 注释
 

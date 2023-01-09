@@ -14,7 +14,7 @@ namespace HslCommunication.Profinet.Yokogawa
 		/// 获取横河PLC的错误的具体描述信息
 		/// </summary>
 		/// <param name="code">错误码</param>
-		/// <returns></returns>
+		/// <returns>错误的描述信息</returns>
 		public static string GetErrorMsg(byte code )
 		{
 			switch (code)

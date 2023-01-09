@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using HslCommunication.BasicFramework;
 using System.IO;
+using HslCommunication.Core.Address;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -70,7 +71,7 @@ namespace HslCommunication.Profinet.AllenBradley
 			byte dst  = (byte)HslHelper.ExtractParameter( ref address, "dst", this.DstNode );
 			byte src  = (byte)HslHelper.ExtractParameter( ref address, "src", this.SrcNode );
 
-			OperateResult<byte[]> build = AllenBradleyDF1Serial.BuildProtectedTypedLogicalRead( dst, src, (int)incrementCount.GetCurrentValue( ), address, length );
+			OperateResult<byte[]> build = AllenBradleyDF1Serial.BuildProtectedTypedLogicalReadWithThreeAddressFields( dst, src, (int)incrementCount.GetCurrentValue( ), address, length );
 			if (!build.IsSuccess) return build;
 
 			OperateResult<byte[]> read = ReadFromCoreServer( PackCommand( stat, build.Content ) );
@@ -91,7 +92,7 @@ namespace HslCommunication.Profinet.AllenBradley
 			byte dst  = (byte)HslHelper.ExtractParameter( ref address, "dst", this.DstNode );
 			byte src  = (byte)HslHelper.ExtractParameter( ref address, "src", this.SrcNode );
 
-			OperateResult<byte[]> build = AllenBradleyDF1Serial.BuildProtectedTypedLogicalWrite( dst, src, (int)incrementCount.GetCurrentValue( ), address, value );
+			OperateResult<byte[]> build = AllenBradleyDF1Serial.BuildProtectedTypedLogicalWriteWithThreeAddressFields( dst, src, (int)incrementCount.GetCurrentValue( ), address, value );
 			if (!build.IsSuccess) return build;
 
 			OperateResult<byte[]> read = ReadFromCoreServer( PackCommand( stat, build.Content ) );
@@ -154,9 +155,7 @@ namespace HslCommunication.Profinet.AllenBradley
 			ms.WriteByte( 0x03 );
 			ms.Write( check, 0, check.Length );
 
-			byte[] buffer = ms.ToArray( );
-			ms.Dispose( );
-			return buffer;
+			return ms.ToArray( );
 		}
 
 		#endregion
@@ -169,9 +168,43 @@ namespace HslCommunication.Profinet.AllenBradley
 
 		#region Static Helper
 
+		private static void AddLengthToMemoryStream( MemoryStream ms, ushort value )
+		{
+			if (value < 255)
+				ms.WriteByte( (byte)value );                     // File Number
+			else
+			{
+				ms.WriteByte( 0xFF );
+				ms.WriteByte( BitConverter.GetBytes( value )[0] );
+				ms.WriteByte( BitConverter.GetBytes( value )[1] );
+			}
+		}
+
+		/// <inheritdoc cref="BuildProtectedTypedLogicalReadWithThreeAddressFields(byte, byte, int, string, ushort)"/>
+		public static OperateResult<byte[]> BuildProtectedTypedLogicalReadWithThreeAddressFields( int tns, string address, ushort length )
+		{
+			var analysis = AllenBradleySLCAddress.ParseFrom( address );
+			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+
+			// AB PLC DF1手册 Page 104
+			MemoryStream ms = new MemoryStream( );
+			ms.WriteByte( 0x0F );                                            // Command
+			ms.WriteByte( 0x00 );                                            // STS
+			ms.WriteByte( BitConverter.GetBytes( tns )[0] );
+			ms.WriteByte( BitConverter.GetBytes( tns )[1] );
+			ms.WriteByte( 0xA2 );                                            // Function
+			ms.WriteByte( BitConverter.GetBytes( length )[0] );              // Bytes Length
+			AddLengthToMemoryStream( ms, analysis.Content.DbBlock );         // file number
+			ms.WriteByte( analysis.Content.DataCode );                       // File Type
+			AddLengthToMemoryStream( ms, (ushort)analysis.Content.AddressStart );    // element number
+			AddLengthToMemoryStream( ms, 0x00 );                             // sub-element number
+
+			return OperateResult.CreateSuccessResult( ms.ToArray( ) );
+		}
+
 		/// <summary>
-		/// 构建0F-A2命令码的报文读取指令，用来读取文件数据。适用 Micro-Logix1000,SLC500,SLC 5/03,SLC 5/04，地址示例：N7:1<br />
-		/// Construct a message read instruction of 0F-A2 command code to read file data. Applicable to Micro-Logix1000, SLC500, SLC 5/03, SLC 5/04, address example: N7:1
+		/// 构建0F-A2命令码的报文读取指令，用来读取文件数据。适用 Micro-Logix1000,SLC500,SLC 5/03,SLC 5/04, PLC-5，地址示例：N7:1<br />
+		/// Construct a message read instruction of 0F-A2 command code to read file data. Applicable to Micro-Logix1000, SLC500, SLC 5/03, SLC 5/04, PLC-5, address example: N7:1
 		/// </summary>
 		/// <param name="dstNode">目标节点号</param>
 		/// <param name="srcNode">原节点号</param>
@@ -182,32 +215,40 @@ namespace HslCommunication.Profinet.AllenBradley
 		/// <remarks>
 		/// 对于SLC 5/01或SLC 5/02而言，一次最多读取82个字节。对于 03 或是 04 为225，236字节取决于是否应用DF1驱动
 		/// </remarks>
-		public static OperateResult<byte[]> BuildProtectedTypedLogicalRead( byte dstNode, byte srcNode, int tns, string address, ushort length )
+		public static OperateResult<byte[]> BuildProtectedTypedLogicalReadWithThreeAddressFields( byte dstNode, byte srcNode, int tns, string address, ushort length )
 		{
-			var analysis = AllenBradleySLCNet.AnalysisAddress( address );
+			var build = BuildProtectedTypedLogicalReadWithThreeAddressFields( tns, address, length );
+			if (!build.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( build );
+
+			return OperateResult.CreateSuccessResult( SoftBasic.SpliceArray( new byte[] { dstNode, srcNode }, build.Content ) );
+		}
+
+		/// <inheritdoc cref="BuildProtectedTypedLogicalWriteWithThreeAddressFields(byte, byte, int, string, byte[])"/>
+		public static OperateResult<byte[]> BuildProtectedTypedLogicalWriteWithThreeAddressFields( int tns, string address, byte[] data )
+		{
+			var analysis = AllenBradleySLCAddress.ParseFrom( address );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
 			// AB PLC DF1手册 Page 104
-			byte[] buffer = new byte[12];
-			buffer[ 0] = dstNode;
-			buffer[ 1] = srcNode;
-			buffer[ 2] = 0x0F;                                            // Command
-			buffer[ 3] = 0x00;                                            // STS
-			buffer[ 4] = BitConverter.GetBytes( tns )[0];
-			buffer[ 5] = BitConverter.GetBytes( tns )[1];
-			buffer[ 6] = 0xA2;                                            // Function
-			buffer[ 7] = BitConverter.GetBytes( length )[0];              // Bytes Length
-			buffer[ 8] = analysis.Content2;                               // File Number
-			buffer[ 9] = analysis.Content1;                               // File Type
-			buffer[10] = BitConverter.GetBytes( analysis.Content3 )[0];   // Offset
-			buffer[11] = BitConverter.GetBytes( analysis.Content3 )[1];
+			MemoryStream ms = new MemoryStream( );
+			ms.WriteByte( 0x0F );                                            // Command
+			ms.WriteByte( 0x00 );                                            // STS
+			ms.WriteByte( BitConverter.GetBytes( tns )[0] );
+			ms.WriteByte( BitConverter.GetBytes( tns )[1] );
+			ms.WriteByte( 0xAA );                                            // Function
+			ms.WriteByte( BitConverter.GetBytes( data.Length )[0] );         // Bytes Length
+			AddLengthToMemoryStream( ms, analysis.Content.DbBlock );         // file number
+			ms.WriteByte( analysis.Content.DataCode );                       // File Type
+			AddLengthToMemoryStream( ms, (ushort)analysis.Content.AddressStart );    // element number
+			AddLengthToMemoryStream( ms, 0x00 );                             // sub-element number
 
-			return OperateResult.CreateSuccessResult( buffer );
+			ms.Write( data );
+			return OperateResult.CreateSuccessResult( ms.ToArray( ) );
 		}
 
 		/// <summary>
-		/// 构建0F-AA命令码的写入读取指令，用来写入文件数据。适用 Micro-Logix1000,SLC500,SLC 5/03,SLC 5/04，地址示例：N7:1<br />
-		/// Construct a write and read command of 0F-AA command code to write file data. Applicable to Micro-Logix1000, SLC500, SLC 5/03, SLC 5/04, address example: N7:1
+		/// 构建0F-AA命令码的写入读取指令，用来写入文件数据。适用 Micro-Logix1000,SLC500,SLC 5/03,SLC 5/04, PLC-5，地址示例：N7:1<br />
+		/// Construct a write and read command of 0F-AA command code to write file data. Applicable to Micro-Logix1000, SLC500, SLC 5/03, SLC 5/04, PLC-5, address example: N7:1
 		/// </summary>
 		/// <param name="dstNode">目标节点号</param>
 		/// <param name="srcNode">原节点号</param>
@@ -218,28 +259,53 @@ namespace HslCommunication.Profinet.AllenBradley
 		/// <remarks>
 		/// 对于SLC 5/01或SLC 5/02而言，一次最多读取82个字节。对于 03 或是 04 为225，236字节取决于是否应用DF1驱动
 		/// </remarks>
-		public static OperateResult<byte[]> BuildProtectedTypedLogicalWrite( byte dstNode, byte srcNode, int tns, string address, byte[] data )
+		public static OperateResult<byte[]> BuildProtectedTypedLogicalWriteWithThreeAddressFields( byte dstNode, byte srcNode, int tns, string address, byte[] data )
 		{
-			var analysis = AllenBradleySLCNet.AnalysisAddress( address );
+			var build = BuildProtectedTypedLogicalWriteWithThreeAddressFields( tns, address, data );
+			if (!build.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( build );
+			
+			return OperateResult.CreateSuccessResult( SoftBasic.SpliceArray( new byte[] { dstNode, srcNode }, build.Content ) );
+		}
+
+		/// <summary>
+		/// 构建0F-AB的掩码写入的功能
+		/// </summary>
+		/// <param name="tns">消息号</param>
+		/// <param name="address">PLC的地址信息</param>
+		/// <param name="bitIndex">位索引信息</param>
+		/// <param name="value">通断值</param>
+		/// <returns>命令报文</returns>
+		public static OperateResult<byte[]> BuildProtectedTypedLogicalMaskWithThreeAddressFields( int tns, string address, int bitIndex, bool value )
+		{
+			int mask = 1 << bitIndex;
+			var analysis = AllenBradleySLCAddress.ParseFrom( address );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
-			// AB PLC DF1手册 Page 104
-			byte[] buffer = new byte[12 + data.Length];
-			buffer[ 0] = dstNode;
-			buffer[ 1] = srcNode;
-			buffer[ 2] = 0x0F;                                            // Command
-			buffer[ 3] = 0x00;                                            // STS
-			buffer[ 4] = BitConverter.GetBytes( tns )[0];
-			buffer[ 5] = BitConverter.GetBytes( tns )[1];
-			buffer[ 6] = 0xAA;                                            // Function
-			buffer[ 7] = BitConverter.GetBytes( data.Length )[0];         // Bytes Length
-			buffer[ 8] = analysis.Content2;                               // File Number
-			buffer[ 9] = analysis.Content1;                               // File Type
-			buffer[10] = BitConverter.GetBytes( analysis.Content3 )[0];   // Offset
-			buffer[11] = BitConverter.GetBytes( analysis.Content3 )[1];
+			MemoryStream ms = new MemoryStream( );
+			ms.WriteByte( 0x0F );                                            // Command
+			ms.WriteByte( 0x00 );                                            // STS
+			ms.WriteByte( BitConverter.GetBytes( tns )[0] );
+			ms.WriteByte( BitConverter.GetBytes( tns )[1] );
+			ms.WriteByte( 0xAB );                                            // Function
+			ms.WriteByte( 0x02 );                                            // Bytes Length
+			AddLengthToMemoryStream( ms, analysis.Content.DbBlock );         // file number
+			ms.WriteByte( analysis.Content.DataCode );                       // File Type
+			AddLengthToMemoryStream( ms, (ushort)analysis.Content.AddressStart );    // element number
+			AddLengthToMemoryStream( ms, 0x00 );                             // sub-element number
 
-			data.CopyTo( buffer, 12 );
-			return OperateResult.CreateSuccessResult( buffer );
+			ms.WriteByte( BitConverter.GetBytes( mask )[0] );
+			ms.WriteByte( BitConverter.GetBytes( mask )[1] );
+			if (value)
+			{
+				ms.WriteByte( BitConverter.GetBytes( mask )[0] );
+				ms.WriteByte( BitConverter.GetBytes( mask )[1] );
+			}
+			else
+			{
+				ms.WriteByte( 0x00 );
+				ms.WriteByte( 0x00 );
+			}
+			return OperateResult.CreateSuccessResult( ms.ToArray( ) );
 		}
 
 		/// <summary>
@@ -283,7 +349,6 @@ namespace HslCommunication.Profinet.AllenBradley
 				}
 
 				content = ms.ToArray( );
-				ms.Dispose( );
 				if (content[3] == 0xF0) return new OperateResult<byte[]>( GetExtStatusDescription( content[6] ) );
 				if (content[3] != 0x00) return new OperateResult<byte[]>( GetStatusDescription( content[3] ) );
 

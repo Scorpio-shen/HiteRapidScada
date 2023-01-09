@@ -123,7 +123,9 @@ namespace HslCommunication.BasicFramework
 	[Serializable]
 	public abstract class ExceptionArgs
 	{
-		/// <inheritdoc/>
+		/// <summary>
+		/// 携带的额外的消息类对象
+		/// </summary>
 		public virtual string Message => string.Empty;
 	}
 }

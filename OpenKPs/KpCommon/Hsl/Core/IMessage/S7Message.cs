@@ -9,19 +9,13 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// 西门子S7协议的消息解析规则
 	/// </summary>
-	public class S7Message : INetMessage
+	public class S7Message : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 4;
 
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal(byte[] token)
+		public override bool CheckHeadBytesLegal(byte[] token)
 		{
 			if (HeadBytes == null) return false;
 
@@ -35,15 +29,14 @@ namespace HslCommunication.Core.IMessage
 		public int GetContentLengthByHeadBytes( )
 		{
 			if (HeadBytes?.Length >= 4)
-				return HeadBytes[2] * 256 + HeadBytes[3] - 4;
+			{
+				int length = HeadBytes[2] * 256 + HeadBytes[3] - 4;
+				if (length < 0) length = 0;
+				return length;
+			}
 			else
 				return 0;
 		}
 
-		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => 0;
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 	}
 }

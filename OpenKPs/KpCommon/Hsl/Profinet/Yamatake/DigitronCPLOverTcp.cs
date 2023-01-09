@@ -24,10 +24,13 @@ namespace HslCommunication.Profinet.Yamatake
 		/// </summary>
 		public DigitronCPLOverTcp( )
 		{
-			Station = 1;
-			WordLength = 1;
+			Station       = 1;
+			WordLength    = 1;
 			ByteTransform = new RegularByteTransform( );
 		}
+
+		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => new SpecifiedCharacterMessage( AsciiControl.CR, AsciiControl.LF );
 
 		#endregion
 
@@ -37,25 +40,6 @@ namespace HslCommunication.Profinet.Yamatake
 		/// 获取或设置当前的站号信息
 		/// </summary>
 		public byte Station { get; set; }
-
-		#endregion
-
-		#region Override
-
-		/// <inheritdoc/>
-		protected override OperateResult<byte[]> ReceiveByMessage( Socket socket, int timeOut, INetMessage netMessage, Action<long, long> reportProgress = null )
-		{
-			return ReceiveCommandLineFromSocket( socket, 0x0D, 0x0A, timeOut );
-		}
-
-#if !NET20 && !NET35
-
-		/// <inheritdoc/>
-		protected async override Task<OperateResult<byte[]>> ReceiveByMessageAsync( Socket socket, int timeOut, INetMessage netMessage, Action<long, long> reportProgress = null )
-		{
-			return await ReceiveCommandLineFromSocketAsync( socket, 0x0D, 0x0A, timeOut );
-		}
-#endif
 
 		#endregion
 

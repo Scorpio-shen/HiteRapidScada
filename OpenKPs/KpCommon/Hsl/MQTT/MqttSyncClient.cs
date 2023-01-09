@@ -13,6 +13,8 @@ using HslCommunication.Reflection;
 using Newtonsoft.Json.Linq;
 using System.IO;
 using HslCommunication.Enthernet;
+using System.Security.Cryptography;
+using HslCommunication.Core.Security;
 #if NET20 || NET35 || NET451
 using System.Drawing;
 #endif
@@ -27,17 +29,29 @@ namespace HslCommunication.MQTT
 	/// The client program based on MQTT protocol for synchronous access supports synchronous access to the server's data information and timely feedback of results,
 	/// When the server starts the file function, it also supports file upload, download, and delete operations.
 	/// </summary>
+	/// <remarks>
+	/// 在最新的V10.2.0及以上版本中，本客户端支持加密模式，启用加密模式后，就无法通过抓包的报文来分析出用户名密码，以及通信的数据细节，详细可以参考API文档。
+	/// </remarks>
 	/// <example>
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test" title="简单的实例化" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test2" title="带用户名密码的实例化" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test3" title="连接示例" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test4" title="读取数据示例" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test5" title="带进度报告示例" />
-	/// 当MqttServer注册了远程RPC接口的时候，例如将一个plc对象注册是接口对象
+	/// 当MqttServer注册了远程RPC接口的时候，例如将一个plc对象注册是接口对象，或是自定义的接口内容
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test11" title="RPC接口读取" />
+	/// 服务器都有什么RPC接口呢？可以通过下面的方式知道
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test12" title="RPC接口列表" />
+	/// 关于加密模式，在不加密的情况下，用户名及密码，还有请求的数据信息会被第三方软件窃取，从而泄露一些关键的数据信息，如果使用了HslCommunicationV10.2.0版本以上创建的MQTTServer，
+	/// 那么可以在客户端使用加密模式，加密使用RSA+AES混合加密，密钥动态生成，在保证效率的同时，具有很高的安全性。客户端使用加密如下：
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test13" title="加密举例" />
 	/// 下面演示文件部分的功能的接口方法，主要包含，上传，下载，删除，遍历操作
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test6" title="下载文件功能" />
+	/// 在实际的窗体界面开发中，会更加的复杂，有个按钮点击下载，还需要支持取消下载操作。可以参考如下的代码：<br />
+	/// <code lang="cs" source="TestProject\HslCommunicationDemo\MQTT\FormMqttFileClient.cs" region="Download Sample" title="带取消的下载功能" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test7" title="上传文件功能" />
+	/// 在实际的窗体界面开发中，会更加的复杂，有个按钮点击上传，还需要支持取消上传操作。可以参考如下的代码：<br />
+	/// <code lang="cs" source="TestProject\HslCommunicationDemo\MQTT\FormMqttFileClient.cs" region="Upload File" title="带取消的上传功能" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test8" title="删除文件功能" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test9" title="遍历指定目录的文件名功能" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MqttSyncClientSample.cs" region="Test10" title="遍历指定目录的所有子目录" />
@@ -51,6 +65,7 @@ namespace HslCommunication.MQTT
 		/// 实例化一个MQTT的同步客户端<br />
 		/// Instantiate an MQTT synchronization client
 		/// </summary>
+		/// <param name="options">连接的参数信息，可以指定IP地址，端口，账户名，密码，客户端ID信息</param>
 		public MqttSyncClient( MqttConnectionOptions options )
 		{
 			this.ByteTransform     = new RegularByteTransform( );
@@ -59,7 +74,7 @@ namespace HslCommunication.MQTT
 			this.Port              = options.Port;
 			this.incrementCount    = new SoftIncrementCount( ushort.MaxValue, 1 );
 			this.ConnectTimeOut    = options.ConnectTimeout;
-			this.receiveTimeOut    = 60_000;
+			this.ReceiveTimeOut    = 60_000;
 		}
 
 		/// <summary>
@@ -68,7 +83,7 @@ namespace HslCommunication.MQTT
 		/// </summary>
 		/// <param name="ipAddress">IP地址信息</param>
 		/// <param name="port">端口号信息</param>
-		public MqttSyncClient(string ipAddress, int port )
+		public MqttSyncClient( string ipAddress, int port )
 		{
 			this.connectionOptions = new MqttConnectionOptions( ) { 
 				IpAddress = ipAddress,
@@ -78,7 +93,7 @@ namespace HslCommunication.MQTT
 			this.IpAddress         = ipAddress;
 			this.Port              = port;
 			this.incrementCount    = new SoftIncrementCount( ushort.MaxValue, 1 );
-			this.receiveTimeOut    = 60_000;
+			this.ReceiveTimeOut    = 60_000;
 		}
 
 		/// <summary>
@@ -104,10 +119,33 @@ namespace HslCommunication.MQTT
 
 		#region InitializationOnConnect
 
-		/// <inheritdoc/>
-		protected override OperateResult InitializationOnConnect( Socket socket )
+		private OperateResult InitializationMqttSocket( Socket socket, string protocol )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildConnectMqttCommand( this.connectionOptions, "HUSL" );
+			// 连接对象加密处理，和服务器进行交换密钥处理
+			RSACryptoServiceProvider rsa = null;
+			if (this.connectionOptions.UseRSAProvider)
+			{
+				cryptoServiceProvider = new RSACryptoServiceProvider( );
+
+				OperateResult sendKey = Send( socket, MqttHelper.BuildMqttCommand( 0xFF, null, HslSecurity.ByteEncrypt( cryptoServiceProvider.GetPEMPublicKey( ) ) ).Content );
+				if (!sendKey.IsSuccess) return sendKey;
+
+				OperateResult<byte, byte[]> key = ReceiveMqttMessage( socket, ReceiveTimeOut );
+				if (!key.IsSuccess) return key;
+
+				try
+				{
+					byte[] serverPublicToken = cryptoServiceProvider.DecryptLargeData( HslSecurity.ByteDecrypt( key.Content2 ) );
+					rsa = RSAHelper.CreateRsaProviderFromPublicKey( serverPublicToken );
+				}
+				catch (Exception ex)
+				{
+					socket?.Close( );
+					return new OperateResult( "RSA check failed: " + ex.Message );
+				}
+			}
+
+			OperateResult<byte[]> command = MqttHelper.BuildConnectMqttCommand( this.connectionOptions, protocol, rsa );
 			if (!command.IsSuccess) return command;
 
 			// 发送连接的报文信息
@@ -122,6 +160,21 @@ namespace HslCommunication.MQTT
 			OperateResult check = MqttHelper.CheckConnectBack( receive.Content1, receive.Content2 );
 			if (!check.IsSuccess) { socket?.Close( ); return check; }
 
+			if (this.connectionOptions.UseRSAProvider)
+			{
+				string key = Encoding.UTF8.GetString( cryptoServiceProvider.Decrypt( receive.Content2.RemoveBegin( 2 ), false ) );
+				this.aesCryptography = new AesCryptography( key );
+			}
+
+			return OperateResult.CreateSuccessResult( );
+		}
+
+		/// <inheritdoc/>
+		protected override OperateResult InitializationOnConnect( Socket socket )
+		{
+			OperateResult ini = InitializationMqttSocket( socket, "HUSL" );
+			if (!ini.IsSuccess) return ini;
+
 			this.incrementCount.ResetCurrentValue( );          // 重置消息计数
 			return OperateResult.CreateSuccessResult( );
 		}
@@ -130,10 +183,34 @@ namespace HslCommunication.MQTT
 
 		#region InitializationOnConnect Async
 #if !NET35 && !NET20
-		/// <inheritdoc/>
-		protected async override Task<OperateResult> InitializationOnConnectAsync( Socket socket )
+
+		private async Task<OperateResult> InitializationMqttSocketAsync( Socket socket, string protocol )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildConnectMqttCommand( this.connectionOptions, "HUSL" );
+			// 连接对象加密处理，和服务器进行交换密钥处理
+			RSACryptoServiceProvider rsa = null;
+			if (this.connectionOptions.UseRSAProvider)
+			{
+				cryptoServiceProvider = new RSACryptoServiceProvider( );
+
+				OperateResult sendKey = await SendAsync( socket, MqttHelper.BuildMqttCommand( 0xFF, null, HslSecurity.ByteEncrypt( cryptoServiceProvider.GetPEMPublicKey( ) ) ).Content );
+				if (!sendKey.IsSuccess) return sendKey;
+
+				OperateResult<byte, byte[]> key = await ReceiveMqttMessageAsync( socket, ReceiveTimeOut );
+				if (!key.IsSuccess) return key;
+
+				try
+				{
+					byte[] serverPublicToken = cryptoServiceProvider.DecryptLargeData( HslSecurity.ByteDecrypt( key.Content2 ) );
+					rsa = RSAHelper.CreateRsaProviderFromPublicKey( serverPublicToken );
+				}
+				catch (Exception ex)
+				{
+					socket?.Close( );
+					return new OperateResult( "RSA check failed: " + ex.Message );
+				}
+			}
+
+			OperateResult<byte[]> command = MqttHelper.BuildConnectMqttCommand( this.connectionOptions, protocol, rsa );
 			if (!command.IsSuccess) return command;
 
 			// 发送连接的报文信息
@@ -147,6 +224,21 @@ namespace HslCommunication.MQTT
 			// 检查连接的返回状态是否正确
 			OperateResult check = MqttHelper.CheckConnectBack( receive.Content1, receive.Content2 );
 			if (!check.IsSuccess) { socket?.Close( ); return check; }
+
+			if (this.connectionOptions.UseRSAProvider)
+			{
+				string key = Encoding.UTF8.GetString( cryptoServiceProvider.Decrypt( receive.Content2.RemoveBegin( 2 ), false ) );
+				this.aesCryptography = new AesCryptography( key );
+			}
+
+			return OperateResult.CreateSuccessResult( );
+		}
+
+		/// <inheritdoc/>
+		protected async override Task<OperateResult> InitializationOnConnectAsync( Socket socket )
+		{
+			OperateResult ini = await InitializationMqttSocketAsync( socket, "HUSL" );
+			if (!ini.IsSuccess) return ini;
 
 			this.incrementCount.ResetCurrentValue( );          // 重置消息计数
 			return OperateResult.CreateSuccessResult( );
@@ -204,11 +296,14 @@ namespace HslCommunication.MQTT
 			}
 		}
 
-		private OperateResult<byte[]> ReadMqttFromCoreServer( byte[] send, Action<long, long> sendProgress, Action<string, string> handleProgress, Action<long, long> receiveProgress )
+		private OperateResult<byte[]> ReadMqttFromCoreServer( byte control, byte flags, byte[] variableHeader, byte[] payLoad, 
+			Action<long, long> sendProgress, 
+			Action<string, string> handleProgress, 
+			Action<long, long> receiveProgress )
 		{
 			var result = new OperateResult<byte[]>( );
 			OperateResult<Socket> resultSocket = null;
-			InteractiveLock.Enter( );
+			this.pipeSocket.PipeLockEnter( );
 
 			try
 			{
@@ -216,20 +311,28 @@ namespace HslCommunication.MQTT
 				resultSocket = GetAvailableSocket( );
 				if (!resultSocket.IsSuccess)
 				{
-					IsSocketError = true;
+					this.pipeSocket.IsSocketError = true;
 					AlienSession?.Offline( );
-					InteractiveLock.Leave( );
+					this.pipeSocket.PipeLockLeave( );
 					result.CopyErrorFromOther( resultSocket );
 					return result;
 				}
 
-				OperateResult<byte, byte[]> read = ReadMqttFromCoreServer( resultSocket.Content, send, sendProgress, handleProgress, receiveProgress );
+				OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( control, flags, variableHeader, payLoad, this.aesCryptography );
+				if (!command.IsSuccess)
+				{
+					this.pipeSocket.PipeLockLeave( );
+					result.CopyErrorFromOther( command );
+					return result;
+				}
+
+				OperateResult<byte, byte[]> read = ReadMqttFromCoreServer( resultSocket.Content, command.Content, sendProgress, handleProgress, receiveProgress );
 				if (read.IsSuccess)
 				{
-					IsSocketError = false;
+					this.pipeSocket.IsSocketError = false;
 					if (read.Content1 >> 4 == MqttControlMessage.FAILED)
 					{
-						OperateResult<string, byte[]> extra = MqttHelper.ExtraMqttReceiveData( read.Content1, read.Content2 );
+						OperateResult<string, byte[]> extra = MqttHelper.ExtraMqttReceiveData( read.Content1, read.Content2, this.aesCryptography );
 						result.IsSuccess = false;
 						result.ErrorCode = int.Parse( extra.Content1 );
 						result.Message = Encoding.UTF8.GetString( extra.Content2 );
@@ -243,17 +346,17 @@ namespace HslCommunication.MQTT
 				}
 				else
 				{
-					IsSocketError = true;
+					this.pipeSocket.IsSocketError = true;
 					AlienSession?.Offline( );
 					result.CopyErrorFromOther( read );
 				}
 
 				ExtraAfterReadFromCoreServer( read );
-				InteractiveLock.Leave( );
+				this.pipeSocket.PipeLockLeave( );
 			}
 			catch
 			{
-				InteractiveLock.Leave( );
+				this.pipeSocket.PipeLockLeave( );
 				throw;
 			}
 
@@ -287,7 +390,7 @@ namespace HslCommunication.MQTT
 
 				if (server_back.Content2.Length != 16) return new OperateResult<byte, byte[]>( StringResources.Language.ReceiveDataLengthTooShort );
 				long already = BitConverter.ToInt64( server_back.Content2, 0 );
-				long total = BitConverter.ToInt64( server_back.Content2, 8 );
+				long total   = BitConverter.ToInt64( server_back.Content2, 8 );
 				sendProgress?.Invoke( already, total );
 				if (already == total) break;
 			}
@@ -310,11 +413,12 @@ namespace HslCommunication.MQTT
 			}
 		}
 
-		private async Task<OperateResult<byte[]>> ReadMqttFromCoreServerAsync( byte[] send, Action<long, long> sendProgress, Action<string, string> handleProgress, Action<long, long> receiveProgress )
+		private async Task<OperateResult<byte[]>> ReadMqttFromCoreServerAsync( byte control, byte flags, byte[] variableHeader, byte[] payLoad, 
+			Action<long, long> sendProgress, Action<string, string> handleProgress, Action<long, long> receiveProgress )
 		{
 			var result = new OperateResult<byte[]>( );
 			OperateResult<Socket> resultSocket = null;
-			InteractiveLock.Enter( );
+			await Task.Run( new Action( ( ) => this.pipeSocket.PipeLockEnter( ) ) );
 
 			try
 			{
@@ -322,20 +426,28 @@ namespace HslCommunication.MQTT
 				resultSocket = await GetAvailableSocketAsync( );
 				if (!resultSocket.IsSuccess)
 				{
-					IsSocketError = true;
+					this.pipeSocket.IsSocketError = true;
 					AlienSession?.Offline( );
-					InteractiveLock.Leave( );
+					this.pipeSocket.PipeLockLeave( );
 					result.CopyErrorFromOther( resultSocket );
 					return result;
 				}
 
-				OperateResult<byte, byte[]> read = await ReadMqttFromCoreServerAsync( resultSocket.Content, send, sendProgress, handleProgress, receiveProgress );
+				OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( control, flags, variableHeader, payLoad, this.aesCryptography );
+				if (!command.IsSuccess)
+				{
+					this.pipeSocket.PipeLockLeave( );
+					result.CopyErrorFromOther( command );
+					return result;
+				}
+
+				OperateResult<byte, byte[]> read = await ReadMqttFromCoreServerAsync( resultSocket.Content, command.Content, sendProgress, handleProgress, receiveProgress );
 				if (read.IsSuccess)
 				{
-					IsSocketError = false;
+					this.pipeSocket.IsSocketError = false;
 					if (read.Content1 >> 4 == MqttControlMessage.FAILED)
 					{
-						OperateResult<string, byte[]> extra = MqttHelper.ExtraMqttReceiveData( read.Content1, read.Content2 );
+						OperateResult<string, byte[]> extra = MqttHelper.ExtraMqttReceiveData( read.Content1, read.Content2, this.aesCryptography );
 						result.IsSuccess = false;
 						result.ErrorCode = int.Parse( extra.Content1 );
 						result.Message = Encoding.UTF8.GetString( extra.Content2 );
@@ -349,17 +461,17 @@ namespace HslCommunication.MQTT
 				}
 				else
 				{
-					IsSocketError = true;
+					this.pipeSocket.IsSocketError = true;
 					AlienSession?.Offline( );
 					result.CopyErrorFromOther( read );
 				}
 
 				ExtraAfterReadFromCoreServer( read );
-				InteractiveLock.Leave( );
+				this.pipeSocket.PipeLockLeave( );
 			}
 			catch
 			{
-				InteractiveLock.Leave( );
+				this.pipeSocket.PipeLockLeave( );
 				throw;
 			}
 			if (!isPersistentConn) resultSocket?.Content?.Close( );
@@ -384,18 +496,16 @@ namespace HslCommunication.MQTT
 		/// <param name="handleProgress">服务器处理数据的进度报告，第一个参数Topic自定义，通常用来传送操作百分比，第二个参数自定义，通常用来表示服务器消息</param>
 		/// <param name="receiveProgress">从服务器接收数据的进度报告，第一个参数为已接收数据，第二个参数为总接收数据</param>
 		/// <returns>服务器返回的数据信息</returns>
-		public OperateResult<string, byte[]> Read(string topic, byte[] payload, 
-			Action<long, long> sendProgress = null, 
-			Action<string, string> handleProgress = null, 
+		public OperateResult<string, byte[]> Read( string topic, byte[] payload,
+			Action<long, long> sendProgress = null,
+			Action<string, string> handleProgress = null,
 			Action<long, long> receiveProgress = null )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildPublishMqttCommand( topic, payload );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<string, byte[]>( command );
-
-			OperateResult<byte[]> read = ReadMqttFromCoreServer( command.Content, sendProgress, handleProgress, receiveProgress );
+			OperateResult<byte[]> read = ReadMqttFromCoreServer( MqttControlMessage.PUBLISH, 0x00, MqttHelper.BuildSegCommandByString( topic ), payload,
+				sendProgress, handleProgress, receiveProgress );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string, byte[]>( read );
 
-			return MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content );
+			return MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content, this.aesCryptography );
 		}
 
 		/// <summary>
@@ -474,13 +584,10 @@ namespace HslCommunication.MQTT
 		/// <returns>包含是否成功的api信息的列表</returns>
 		public OperateResult<MqttRpcApiInfo[]> ReadRpcApis( )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( MqttControlMessage.SUBSCRIBE, 0x00, MqttHelper.BuildSegCommandByString( "" ), null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<MqttRpcApiInfo[]>( command );
-
-			OperateResult<byte[]> read = ReadMqttFromCoreServer( command.Content, null, null, null );
+			OperateResult<byte[]> read = ReadMqttFromCoreServer( MqttControlMessage.SUBSCRIBE, 0x00, MqttHelper.BuildSegCommandByString( "" ), null, null, null, null );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<MqttRpcApiInfo[]>( read );
 
-			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content );
+			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content, this.aesCryptography );
 			if(!mqtt.IsSuccess) return OperateResult.CreateFailedResult<MqttRpcApiInfo[]>( mqtt );
 
 			return OperateResult.CreateSuccessResult( JArray.Parse( Encoding.UTF8.GetString( mqtt.Content2 ) ).ToObject<MqttRpcApiInfo[]>( ) );
@@ -498,13 +605,10 @@ namespace HslCommunication.MQTT
 		/// <returns>最近几日的连续的调用情况，例如[1,2,3]，表示前提调用1次，昨天调用2次，今天3次</returns>
 		public OperateResult<long[]> ReadRpcApiLog( string api )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( MqttControlMessage.PUBREL, 0x00, MqttHelper.BuildSegCommandByString( api ), null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<long[]>( command );
-
-			OperateResult<byte[]> read = ReadMqttFromCoreServer( command.Content, null, null, null );
+			OperateResult<byte[]> read = ReadMqttFromCoreServer( MqttControlMessage.PUBREL, 0x00, MqttHelper.BuildSegCommandByString( api ), null, null, null, null );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<long[]>( read );
 
-			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content );
+			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content, this.aesCryptography );
 			if (!mqtt.IsSuccess) return OperateResult.CreateFailedResult<long[]>( mqtt );
 
 			string content = Encoding.UTF8.GetString( mqtt.Content2 );
@@ -518,13 +622,10 @@ namespace HslCommunication.MQTT
 		/// <returns>消息列表对象</returns>
 		public OperateResult<string[]> ReadRetainTopics( )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( MqttControlMessage.PUBACK, 0x00, MqttHelper.BuildSegCommandByString( "" ), null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<string[]>( command );
-
-			OperateResult<byte[]> read = ReadMqttFromCoreServer( command.Content, null, null, null );
+			OperateResult<byte[]> read = ReadMqttFromCoreServer( MqttControlMessage.PUBACK, 0x00, MqttHelper.BuildSegCommandByString( "" ), null, null, null, null );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string[]>( read );
 
-			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content );
+			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content, this.aesCryptography );
 			if (!mqtt.IsSuccess) return OperateResult.CreateFailedResult<string[]>( mqtt );
 
 			return OperateResult.CreateSuccessResult( HslProtocol.UnPackStringArrayFromByte( mqtt.Content2 ) );
@@ -539,13 +640,10 @@ namespace HslCommunication.MQTT
 		/// <returns>消息列表对象</returns>
 		public OperateResult<MqttClientApplicationMessage> ReadTopicPayload( string topic, Action<long, long> receiveProgress = null )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( MqttControlMessage.PUBREC, 0x00, MqttHelper.BuildSegCommandByString( topic ), null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<MqttClientApplicationMessage>( command );
-
-			OperateResult<byte[]> read = ReadMqttFromCoreServer( command.Content, null, null, receiveProgress );
+			OperateResult<byte[]> read = ReadMqttFromCoreServer( MqttControlMessage.PUBREC, 0x00, MqttHelper.BuildSegCommandByString( topic ), null, null, null, receiveProgress );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<MqttClientApplicationMessage>( read );
 
-			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content );
+			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content, this.aesCryptography );
 			if (!mqtt.IsSuccess) return OperateResult.CreateFailedResult<MqttClientApplicationMessage>( mqtt );
 
 			return OperateResult.CreateSuccessResult( JObject.Parse( Encoding.UTF8.GetString( mqtt.Content2 ) ).ToObject<MqttClientApplicationMessage>( ) );
@@ -561,13 +659,11 @@ namespace HslCommunication.MQTT
 			Action<string, string> handleProgress = null,
 			Action<long, long> receiveProgress = null )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildPublishMqttCommand( topic, payload );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<string, byte[]>( command );
-
-			OperateResult<byte[]> read = await ReadMqttFromCoreServerAsync( command.Content, sendProgress, handleProgress, receiveProgress );
+			OperateResult<byte[]> read = await ReadMqttFromCoreServerAsync( MqttControlMessage.PUBLISH, 0x00, MqttHelper.BuildSegCommandByString( topic ), payload, 
+				sendProgress, handleProgress, receiveProgress );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string, byte[]>( read );
 
-			return MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content );
+			return MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content, this.aesCryptography );
 		}
 
 		/// <inheritdoc cref="ReadString(string, string, Action{long, long}, Action{string, string}, Action{long, long})"/>
@@ -605,13 +701,10 @@ namespace HslCommunication.MQTT
 		/// <inheritdoc cref="ReadRpcApis"/>
 		public async Task<OperateResult<MqttRpcApiInfo[]>> ReadRpcApisAsync( )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( MqttControlMessage.SUBSCRIBE, 0x00, MqttHelper.BuildSegCommandByString( "" ), null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<MqttRpcApiInfo[]>( command );
-
-			OperateResult<byte[]> read = await ReadMqttFromCoreServerAsync( command.Content, null, null, null );
+			OperateResult<byte[]> read = await ReadMqttFromCoreServerAsync( MqttControlMessage.SUBSCRIBE, 0x00, MqttHelper.BuildSegCommandByString( "" ), null, null, null, null );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<MqttRpcApiInfo[]>( read );
 
-			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content );
+			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content, this.aesCryptography );
 			if (!mqtt.IsSuccess) return OperateResult.CreateFailedResult<MqttRpcApiInfo[]>( mqtt );
 
 			return OperateResult.CreateSuccessResult( JArray.Parse( Encoding.UTF8.GetString( mqtt.Content2 ) ).ToObject<MqttRpcApiInfo[]>( ) );
@@ -620,13 +713,10 @@ namespace HslCommunication.MQTT
 		/// <inheritdoc cref="ReadRpcApiLog(string)"/>
 		public async Task<OperateResult<long[]>> ReadRpcApiLogAsync( string api )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( MqttControlMessage.PUBREL, 0x00, MqttHelper.BuildSegCommandByString( api ), null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<long[]>( command );
-
-			OperateResult<byte[]> read = await ReadMqttFromCoreServerAsync( command.Content, null, null, null );
+			OperateResult<byte[]> read = await ReadMqttFromCoreServerAsync( MqttControlMessage.PUBREL, 0x00, MqttHelper.BuildSegCommandByString( api ), null, null, null, null );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<long[]>( read );
 
-			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content );
+			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content, this.aesCryptography );
 			if (!mqtt.IsSuccess) return OperateResult.CreateFailedResult<long[]>( mqtt );
 
 			string content = Encoding.UTF8.GetString( mqtt.Content2 );
@@ -636,13 +726,10 @@ namespace HslCommunication.MQTT
 		/// <inheritdoc cref="ReadRetainTopics"/>
 		public async Task<OperateResult<string[]>> ReadRetainTopicsAsync( )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( MqttControlMessage.PUBACK, 0x00, MqttHelper.BuildSegCommandByString( "" ), null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<string[]>( command );
-
-			OperateResult<byte[]> read = await ReadMqttFromCoreServerAsync( command.Content, null, null, null );
+			OperateResult<byte[]> read = await ReadMqttFromCoreServerAsync( MqttControlMessage.PUBACK, 0x00, MqttHelper.BuildSegCommandByString( "" ), null, null, null, null );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string[]>( read );
 
-			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content );
+			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content, this.aesCryptography );
 			if (!mqtt.IsSuccess) return OperateResult.CreateFailedResult<string[]>( mqtt );
 
 			return OperateResult.CreateSuccessResult( HslProtocol.UnPackStringArrayFromByte( mqtt.Content2 ) );
@@ -651,13 +738,10 @@ namespace HslCommunication.MQTT
 		/// <inheritdoc cref="ReadTopicPayload(string, Action{long, long})"/>
 		public async Task<OperateResult<MqttClientApplicationMessage>> ReadTopicPayloadAsync( string topic, Action<long, long> receiveProgress = null )
 		{
-			OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( MqttControlMessage.PUBREC, 0x00, MqttHelper.BuildSegCommandByString( topic ), null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<MqttClientApplicationMessage>( command );
-
-			OperateResult<byte[]> read = await ReadMqttFromCoreServerAsync( command.Content, null, null, receiveProgress );
+			OperateResult<byte[]> read = await ReadMqttFromCoreServerAsync( MqttControlMessage.PUBREC, 0x00, MqttHelper.BuildSegCommandByString( topic ), null, null, null, receiveProgress );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<MqttClientApplicationMessage>( read );
 
-			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content );
+			OperateResult<string, byte[]> mqtt = MqttHelper.ExtraMqttReceiveData( MqttControlMessage.PUBLISH, read.Content, this.aesCryptography );
 			if (!mqtt.IsSuccess) return OperateResult.CreateFailedResult<MqttClientApplicationMessage>( mqtt );
 
 			return OperateResult.CreateSuccessResult( JObject.Parse( Encoding.UTF8.GetString( mqtt.Content2 ) ).ToObject<MqttClientApplicationMessage>( ) );
@@ -667,25 +751,17 @@ namespace HslCommunication.MQTT
 		#endregion
 
 		#region File Download Upload
+
+
 		private OperateResult<Socket> ConnectFileServer( byte code, string groups, string[] fileNames )
 		{
+			// 创建连接对象
 			OperateResult<Socket> socketResult = CreateSocketAndConnect( this.IpAddress, this.Port, this.ConnectTimeOut );
 			if (!socketResult.IsSuccess) return socketResult;
 
-			OperateResult<byte[]> command = MqttHelper.BuildConnectMqttCommand( this.connectionOptions, "FILE" );
-			if (!command.IsSuccess) { socketResult.Content?.Close( ); return OperateResult.CreateFailedResult<Socket>( command ); }
-
-			// 发送连接的报文信息
-			OperateResult send = Send( socketResult.Content, command.Content );
-			if (!send.IsSuccess) return OperateResult.CreateFailedResult<Socket>( send );
-
-			// 接收服务器端注册返回的报文信息
-			OperateResult<byte, byte[]> receive = ReceiveMqttMessage( socketResult.Content, ReceiveTimeOut );
-			if (!receive.IsSuccess) { socketResult.Content?.Close( ); return OperateResult.CreateFailedResult<Socket>( receive ); }
-
-			// 检查连接的返回状态是否正确
-			OperateResult check = MqttHelper.CheckConnectBack( receive.Content1, receive.Content2 );
-			if (!check.IsSuccess) { socketResult.Content?.Close( ); return OperateResult.CreateFailedResult<Socket>( check ); }
+			// 账户登录
+			OperateResult ini = InitializationMqttSocket( socketResult.Content, "FILE" );
+			if (!ini.IsSuccess) return OperateResult.CreateFailedResult<Socket>( ini );
 
 			// 发送文件分类
 			OperateResult sendClass = Send( socketResult.Content, MqttHelper.BuildMqttCommand( code, null,
@@ -705,14 +781,18 @@ namespace HslCommunication.MQTT
 			return OperateResult.CreateSuccessResult( socketResult.Content );
 		}
 
-		private OperateResult DownloadFileBase( string groups, string fileName, Action<long, long> processReport, object source )
+		private OperateResult DownloadFileBase( string groups, 
+			string fileName, 
+			Action<long, long> processReport, 
+			object source,
+			HslCancelToken cancelToken )
 		{
 			// connect server
 			OperateResult<Socket> socketResult = ConnectFileServer( MqttControlMessage.FileDownload, groups, new string[] { fileName } );
 			if (!socketResult.IsSuccess) return socketResult;
 
 			// 根据数据源分析
-			OperateResult result = ReceiveMqttFile( socketResult.Content, source, processReport );
+			OperateResult result = ReceiveMqttFile( socketResult.Content, source, processReport, this.aesCryptography, cancelToken );
 			if (!result.IsSuccess) return result;
 
 			socketResult.Content?.Close( );
@@ -725,12 +805,14 @@ namespace HslCommunication.MQTT
 		/// </summary>
 		/// <param name="groups">文件的类别，例如 Files/Personal/Admin 按照斜杠来区分 </param>
 		/// <param name="fileName">文件名称，例如 123.txt</param>
-		/// <param name="processReport">进度报告，第一个参数是已完成字节数，第二个参数是总字节数</param>
+		/// <param name="processReport">进度报告，第一个参数是已完成字节数，第二个参数是总字节数，如果不需要，传入NULL即可</param>
 		/// <param name="fileSaveName">本地保存的文件名</param>
+		/// <param name="cancelToken">取消下载操作的令牌</param>
 		/// <returns>是否下载成功</returns>
-		public OperateResult DownloadFile( string groups, string fileName, Action<long, long> processReport, string fileSaveName )
+		public OperateResult DownloadFile( string groups, string fileName, Action<long, long> processReport, string fileSaveName,
+			HslCancelToken cancelToken = null )
 		{
-			return DownloadFileBase( groups, fileName, processReport, fileSaveName );
+			return DownloadFileBase( groups, fileName, processReport, fileSaveName, cancelToken );
 		}
 
 		/// <summary>
@@ -741,10 +823,12 @@ namespace HslCommunication.MQTT
 		/// <param name="fileName">文件名称，例如 123.txt</param>
 		/// <param name="processReport">进度报告，第一个参数是已完成字节数，第二个参数是总字节数</param>
 		/// <param name="stream">数据流</param>
+		/// <param name="cancelToken">取消下载操作的令牌</param>
 		/// <returns>是否下载成功</returns>
-		public OperateResult DownloadFile( string groups, string fileName, Action<long, long> processReport, Stream stream )
+		public OperateResult DownloadFile( string groups, string fileName, Action<long, long> processReport, Stream stream,
+			HslCancelToken cancelToken = null )
 		{
-			return DownloadFileBase( groups, fileName, processReport, stream );
+			return DownloadFileBase( groups, fileName, processReport, stream, cancelToken );
 		}
 
 #if NET20 || NET35 || NET451
@@ -755,12 +839,14 @@ namespace HslCommunication.MQTT
 		/// <param name="groups">文件的类别，例如 Files/Personal/Admin 按照斜杠来区分</param>
 		/// <param name="fileName">文件名称，例如 123.txt</param>
 		/// <param name="processReport">进度报告，第一个参数是已完成字节数，第二个参数是总字节数</param>
+		/// <param name="cancelToken">取消下载操作的令牌</param>
 		/// <returns>如果下载成功，则携带图片资源对象</returns>
-		public OperateResult<Bitmap> DownloadBitmap( string groups, string fileName, Action<long, long> processReport )
+		public OperateResult<Bitmap> DownloadBitmap( string groups, string fileName, Action<long, long> processReport,
+			HslCancelToken cancelToken = null )
 		{
 			MemoryStream stream = new MemoryStream( );
 			Bitmap bitmap = null;
-			OperateResult result = DownloadFileBase( groups, fileName, processReport, stream );
+			OperateResult result = DownloadFileBase( groups, fileName, processReport, stream, cancelToken );
 			if (!result.IsSuccess)
 			{
 				stream.Dispose( );
@@ -781,18 +867,20 @@ namespace HslCommunication.MQTT
 		/// <param name="serverName">在服务器保存的文件名称</param>
 		/// <param name="fileTag">文件的额外的描述信息</param>
 		/// <param name="processReport">进度报告，第一个参数是已完成字节数，第二个参数是总字节数</param>
+		/// <param name="cancelToken">取消上传操作的令牌</param>
 		/// <returns>是否上传成功</returns>
 		public OperateResult UploadFile(
 			Bitmap bitmap,
 			string groups,
 			string serverName,
 			string fileTag,
-			Action<long, long> processReport )
+			Action<long, long> processReport,
+			HslCancelToken cancelToken = null )
 		{
 			MemoryStream stream = new MemoryStream( );
 			if (bitmap.RawFormat != null) bitmap.Save( stream, bitmap.RawFormat );
 			else bitmap.Save( stream, System.Drawing.Imaging.ImageFormat.Bmp );
-			OperateResult result = UploadFileBase( stream, groups, serverName, fileTag, processReport );
+			OperateResult result = UploadFileBase( stream, groups, serverName, fileTag, processReport, cancelToken );
 			stream.Dispose( );
 			return result;
 		}
@@ -807,13 +895,15 @@ namespace HslCommunication.MQTT
 		/// <param name="groups">文件的类别，例如 Files/Personal/Admin 按照斜杠来区分</param>
 		/// <param name="fileTag">文件的额外的描述信息</param>
 		/// <param name="processReport">进度报告，第一个参数是已完成字节数，第二个参数是总字节数</param>
+		/// <param name="cancelToken">用户取消的令牌信息</param>
 		/// <returns>是否成功的结果对象</returns>
 		private OperateResult UploadFileBase(
 			object source,
 			string groups,
 			string serverName,
 			string fileTag,
-			Action<long, long> processReport )
+			Action<long, long> processReport,
+			HslCancelToken cancelToken )
 		{
 			OperateResult<Socket> socketResult = ConnectFileServer( MqttControlMessage.FileUpload, groups, new string[] { serverName } );
 			if (!socketResult.IsSuccess) return socketResult;
@@ -821,12 +911,12 @@ namespace HslCommunication.MQTT
 			// 判断数据源格式
 			if (source is string fileName)
 			{
-				OperateResult result = SendMqttFile( socketResult.Content, fileName, serverName, fileTag, processReport );
+				OperateResult result = SendMqttFile( socketResult.Content, fileName, serverName, fileTag, processReport, this.aesCryptography, cancelToken );
 				if (!result.IsSuccess) return result;
 			}
 			else if (source is Stream stream)
 			{
-				OperateResult result = SendMqttFile( socketResult.Content, stream, serverName, fileTag, processReport );
+				OperateResult result = SendMqttFile( socketResult.Content, stream, serverName, fileTag, processReport, this.aesCryptography, cancelToken );
 				if (!result.IsSuccess) return result;
 			}
 			else
@@ -854,17 +944,19 @@ namespace HslCommunication.MQTT
 		/// <param name="serverName">服务器端保存的文件名</param>
 		/// <param name="fileTag">文件的额外的描述信息</param>
 		/// <param name="processReport">进度报告，第一个参数是已完成字节数，第二个参数是总字节数</param>
+		/// <param name="cancelToken">取消上传操作的令牌</param>
 		/// <returns>是否上传成功的结果对象</returns>
 		public OperateResult UploadFile(
 			string fileName,
 			string groups,
 			string serverName,
 			string fileTag,
-			Action<long, long> processReport )
+			Action<long, long> processReport,
+			HslCancelToken cancelToken = null )
 		{
 			if (!File.Exists( fileName )) return new OperateResult( StringResources.Language.FileNotExist );
 
-			return UploadFileBase( fileName, groups, serverName, fileTag, processReport );
+			return UploadFileBase( fileName, groups, serverName, fileTag, processReport, cancelToken );
 		}
 
 		/// <summary>
@@ -876,17 +968,41 @@ namespace HslCommunication.MQTT
 		/// <param name="groups">文件的类别，例如 Files/Personal/Admin 按照斜杠来区分</param>
 		/// <param name="fileTag">文件的额外的描述信息</param>
 		/// <param name="processReport">进度报告，第一个参数是已完成字节数，第二个参数是总字节数</param>
+		/// <param name="cancelToken">取消上传操作的令牌</param>
 		/// <returns>是否上传成功的结果对象</returns>
 		public OperateResult UploadFile(
 			string fileName,
 			string groups,
 			string fileTag,
-			Action<long, long> processReport )
+			Action<long, long> processReport,
+			HslCancelToken cancelToken = null )
 		{
 			if (!File.Exists( fileName )) return new OperateResult( StringResources.Language.FileNotExist );
 
 			FileInfo fileInfo = new FileInfo( fileName );
-			return UploadFileBase( fileName, groups, fileInfo.Name, fileTag, processReport );
+			return UploadFileBase( fileName, groups, fileInfo.Name, fileTag, processReport, cancelToken );
+		}
+
+		/// <summary>
+		/// 上传流给服务器，需要指定流，服务器保存的名字，以及上传到服务器的分类信息，支持进度汇报功能。<br />
+		/// To upload a stream to the server, you need to specify the stream, the name saved by the server, and the classification information uploaded to the server to support the progress reporting function.
+		/// </summary>
+		/// <param name="stream">流</param>
+		/// <param name="groups">文件的类别，例如 Files/Personal/Admin 按照斜杠来区分</param>
+		/// <param name="fileTag"></param>
+		/// <param name="serverName">文件的额外的描述信息</param>
+		/// <param name="processReport">进度报告，第一个参数是已完成字节数，第二个参数是总字节数</param>
+		/// <param name="cancelToken">取消上传操作的令牌</param>
+		/// <returns>是否上传成功的结果对象</returns>
+		public OperateResult UploadFile(
+			Stream stream,
+			string groups,
+			string serverName,
+			string fileTag,
+			Action<long, long> processReport,
+			HslCancelToken cancelToken = null )
+		{
+			return UploadFileBase( stream, groups, serverName, fileTag, processReport, cancelToken );
 		}
 
 		private OperateResult<T[]> DownloadStringArrays<T>( byte protocol, string groups, string[] fileNames )
@@ -1027,11 +1143,12 @@ namespace HslCommunication.MQTT
 		/// Get the file information of all subdirectories of the specified directory of the server folder, including the number of files in each subdirectory, the total size, and the last update time
 		/// </summary>
 		/// <param name="groups">文件的类别，例如 Files/Personal/Admin 按照斜杠来区分</param>
+		/// <param name="withLastFileInfo">是否让服务器携带最新的文件信息返回</param>
 		/// <returns>服务器文件大小的结果对象，单位：字节数</returns>
-		public OperateResult<GroupFileInfo[]> GetSubGroupFileInfos( string groups )
+		public OperateResult<GroupFileInfo[]> GetSubGroupFileInfos( string groups, bool withLastFileInfo = false )
 		{
 			// connect server
-			OperateResult<Socket> socketResult = ConnectFileServer( MqttControlMessage.FileFolderInfos, groups, null );
+			OperateResult<Socket> socketResult = ConnectFileServer( MqttControlMessage.FileFolderInfos, groups, withLastFileInfo ? new string[] { "1" } : null );
 			if (!socketResult.IsSuccess) return OperateResult.CreateFailedResult<GroupFileInfo[]>( socketResult );
 
 			// 接收服务器操作结果
@@ -1045,23 +1162,13 @@ namespace HslCommunication.MQTT
 #if !NET20 && !NET35
 		private async Task<OperateResult<Socket>> ConnectFileServerAsync( byte code, string groups, string[] fileNames )
 		{
+			// 创建连接对象
 			OperateResult<Socket> socketResult = await CreateSocketAndConnectAsync( this.IpAddress, this.Port, this.ConnectTimeOut );
 			if (!socketResult.IsSuccess) return socketResult;
 
-			OperateResult<byte[]> command = MqttHelper.BuildConnectMqttCommand( this.connectionOptions, "FILE" );
-			if (!command.IsSuccess) { socketResult.Content?.Close( ); return OperateResult.CreateFailedResult<Socket>( command ); }
-
-			// 发送连接的报文信息
-			OperateResult send = await SendAsync( socketResult.Content, command.Content );
-			if (!send.IsSuccess) return OperateResult.CreateFailedResult<Socket>( send );
-
-			// 接收服务器端注册返回的报文信息
-			OperateResult<byte, byte[]> receive = await ReceiveMqttMessageAsync( socketResult.Content, ReceiveTimeOut );
-			if (!receive.IsSuccess) { socketResult.Content?.Close( ); return OperateResult.CreateFailedResult<Socket>( receive ); }
-
-			// 检查连接的返回状态是否正确
-			OperateResult check = MqttHelper.CheckConnectBack( receive.Content1, receive.Content2 );
-			if (!check.IsSuccess) { socketResult.Content?.Close( ); return OperateResult.CreateFailedResult<Socket>( check ); }
+			// 账户登录
+			OperateResult ini = await InitializationMqttSocketAsync( socketResult.Content, "FILE" );
+			if (!ini.IsSuccess) return OperateResult.CreateFailedResult<Socket>( ini );
 
 			// 发送文件分类
 			OperateResult sendClass = await SendAsync( socketResult.Content, MqttHelper.BuildMqttCommand( code, null, 
@@ -1081,39 +1188,39 @@ namespace HslCommunication.MQTT
 			return OperateResult.CreateSuccessResult( socketResult.Content );
 		}
 
-		private async Task<OperateResult> DownloadFileBaseAsync( string groups, string fileName, Action<long, long> processReport, object source )
+		private async Task<OperateResult> DownloadFileBaseAsync( string groups, string fileName, Action<long, long> processReport, object source, HslCancelToken cancelToken )
 		{
 			// connect server
 			OperateResult<Socket> socketResult = await ConnectFileServerAsync( MqttControlMessage.FileDownload , groups, new string[] { fileName } );
 			if (!socketResult.IsSuccess) return socketResult;
 
 			// 根据数据源分析
-			OperateResult result = await ReceiveMqttFileAsync( socketResult.Content, source, processReport );
+			OperateResult result = await ReceiveMqttFileAsync( socketResult.Content, source, processReport, this.aesCryptography, cancelToken );
 			if (!result.IsSuccess) return result;
 
 			socketResult.Content?.Close( );
 			return OperateResult.CreateSuccessResult( );
 		}
 
-		/// <inheritdoc cref="DownloadFile(string, string, Action{long, long}, string)"/>
-		public async Task<OperateResult> DownloadFileAsync( string groups, string fileName, Action<long, long> processReport, string fileSaveName )
+		/// <inheritdoc cref="DownloadFile(string, string, Action{long, long}, string, HslCancelToken)"/>
+		public async Task<OperateResult> DownloadFileAsync( string groups, string fileName, Action<long, long> processReport, string fileSaveName, HslCancelToken cancelToken = null )
 		{
-			return await DownloadFileBaseAsync( groups, fileName, processReport, fileSaveName );
+			return await DownloadFileBaseAsync( groups, fileName, processReport, fileSaveName, cancelToken );
 		}
 
-		/// <inheritdoc cref="DownloadFile(string, string, Action{long, long}, Stream)"/>
-		public async Task<OperateResult> DownloadFileAsync( string groups, string fileName, Action<long, long> processReport, Stream stream )
+		/// <inheritdoc cref="DownloadFile(string, string, Action{long, long}, Stream, HslCancelToken)"/>
+		public async Task<OperateResult> DownloadFileAsync( string groups, string fileName, Action<long, long> processReport, Stream stream, HslCancelToken cancelToken = null )
 		{
-			return await DownloadFileBaseAsync( groups, fileName, processReport, stream );
+			return await DownloadFileBaseAsync( groups, fileName, processReport, stream, cancelToken );
 		}
 
 #if NET20 || NET35 || NET451
-		/// <inheritdoc cref="DownloadBitmap(string, string, Action{long, long})"/>
-		public async Task<OperateResult<Bitmap>> DownloadBitmapAsync( string groups, string fileName, Action<long, long> processReport )
+		/// <inheritdoc cref="DownloadBitmap(string, string, Action{long, long}, HslCancelToken)"/>
+		public async Task<OperateResult<Bitmap>> DownloadBitmapAsync( string groups, string fileName, Action<long, long> processReport, HslCancelToken cancelToken = null )
 		{
 			MemoryStream stream = new MemoryStream( );
 			Bitmap bitmap = null;
-			OperateResult result = await DownloadFileBaseAsync( groups, fileName, processReport, stream );
+			OperateResult result = await DownloadFileBaseAsync( groups, fileName, processReport, stream, cancelToken );
 			if (!result.IsSuccess)
 			{
 				stream.Dispose( );
@@ -1125,25 +1232,26 @@ namespace HslCommunication.MQTT
 			return OperateResult.CreateSuccessResult( bitmap );
 		}
 
-		/// <inheritdoc cref="UploadFile(Bitmap, string, string, string, Action{long, long})"/>
-		public async Task<OperateResult> UploadFileAsync( Bitmap bitmap, string groups, string serverName, string fileTag, Action<long, long> processReport )
+		/// <inheritdoc cref="UploadFile(Bitmap, string, string, string, Action{long, long}, HslCancelToken)"/>
+		public async Task<OperateResult> UploadFileAsync( Bitmap bitmap, string groups, string serverName, string fileTag, Action<long, long> processReport, HslCancelToken cancelToken = null )
 		{
 			MemoryStream stream = new MemoryStream( );
 			if (bitmap.RawFormat != null) bitmap.Save( stream, bitmap.RawFormat );
 			else bitmap.Save( stream, System.Drawing.Imaging.ImageFormat.Bmp );
-			OperateResult result = await UploadFileBaseAsync( stream, groups, serverName, fileTag, processReport );
+			OperateResult result = await UploadFileBaseAsync( stream, groups, serverName, fileTag, processReport, cancelToken );
 			stream.Dispose( );
 			return result;
 		}
 #endif
 
-		/// <inheritdoc cref="UploadFileBase(object, string, string, string, Action{long, long})"/>
+		/// <inheritdoc cref="UploadFileBase(object, string, string, string, Action{long, long}, HslCancelToken)"/>
 		private async Task<OperateResult> UploadFileBaseAsync(
 			object source,
 			string groups,
 			string serverName,
 			string fileTag,
-			Action<long, long> processReport )
+			Action<long, long> processReport,
+			HslCancelToken cancelToken )
 		{
 			OperateResult<Socket> socketResult = await ConnectFileServerAsync( MqttControlMessage.FileUpload, groups, new string[] { serverName } );
 			if (!socketResult.IsSuccess) return socketResult;
@@ -1151,12 +1259,12 @@ namespace HslCommunication.MQTT
 			// 判断数据源格式
 			if (source is string fileName)
 			{
-				OperateResult result = await SendMqttFileAsync( socketResult.Content, fileName, serverName, fileTag, processReport );
+				OperateResult result = await SendMqttFileAsync( socketResult.Content, fileName, serverName, fileTag, processReport, this.aesCryptography, cancelToken );
 				if (!result.IsSuccess) return result;
 			}
 			else if (source is Stream stream)
 			{
-				OperateResult result = await SendMqttFileAsync( socketResult.Content, stream, serverName, fileTag, processReport );
+				OperateResult result = await SendMqttFileAsync( socketResult.Content, stream, serverName, fileTag, processReport, this.aesCryptography, cancelToken );
 				if (!result.IsSuccess) return result;
 			}
 			else
@@ -1174,30 +1282,44 @@ namespace HslCommunication.MQTT
 			return resultCheck.Content1 != MqttControlMessage.FAILED ? OperateResult.CreateSuccessResult( ) : new OperateResult( Encoding.UTF8.GetString( resultCheck.Content2 ) );
 		}
 
-		/// <inheritdoc cref="UploadFile(string, string, string, string, Action{long, long})"/>
+		/// <inheritdoc cref="UploadFile(string, string, string, string, Action{long, long}, HslCancelToken)"/>
 		public async Task<OperateResult> UploadFileAsync(
 			string fileName,
 			string groups,
 			string serverName,
 			string fileTag,
-			Action<long, long> processReport )
+			Action<long, long> processReport,
+			HslCancelToken cancelToken = null )
 		{
 			if (!File.Exists( fileName )) return new OperateResult( StringResources.Language.FileNotExist );
 
-			return await UploadFileBaseAsync( fileName, groups, serverName, fileTag, processReport );
+			return await UploadFileBaseAsync( fileName, groups, serverName, fileTag, processReport, cancelToken );
 		}
 
-		/// <inheritdoc cref="UploadFile(string, string, string, Action{long, long})"/>
+		/// <inheritdoc cref="UploadFile(string, string, string, Action{long, long}, HslCancelToken)"/>
 		public async Task<OperateResult> UploadFileAsync(
 			string fileName,
 			string groups,
 			string fileTag,
-			Action<long, long> processReport )
+			Action<long, long> processReport,
+			HslCancelToken cancelToken = null )
 		{
 			if (!File.Exists( fileName )) return new OperateResult( StringResources.Language.FileNotExist );
 
 			FileInfo fileInfo = new FileInfo( fileName );
-			return await UploadFileBaseAsync( fileName, groups, fileInfo.Name, fileTag, processReport );
+			return await UploadFileBaseAsync( fileName, groups, fileInfo.Name, fileTag, processReport, cancelToken );
+		}
+
+		/// <inheritdoc cref="UploadFile(Stream, string, string, string, Action{long, long}, HslCancelToken)"/>
+		public async Task<OperateResult> UploadFileAsync(
+			Stream stream,
+			string groups,
+			string serverName,
+			string fileTag,
+			Action<long, long> processReport,
+			HslCancelToken cancelToken = null )
+		{
+			return await UploadFileBaseAsync( stream, groups, serverName, fileTag, processReport, cancelToken );
 		}
 
 		private async Task<OperateResult<T[]>> DownloadStringArraysAsync<T>( byte protocol, string groups, string[] fileNames )
@@ -1299,11 +1421,11 @@ namespace HslCommunication.MQTT
 			return OperateResult.CreateSuccessResult( JObject.Parse( Encoding.UTF8.GetString( receiveBack.Content2 ) ).ToObject<GroupFileInfo>( ) );
 		}
 
-		/// <inheritdoc cref="GetSubGroupFileInfos(string)"/>
-		public async Task<OperateResult<GroupFileInfo[]>> GetSubGroupFileInfosAsync( string groups )
+		/// <inheritdoc cref="GetSubGroupFileInfos(string, bool)"/>
+		public async Task<OperateResult<GroupFileInfo[]>> GetSubGroupFileInfosAsync( string groups, bool withLastFileInfo = false )
 		{
 			// connect server
-			OperateResult<Socket> socketResult = await ConnectFileServerAsync( MqttControlMessage.FileFolderInfos, groups, null );
+			OperateResult<Socket> socketResult = await ConnectFileServerAsync( MqttControlMessage.FileFolderInfos, groups, withLastFileInfo ? new string[] { "1" } : null );
 			if (!socketResult.IsSuccess) return OperateResult.CreateFailedResult<GroupFileInfo[]>( socketResult );
 
 			// 接收服务器操作结果
@@ -1313,7 +1435,6 @@ namespace HslCommunication.MQTT
 			socketResult.Content?.Close( );
 			return OperateResult.CreateSuccessResult( JArray.Parse( Encoding.UTF8.GetString( receiveBack.Content2 ) ).ToObject<GroupFileInfo[]>( ) );
 		}
-
 #endif
 		#endregion
 
@@ -1347,6 +1468,8 @@ namespace HslCommunication.MQTT
 		private SoftIncrementCount incrementCount;                            // 自增的数据id对象
 		private MqttConnectionOptions connectionOptions;                      // 连接服务器时的配置信息
 		private Encoding stringEncoding = Encoding.UTF8;                      // 使用字符串通信时的编码
+		private RSACryptoServiceProvider cryptoServiceProvider = null;        // 账户验证加密对象
+		private AesCryptography aesCryptography = null;                       // 数据请求加密对象
 
 		#endregion
 

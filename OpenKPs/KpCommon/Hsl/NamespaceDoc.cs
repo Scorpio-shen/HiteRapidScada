@@ -81,19 +81,19 @@ namespace HslCommunication
 	/// <br />
 	/// 博客地址：<a href="https://www.cnblogs.com/dathlin/p/7703805.html">https://www.cnblogs.com/dathlin/p/7703805.html</a>
 	/// <br />
-	/// 授权付费模式：超级VIP群 : 189972948
+	/// 授权付费模式：Hslcommunication企业商业授权，一次付费，终身授权，终身开放源码，终身支持后续更新，支持的设备列表请参考最新的DEMO界面，凡是DEMO列举都是统一打包授权的。不限制电脑，项目，plc，开发人员数量。
 	/// <br />
 	/// <list type="bullet">
-	///     <item>本群提供专业版通讯库的所有更新版的 HslCommunication 源代码。包含 .Net Java Python 三大平台。</item>
-	///     <item>本群支持对特殊需求而进行修改，更新源代码的服务，配合企业客户修复源代码错误的服务。</item>
-	///     <item>本群成员拥有对通讯库商用的权利，拥有自己修改源代码并商业使用的权利，组件版权仍归属原作者。</item>
-	///     <item>本群成员需要对源代码保密。禁止公开源代码，禁止对源代码的商业用途。</item>
-	///     <item>本群成员可以免费获得官网的 MES DEMO源代码。</item>
+	///     <item>企业授权提供专业版通讯库的所有更新版的 HslCommunication 源代码。包含 .Net Java Python 三大平台。</item>
+	///     <item>企业授权支持对特殊需求而进行修改，更新源代码的服务，配合企业客户修复源代码错误的服务。</item>
+	///     <item>企业授权用户拥有对通讯库商用的权利，拥有自己修改源代码并商业使用的权利，组件版权仍归属原作者。</item>
+	///     <item>企业授权用户需要对源代码保密。禁止公开源代码，禁止对源代码的商业用途。</item>
+	///     <item>企业授权用户可以免费获得官网的 MES DEMO源代码。</item>
 	///     <item>企业商业授权 费用请联系QQ200962190咨询，公司即可拥有商用版权，支持任意的开发人员数量，项目数量，支持源代码更新，长期支持，商用软件必须冠名公司标识，官网显示合作伙伴logo。</item>
 	///     <item>支持专业的一对一培训业务，一小时1000 rmb，一天8小时为5000 rmb</item>
 	/// </list>
 	/// 
-	/// 付费二维码：<br />
+	/// 个人赞助二维码：<br />
 	/// <img src="https://raw.githubusercontent.com/dathlin/HslCommunication/master/imgs/support.png" />
 	/// </remarks>
 	/// <revisionHistory>
@@ -1691,6 +1691,498 @@ namespace HslCommunication
 	///             <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
 	///             <item>本软件已经申请软件著作权，软著登字第5219522号，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
 	///         </list>
+	///     </revision> <revision date="2021-8-23" version="10.1.3" author="Richard.Hu">
+	///         <list type="bullet">
+	///             <item>JSON: .NET framework的dll对newtonsoft.Json不依赖特定的版本。</item>
+	///             <item>XGBFastEnet: 修复读取单个的bool时报文不正确的bug.</item>
+	///             <item>MqttServer: 新增GetMqttSessionsByTopic方法，用来获取订阅某个主题的所有客户端列表。</item>
+	///             <item>HttpServer: 修复httpserver中文编码问题，在谷歌，微软浏览器下显示中文乱码的bug。因为Content-Type传值不正确</item>
+	///             <item>HttpServer: 修复在账户验证模式下，使用ajax跨域请求OPTIONS导致401错误的bug。</item>
+	///             <item>FujiCommandSettingType: 新增富士的CommandSettingType通信协议的实现，基于TCP访问，支持地址见API文档.</item>
+	///             <item>FujiCommandSettingTypeServer: 新增富士的CommandSettingType协议的虚拟PLC，支持B,M,K,D,W9,BD,F,A,WL,W21地址</item>
+	///             <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///             <item>本软件已经申请软件著作权，软著登字第5219522号，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2021-9-3" version="10.1.4" author="Richard.Hu">
+	///         <list type="bullet">
+	///             <item>NetworkAlienClient: DTU(异形)服务器增加对报文的固定头的检查。</item>
+	///             <item>NetworkServerBase: 连接异形DTU(异形)的server的方法ConnectHslAlientClient支持密码输入。</item>
+	///             <item>NetworkDoubleBase: 当设置DTU会话时，修复恰好正在读取导致报文错乱的bug，初始化成功才成功切换DTU。</item>
+	///             <item>McServer: 修复三菱的MC虚拟服务器在ASCII模式下，远程客户端读写B继电器时，地址解析异常的bug。</item>
+	///             <item>LSisServer: 修复LSisServer在客户端读写位时，PX20之类的地址时，写入true不成功的bug。</item>
+	///             <item>TemperatureController: 新增RKC的数字式温度控制器的读写类，地址支持M1,M2,M3,等等</item>
+	///             <item>TemperatureControllerOverTcp: 新增RKC的数字式温度控制器的网口透传读写类，地址支持M1,M2,M3,等等</item>
+	///             <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///             <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2021-9-12" version="10.2.0" author="Richard.Hu">
+	///         <list type="bullet">
+	///             <item>NetSoftUpdateServer: 代码优化，新增一个OnlineSessionss属性，用来获取当前正在更新的客户端的数量。</item>
+	///             <item>RSAHelper: 提供了从PEM格式的私钥和公钥创建RSA对象的辅助方法，还提供了RSA对象导出PEM格式的私钥公钥方法。支持加密解密超长数据</item>
+	///             <item>RSACryptoServiceProvider: 增加RSA对象的扩展方法GetPEMPrivateKey及GetPEMPublicKey方便快捷的获取PEM格式的公钥和私钥，扩展加密解密超长数据。</item>
+	///             <item>SerialBase: 串口基类新增虚方法CheckReceiveDataComplete用于检查报文是否接收完成，一旦接收完成，立即返回，增加通信性能。</item>
+	///             <item>ModbusRtu: 重写了CheckReceiveDataComplete方法，根据功能码的不同来判断当前的数据长度是否完整，以此判断报文是否完整。</item>
+	///             <item>ModbusAscii: 重写了CheckReceiveDataComplete方法，根据开头及结尾的固定字符来是否指定值，以此判断报文是否完整。</item>
+	///             <item>ModbusTcpServer: 优化服务器的串口接收功能，现在回复报文很快。1. 先接收串口数据，再Sleep。2. 增加数据完整性校验，一旦成功，立即返回报文。</item>
+	///             <item>ModbusTcpServer: 新增属性RequestDelayTime，设置非0时用来防止有客户端疯狂进行请求而导致服务器的CPU占用率上升问题。</item>
+	///             <item>MelsecA1EServer: 新增MC-A1E协议的虚拟服务器，支持了二进制和ASCII格式，已经配合客户端通过单元测试。</item>
+	///             <item>AesCryptography, DesCryptography: 新增AES及DES加密解密对象，使用密钥实例化即可加密解密操作。</item>
+	///             <item>MQTTServer: 在原有的基础上增加了加密的功能，如果MQTTClient，MQTTSyncClient启用加密功能，那么数据的传输就是加密的，无法抓包破解账户名密码及交互数据。</item>
+	///             <item>AllenBradleyNet: cip协议支持了日期，日期时间的读写操作，这样omron的plc的cip协议也支持了日期时间的读写，在omroncip的demo上添加测试操作。</item>
+	///             <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///             <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2021-9-19" version="10.2.1" author="Richard.Hu">
+	///         <list type="bullet">
+	///             <item>SiemensS7Net: 修复读写WString字符串时，乱码的情况。</item>
+	///             <item>NetSoftUpdateServer: 修复在某些情况下在线客户端数量新增后不会减少的bug。</item>
+	///             <item>demo: 字节转换工具界面增加字节数组和base64字符串的转换功能。</item>
+	///             <item>MqttServer: 当MQTTClient在加密模式下，订阅一个主题后，修复服务器仍然返回没有加密的bug，导致客户端解密失败。</item>
+	///             <item>MqttSyncClient: 修复加密模式下，使用SetPersistentConnection设置长连接，不进行ConnectServer直接第一次请求失败的bug。</item>
+	///             <item>AllenBradleyNet: 优化读取bool的功能方法，新增读取bool数组的实现。</item>
+	///             <item>NetworkDataServerBase: 所有串口类的服务器（从机），功能代码优化调整，部分的类实现报文完整性判断，实现数据瞬间回复客户端（主机）。</item>
+	///             <item>Serial: 大量的串口类的设备进行了优化，对接收结果是否结束进行判断，提高了串口通信的性能。</item>
+	///             <item>NetSoftUpdateServer: 新增另一种更新机制，更新软件在收到文件信息后，先比对MD5信息来确定是否下载更新，从而提高升级速度，仍然兼容旧的更新模式。</item>
+	///             <item>NetSoftUpdateServer配套的更新客户端，软件自动更新重新命名为 AutoUpdate, 针对差异化更新做了优化。</item>
+	///             <item>DEMO里面所有的读写PLC界面的读写字符串功能支持了可选编码，支持ASCII,UTF8,UNICODE,UNICODE-BIG,GB2312,ANSI</item>
+	///             <item>其他一些细节的优化，和注释的完善。DEMO界面的大量优化，显示调整，DEMO使用了新的更新软件，AutoUpdate.exe</item>
+	///             <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///             <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2021-9-30" version="10.2.2" author="Richard.Hu">
+	///         <list type="bullet">
+	///             <item>NetworkDoubleBase: 在异步的网络通信方法中，原来的同步锁会在特殊的情况下导致UI线程卡死，所以改为异步锁，相关继承类也修改。</item>
+	///             <item>HslReflectionHelper: 通过HslDeviceAddressAttribute反射Read，Write的读写自定义对象的功能支持对byte类型的读写操作，需要通信对象本身支持才能成功读写。</item>
+	///             <item>SerialBase: 新增protect级别的AtLeastReceiveLength变量，用来表示从串口中至少接收的字节长度信息，一般为1。</item>
+	///             <item>IReadWriteNet: 新增api支持ReadCustomer( string address, T obj )，允许传入实例对象，对属性进行赋值，方便wpf进行数据绑定操作。</item>
+	///             <item>NetworkWebApiBase: 新增属性UseEncodingISO，在访问某些特殊的API的时候，会发生异常"The character set provided in ContentType is invalid...."，这时候本属性设置为true即可。</item>
+	///             <item>Cip: 欧姆龙cip及rockwell的cip支持读取plc型号的方法ReadPlcType()，omron的cip重新设计了WriteTag，对于0xD1类型数据，支持偶数个写入操作。</item>
+	///             <item>SiemensPPI: 修复writebyte方法的api接口名称还未注册的问题, 和串口透传类的相关代码优化，精简。</item>
+	///             <item>MelsecFxSerial: AtLeastReceiveLength变量设置为2，和串口透传类的相关代码优化，精简。</item>
+	///             <item>MqttServer: 新增属性：TopicWildcard，当设置为true时，支持主题订阅通配符，使用#,+来订阅多个主题的功能。具体参考该属性的API文档。</item>
+	///             <item>demo: 修复demo的HTTPClient界面浏览在linux创建的Webapi服务器的api列表功能失败的bug，使用HttpWebRequest来实现。</item>
+	///             <item>demo: rsa加密解密算法测试界面实现签名和验签操作。签名算法可选SHA1，SHA256, SHA512, MD5等等。</item>
+	///             <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///             <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2021-11-19" version="10.3.0" author="Richard.Hu">
+	///         <list type="bullet">
+	///             <item>allenbrandlyNet: ExtraOnDisconnect方法增加socket的空检测操作，因为在极少数特殊情况会发生空的异常的bug。</item>
+	///             <item>OmronCipNet: 修复Write数据类型为short[]时长度不是1的bug。同步方法调用Write(string,short[])时会发生写入失败。</item>
+	///             <item>Demo: OmronHostLinkCModeOverTcp的Demo测试界面添加读取型号的功能，可以更加便捷的测试。</item>
+	///             <item>AllenBradleyNet: 重写读取字符串方法ReadString( string address, ushort length )，编码修改为UTF8</item>
+	///             <item>ReverseWordTransform: 字节变换的对象代码优化精简，ReverseWordTransform新增IsInteger16Reverse属性指示short,ushort是否发生翻转，默认翻转。适用极个别特殊的Modbus格式</item>
+	///             <item>YRC1000TcpNet: 安川的机器人的API功能大量添加，支持读取机器人坐标，各种变量信息，启动程序，停止，复位，读报警等待。</item>
+	///             <item>SiemensS7Net: 写入bool数组的方法优化，修改为先读取byte[], 修改中间的位，然后再写回去操作，可以写入一个字节的中间几个位，单元测试通过，仍然有风险，谨慎调用。</item>
+	///             <item>OmronHostLinkCMode: 修复OmronHostLinkCMode读写字节顺序颠倒的问题，新增了读取plc型号，plc状态，修改状态的功能，增加错误码文本解释。</item>
+	///             <item>OmronHostLinkCModeServer: 新增CMode协议对应的虚拟PLC服务器，初步实现了和客户端通信功能，包括串口和网口的支持，单元测试通过。</item>
+	///             <item>添加在NET2.0，NET3.5及Standard项目缺失的SiemensFetchWriteServer, MelsecA3CServer, MelsecA1EServer, 以及安川的 memobusTcpNet</item>
+	///             <item>SiemensS7Net: 在读取单个的bool的值的时候，增加对结果数据的合法性检测，当遇到错误码时，提示错误信息。修复写入bool在某些特殊的情况下，实际成功但是提示失败的bug。</item>
+	///             <item>YRCHighEthernet: 安川机器人添加高速以太网通信，基于UDP实现，在DEMO界面可以直接原生命令测试，支持读取报警，字节，整型，字符串等变量。</item>
+	///             <item>PipeSerial, PipeSocket: 新增串口管道和网口管道，串口基类和网口基类优化重构，允许多个串口设备对象共享一个串口通道，多个网口的设备对象共享一个网口通道。</item>
+	///             <item>ModbusTcpNet:新增属性IsCheckMessageId，用于配置modbustcp协议是否检查设备返回的消息ID是否一致，默认检查，设置为False，也即是不检查ID一致。</item>
+	///             <item>MemobusTcpNet: 安川PLC的memobus协议的修复报文错误的bug，增加了线圈读写，寄存器读写，扩展寄存器的读写功能，例如扩展保持寄存器地址：x=9;100</item>
+	///             <item>Demo：测试界面添加了一个TCP转TCP的界面，可以用于两个网络连接中捕捉通信的数据报文。还有其他的一些细节优化。</item>
+	///             <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///             <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2021-12-2" version="10.4.0" author="Richard.Hu">
+	///         <list type="bullet">
+	///             <item>Delta:台达系列的PLC类重命名，新增PLC系列，可选DVP系列和AS系列，相当于新增了对AS300的支持，如果用到，谨慎更新。</item>
+	///             <item>WebSocketServer: 原先订阅的操作使用header来完成，新增客户端从url添加订阅主题，例如：ws://127.0.0.1:1883/HslSubscribes=A,B</item>
+	///             <item>AllenBradleyPcccNet:新增AB的CIP协议PCCC格式的通信，测试适用ab1400，地址格式为 N7:5, I:0/2, F2:0 等</item>
+	///             <item>AllenBradleyPcccServer: 新增PCCC的虚拟服务器功能，可以配合客户端进行通信的测试，支持基本的地址。</item>
+	///             <item>MC-A3C: 修复A3C的服务器在格式4的情况下，返回写入操作的控制代码错误的bug，应该为06，写成了02。</item>
+	///             <item>三菱的A3C协议的读取字数据及位数据长度自动切割，可以输入理论最大长度，修复校验是否写入成功确提示失败的bug。</item>
+	///             <item>NetworkDataServerBase:串口接收增加最小接收时间，默认是20，表示20毫秒，如果重写了报文结束检查，则可以设置大一点。</item>
+	///             <item>NetworkServerBase: 基础服务器对象新增属性EnableIPv6，当设置为true的时候，则使用IPv6协议进行数据通信和访问。</item>
+	///             <item>所有的TCP及UDP的相关的客户端通信类的 IP 地址设置，都支持了 IPv6 地址，所以目前IP地址支持 IPv4 和 IPv6 及 网址。</item>
+	///             <item>Demo:fanuc机器人的测试界面写入数据操作进行提示相关的确认，防止手抖不小心写入导致机器人运行不正常。</item>
+	///             <item>Demo，所有的设备通信类，新增一个支持的设备列表功能，大家可以手动添加支持的列表，方便别人查看支持的型号，请大家务必真实填写。</item>
+	///             <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///             <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2021-12-17" version="10.4.1" author="Richard.Hu">
+	///         <list type="bullet">
+	///             <item>Delta: 台达的DVP系列，当地址带站号时，并且出现了跨地址切割时，修复站号丢失的bug。跨地址指跨越M1536,D4096地址。</item>
+	///             <item>Delta: 台达AS系列的地址 SR 地址支持输入 SR0 以及 sr0 </item>
+	///             <item>针对FinsTcp协议及ADS协议的剩余字节解析，本来是int类型，现在加了最大长度10000的限制，防止异常攻击时导致申请内存过大而奔溃。</item>
+	///             <item>Inovance: 汇川相关的PLC的数据排列规则调整为 CDAB，DEMO上的选择也默认改为这个。</item>
+	///             <item>MelsecFxSerial: 移除三菱编程口协议最小接收回复报文2字节的限制，实际测试有时候只需要一个字节就可以了，否则会一直处于接收超时。</item>
+	///             <item>ByteTransform: TransBool的方法的偏移和长度均修改为以位为单位，具体调用API时查看注释说明，长度为10就表示10个长度的bool。</item>
+	///             <item>AllenBradleySLCNet,AllenBradleyPcccNet: 地址支持ST10:2这种字符串地址，并在AllenBradleyPcccNet上实现动态读取字符串，长度为0或没有，则自动长度。</item>
+	///             <item>AllenBradleySLCNet,AllenBradleyPcccNet: 以及SLC的协议地址支持了 L17:0 的地址，长整型类型</item>
+	///             <item>VigorSerial,VigorSerialOverTcp: 新增丰炜PLC的编程口协议及透传类，支持VS系列，地址支持动态站号信息，例如 s=2;D100</item>
+	///             <item>VigorServer: 新增丰炜的虚拟PLC，模拟了VS系列的通信，可以和对应的客户端进行数据读写测试，位地址支持 X,Y,M,S，字地址支持 D,R,SD</item>
+	///             <item>MelsecFxSerial: 三菱的编程口协议及其透传类添加一个激活PLC的API方法ActivePlc，在某些特殊的PLC读写数据之前，需要先调用一下。</item>
+	///             <item>Modbus:Modbus所有协议的ReadFromCoreServe(byte[])增加特别的注释，只需要传递modbus核心报文即可，不管tcp,还是rtu,还是ascii，都是一样的。</item>
+	///             <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///             <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2021-12-22" version="10.4.2" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>NetworkBase: 新增Receive原始字节数据时，也就是申请byte[]缓存时，对可能存在的异常捕获操作，返回失败的结果对象。</item>
+	///            <item>AllenBradleyPcccNet: 修复对于ReadAsync也注册了API接口，导致重复注册的bug。</item>
+	///            <item>WebSocketClient: 修复因为掉线重连服务器的时候，重新携带订阅的主题。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-1-1" version="10.4.3" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>SerialBase: SetPipSerial重，命名为SetPipeSerial，如果有使用串口管道，则需要更改相关的名称。</item>
+	///            <item>MelsecMcDataType: 修复三菱累计定时器当前的值的地址进制转换应该为10进制，结果写成100导致转换失败的bug。</item>
+	///            <item>Keyence: 上位链路协议的串口及网口的通信类，ByteTransform的IsStringReverseByteWord调整为true，读写字符串时将两两颠倒。</item>
+	///            <item>IByteTransform: 转换接口类的注释进行完善，提示更加详细完整，中英文并行提示。</item>
+	///            <item>Vigor: 丰炜PLC的读取位和读取字的功能方法，对读取长度进行内置切割，相当于支持了无限长度的数据读取。</item>
+	///            <item>EstunTcpNet: 新增埃斯顿机器人通信类，内置定时器保持心跳，支持读取机器人的基本信息，详细见DEMO界面。</item>
+	///            <item>FanucInterfaceNet: 修复fanuc机器人的中文编码异常的bug，使用标准的GB编码解析，如果编码获取异常，需要自行nuget安装System.Text.Encoding.CodePages组件，并注册编码。</item>
+	///            <item>Device: 设备类增加ReadStruct{T}方法，根据特性从原始字节里解析出实际的数据对象。影响范围所有的设备类对象。</item>
+	///            <item>Demo: Demo程序支持了手动设置版本更新忽略提醒，忽略之后再菜单栏进行提示新版，以及增加添加激活操作功能，本地保存加密的激活码。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-1-17" version="10.5.0" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>ABBWebApiClient: GetRobotTarget方法，返回的数据信息，增加q4数据信息。</item>
+	///            <item>Modbus: 在modbus的派生类协议中，重写了modbus的地址转换的情况中，修复读写bool操作，因为地址中带小数点导致地址转换异常的bug。例如汇川AM系列读写QX3000.0 的bool值</item>
+	///            <item>MelsecFxSerialHelper: 三菱编程口协议的检查和校验的方法，增加try...catch，在某些特殊的情况下，会导致异常，直接奔溃。</item>
+	///            <item>NetSoftUpdateServer: 针对之前旧版的软件升级功能，增加30分钟的超时时间限制，如果30分钟后仍然没有更新完成，则自动移除会话。</item>
+	///            <item>SiemensS7: S7的地址支持大小写，且都支持带X,B,D,W的地址，比如MD100, MW100, MX100.2</item>
+	///            <item>OmronConnectedCipNet: 注册报文里的不通信超时修改为42分钟，读取short，及ushort数组时，按照994长度进行切割</item>
+	///            <item>AllenBradleyPcccNet: 支持使用0F-AB的掩码写入功能，写入一个bool值到PLC中，PCCC虚拟服务器实现了这个AB功能码，可以虚拟测试。</item>
+	///            <item>FanucInterfaceNet: 修复demo上读取WO数据时，地址偏移不正确的bug。</item>
+	///            <item>Freedom: 串口，网口的自由通信协议增加委托CheckResponseStatus，可以自定义对报文结果进行校验，完善注释。</item>
+	///            <item>DLT645: 优化数据接收部分的代码，如果数据完整，立即返回，数据前面兼容无用的字符数据。</item>
+	///            <item>INetMessage: 消息类新增方法PependedUselesByteLength( byte[] headByte )并在DLT645OverTcp消息类重写，支持前置无效的字符。</item>
+	///            <item>AllenBradleyNet：支持添加消息路由功能，默认不开启，实例化属性MessageRouter, 例如：1.15.2.18.1.1，支持在demo界面进行配置操作。</item>
+	///            <item>AllenBradleyNet: 支持遍历全局变量和局部变量。新增StructTagEnumerator( AbTagItem structTag )方法遍历结构体的成员变量信息。</item>
+	///            <item>Demo:AllenBradleyNet节点浏览的界面支持了查找数据，显示数据，结构体嵌套遍历，还支持显示当前的数据信息。</item>
+	///            <item>ModbusTcpServer的RTU接收时间调整为500ms，如果报文完整立即接收结束。</item>
+	///            <item>本版本可能是春节前的最后一个版本了，提前祝大家新春快乐。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-2-28" version="10.5.1" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>AllenBradleyNet: Write( string address, bool value )写入bool方法优化，如果是类型代号0xD3的，地址前面需要增加 "i=" 标记。</item>
+	///            <item>PanasonicMewtocolServer: 松下虚拟PLC地址类型支持完善线圈支持X,Y,R,L, 字单位的整型支持 X,Y,R,L,D,LD,F，支持RCP及WCP指令离散读写线圈。</item>
+	///            <item>PanasonicMewtocol：松下协议及其网口类的代码优化提炼共同代码，新增加离散bool地址的读写，传入多个地址，返回一个bool数组。</item>
+	///            <item>AsciiControl: 在命名空间slCommunication.Core下面增加一个AsciiControl类，包含控制类ASCII常量定义，例如ENQ,NAK,STX,ETX等。</item>
+	///            <item>MelsecFxLinksServer: 新增三菱的FxLinks计算机链接协议的虚拟PLC，支持串口和网口透传访问，支持格式1，4切换，支持是否和校验。</item>
+	///            <item>MelsecFxLinks: 1. 同时支持了格式1，格式4，2. 支持了地址大于10000的时候使用QR,QW命令，3. 修复报文创建时数据长度及站号不是16进制的bug。</item>
+	///            <item>KeyenceNanoServer: 修复启动串口时，和上位链路客户端通信时，一直返回通信校验错误的bug，现在针对CC指令和CQ指令都能正确的返回。</item>
+	///            <item>keyenceNano: 基恩士上位链路协议的串口类和网口透传类记录报文的格式调整为ASCII码，这样更加直观。</item>
+	///            <item>NetworDataServerBase: 添加GetNewNetMessage( )及ReadFromCoreServer方法，精简所有继承的子类虚拟PLC的服务器的代码。</item>
+	///            <item>MelsecA1EServer: 修复三菱A1E协议服务器报文接收异常的bug，导致客户端读写数据不正常。</item>
+	///            <item>FatekPrograme: 永宏编程口协议读取字按照64字长度自动切割，支持了RUN,STOP，读取状态接口方法，新增对应的虚拟服务器实现。</item>
+	///            <item>SpecifiedCharacterMessage: 新增基于指定字符结尾的消息类，通过ProtocolHeadBytesLength属性变种而来，NetworkBase的ReceiveByMessage功能适配了SpecifiedCharacterMessage消息。</item>
+	///            <item>Turck: 新增图尔克的Reader协议实现，支持对字节读写，bool读写，实现了虚拟服务器，通过了单元测试，主要用来和RFID进行通信。</item>
+	///            <item>IEC104: 初步添加IEC104协议实现和解析，增加demo测试，但是目前还清楚怎么设计API和使用场景，等待继续优化，欢迎相关需求的人联系测试优化。</item>
+	///            <item>DEMO: RSA加密解密的测试界面，支持对超长的数据进行加密解密操作。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-4-1" version="10.6.0" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>ModbusHelper: 修复ReadBoolHelper在Modbus继承类里进行了自定义地址转换，导致读字地址的位失败，例如汇川AM系列读取M240.1的bool数据失败</item>
+	///            <item>LSisServer: 修复基于Cnet串口协议的通讯时，客户端使用SB连续读取指令读取长度大于9时，服务器对长度解析失败导致读取失败的bug。</item>
+	///            <item>GroupFileContainer: 新增获取所有文件的下载次数总和的属性，名称为：TotalDownloadTimes。</item>
+	///            <item>SerialPort: 新增串口的扩展方法IniSerialByFormatString，支持格式化的初始串口信息，例如 COM3-9600-8-N-1，简单明了。ModbusServer界面支持串口参数配置，支持配置最短接收时间配置。</item>
+	///            <item>MelsecFxLinksServer: 三菱Fxlinks虚拟服务器，修复远程客户端在读取位地址（例如M100）的字数据时，返回错误失败的bug。</item>
+	///            <item>HslReflectionHelper: MRPC及Webapi注册的方法接口功能中，支持参数类型为自定义类型数组的参数，例如Student[]，不支持List{Student}。</item>
+	///            <item>MqttServer: 文件读写功能的引擎中，遍历所有子目录统计信息时，可选参数是否携带返回最新的一个文件的信息，客户端做了相关的适配，参数支持。</item>
+	///            <item>XGBFastEnet: 修复向PLC读取数据到时候，类型指定不正确的bug，之前无论是什么类型，都会设置为0，PLC从而值返回一个字节长度的数据。</item>
+	///            <item>Mewtocol: 松下Mewtocol协议，当读写字单位超出协议限制时，自动升级为扩展协议标识，标记字符为 &lt; (小于号), 服务器读写长度根据实际限制，支持扩展协议标识。</item>
+	///            <item>FanucSeries0i: 修复fanuc机床类读取虚拟机床系统时，显示运行时间为负数的bug。</item>
+	///            <item>NetworkDoubleBase: 新增受保护的属性UseServerActivePush，只要设置为True，就可以将当前的连接切换为既支持设备主动发送，又支持同步访问的客户端，使用信号同步器来支持问答通信。</item>
+	///            <item>SiemensPPIServer: 新增PPI Server类，支持TCP以及串口的通讯，PPI的串口和网口透传类客户端增加读取PLC类型的功能方法。</item>
+	///            <item>SiemensS7Server: 修复客户端读取数据时，返回客户端FF04的数据内容时，位长度信息赋值不正确的bug，这会导致某些客户端发生数据异常。</item>
+	///            <item>SiemensPPI: 西门子PPI协议优化，读取bool[]的功能方法调整为先读取字，再解析出位数据信息，以此来支持批量读取位。</item>
+	///            <item>XinJETcpNet: 信捷的modbustcp协议新增当某些地址超过临界范围时，自动升级modbus协议到信捷内部TCP协议，以此访问到更大范围的数据内容，并支持了临界地址的跨地址访问，自动切割重组。</item>
+	///            <item>XinJEInternalNet: 新增完全的信捷内部协议实现的TCP通信，可以读取更大范围的数据内容，比如D200000地址，支持的地址参考API文档。</item>
+	///            <item>DeltaDvp: 修复台达系列在进行读取D寄存器的位的时候，也即是时 ReadBool("D100.1") 方法时，地址无法识别的bug，现在可以正确的读到D100的位信息。</item>
+	///            <item>FanucSeries0i: 新增WriteRData的接口方法，新增读写PMC数据的方法，ReadPMCData及WritePMCData，与R数据的读写类似，都是字节操作的方法。</item>
+	///            <item>IReadWriteDevice: 扩充方法支持，支持ReadFromCoreServer(List{byte[]})的读取的方法支持，支持多个报文读取，结果打包返回。</item>
+	///            <item>BeckhoffAdsNet: 倍福通信类新增是否使用自动AMS属性，默认为false，设置为true时，网络初始化时从server端加载相关的NETID参数信息，目前在twincat3上成功测试。</item>
+	///            <item>BeckhoffAdsNet: 修复ReadBool数组时，返回的长度都是8的倍数的bug。属性UseServerActivePush调整为True，支持PLC方主动推送数据信息。</item>
+	///            <item>BeckhoffAdsNet: 修改读取bool时地址机制，地址支持小数点，例如M100.2 ，所以M800等于M100.0， 修复读取数组时值解析不正确的bug， 修复写入bool数组失败的bug。</item>
+	///            <item>BeckhoffAdsNet: 修复直接SetPersistentConnection设置长连接无法读取的bug，以及掉线后，继续读写一直失败的bug。</item>
+	///            <item>BeckhoffAdsNet: 修复倍福服务器重启后继续读写标签变量一直失败的bug，原因来自倍福重启导致标签内存地址变更，但是缓存还是一直使用旧的。</item>
+	///            <item>SecsHsms: 新增secs协议的hsms实现，初步实现了主动方，也即是客户端，支持了一个通用的接口和数据，ReadSecsMessage方法。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-4-11" version="10.6.1" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>MelsecMcRNet: 修复McType属性设置不正确的bug，导致依然使用普通的mc协议来进行通信，因为R系列MC协议地址不一样。</item>
+	///            <item>ModbusServer: ModbusServer增加属性StationCheck，默认为True，对请求的客户端的站号进行检查操作，也可以设置false，不检查站号一致。</item>
+	///            <item>BeckhoffAdsNet: 新增支持批量读取的方法Read( string[] address, ushort[] length )，完善了API文档说明，可以一次性读取多个标签信息，需要自行解析。</item>
+	///            <item>BeckhoffAdsNet： 修改默认的端口为851，主要用于TWINCAT3，当没有设置 NETID 时，直接连接PLC的话，自动升级为自动获取NETID信息。</item>
+	///            <item>BeckhoffAdsNet: 重写实现新的Read{T}(), 一次性读取所有的类型数据，然后自动解析赋值到对象的属性，在API文档上增加示例的代码。</item>
+	///            <item>SiemensPPI: 西门子PPI协议修复输入M5这种只有两个字符的地址的时候，地址解析报异常的bug，同样也适用于SiemensPPIOverTcp</item>
+	///            <item>KeyenceNano: 基恩士上位链路协议优化，地址重新设计，修复B,VB,W的十六进制地址解析异常的bug，FM地址不正确解析的bug。</item>
+	///            <item>KeyenceNano: 上位链路协议读取支持自动切割，根据不同的地址切割出不同的长度信息，一般都是256长度切割，虚拟服务器也进行了地址修复和长度限制适配。</item>
+	///            <item>OmronFinsUdp: 欧姆龙Finsudp协议的DA1（PLC节点号）调整为0x00，自动获取，在demo测试界面，增加GCT和SID的参数设置，一般默认就好。</item>
+	///            <item>FanucSeries0i: 读取R数据的接口重新设计，修改为ReadPMCData，地址支持G,F,Y,X,A,R,T,K,C,D,E 例如R1200，写入也是一样，具体看demo演示。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-5-25" version="11.0.0" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>TcpForward: 新增TCP转TCP的类，设置本地端口及远程端口，客户端连接之后立即连接远程服务器，进行数据转发，支持多个连接，每个客户端都创建一个远程连接对象，DEMO的转发测试使用这个类。</item>
+	///            <item>BeckhoffAdsServer: 倍福的虚拟PLC修复M100.1位地址读写数据不正确的bug，支持了符号地址，支持创建符号数据，自动生成唯一的句柄地址。支持客户端批量的地址读取，也即功能码为 0xF080。</item>
+	///            <item>AllenBradleyPcccServer: 修复PCCC虚拟PLC读写地址数据解析异常的bug，导致和客户端的地址数据不一致。提炼优化地址信息。</item>
+	///            <item>NetworkDataServerBase: 优化串口接收时候的数据检测的代码，修复modbus虚拟服务器接收串口数据时，功能码为0x10时，SerialReceiveAtleastTime属性设置无效的bug。</item>
+	///            <item>XinJE: 基于modbus协议的信捷类对象，当地址是位地址时(X,Y,M等)，支持了当使用Read（字单位）读取原始字节的方法，返回原始的字节信息。</item>
+	///            <item>FanucSeries0i: Fanuc数控机床通信类，新增读取机床型号信息的api，ReadSysInfo，信息在连接初始时获取生成，后续直接读取内存。</item>
+	///            <item>FanucSeries0i: 读取程序文件及下载程序到机床支持路径参数，例如操作PATH2时只需要输入 //CNC_MEM/USER/PATH2/ 即可，新增DeleteFile的API用于删除任意路径的程序文件。</item>
+	///            <item>FanucSeries0i: 新增ReadAllDirectoryAndFile方法，用来遍历指定路径下的所有的子路径和文件的信息，文件大小使用字节为单位。</item>
+	///            <item>ISessionContext: 在MRPC的接口及HttpWebapi注册接口的方法里，参数ISessionContext新增Tag对象，方便自定义捆绑一些数据信息。</item>
+	///            <item>MqttServer: 文件服务器相关的功能增加GetGroupFromFilePath方法，从路径信息里获取到文件列表管理容器，进而可以获取单个文件的对象，在权限控制时可以更加的细致。</item>
+	///            <item>Modbus: ModbusHelper针对modbus-rtu的返回接收报文检测，增加对站号一致性的检测，如果发现站号不一样，返回错误信息。</item>
+	///            <item>ICryptography: 添加直接对字符串进行加密解密的方法，并在AesCryptography类和DesCryptography实现方法，方便直接操作。</item>
+	///            <item>OmronConnectedCipNet: 优化批量读取数组的方法，自动根据类型来切割不同的读取长度，分批次读取所有的数据信息。修复握手报文丢失Timeout时间报文的bug，导致v10.5.0以来不能读取的问题</item>
+	///            <item>OmronConnectedCipNet: 优化和PLC持续几秒钟不读写就被PLC强制断线的问题，现在支持很长的时间，修复关闭立即重连（包括意外断线重连）连接不成功，一直报错重复打开会话的异常。</item>
+	///            <item>NetworkConnectedCip: 基于连接的CIP协议里，在OpenForward初始化里，自动获取连接ID，如果失败，并尝试五次自增连接ID重新Open。</item>
+	///            <item>AllenBradleyConnectedCipNet: 新增ab的connected cip协议的实现，继承自欧姆龙的connected cip协议，重写了部分的逻辑实现，缩小了单次读取的字节上限，初步测试通过。</item>
+	///            <item>NetworkServerBase,NetworkDoubleBase: 新增属性SocketKeepAliveTime，用来设置底层的socket的KeepAlive信号，单位毫秒，默认不开启，开启后将会自动间隔的发送KeepAlive信号。</item>
+	///            <item>AllenBradleyServer: cip的虚拟服务器同时支持了基于连接的CIP的访问。标签定义类AllenBradleyItemValue新增TypeCode属性，在返回客户端数据的时候，带类型数据返回。支持bool[]节点创建</item>
+	///            <item>SoftBasic: GetAsciiStringRender 不可见字符判断除了0x20以下，追加0x7e以上的字符。新增GetFromAsciiStringRender方法，把GetAsciiStringRender 结果反向转换回来。</item>
+	///            <item>AllenBradleyNet: 支持写入bool[]功能，支持写入byte[]数组功能（类型代号默认为0xD1），WriteTag方法支持地址携带类型信息，例如地址 type=0xD1;A[0]</item>
+	///            <item>MelsecFxSerial: 三菱的编程口协议在新版协议配置为True时，修复D8000地址以上读写不正确的bug，修复X,Y,M,S部分地址读写不正确的bug，都调整为新版的报文，支持的范围更大更准确。</item>
+	///            <item>MelsecFxSerialOverTcp: 新增加通过GOT连接的方式，。PanasonicMewtocol: 松下的Mewtocol协议支持了经过值及目标值。ILogNet: 日志的接口新增属性LogThreadID，用来配置是否记录线程ID的数据信息。</item>
+	///            <item>SecsHsmsServer: 新增Secs协议的虚拟服务器，支持事件自定义处理所有的消息。并添加示例的代码。Demo程序界面。</item>
+	///            <item>Mqtt: MqttClient及MqttServer支持了遗言消息，客户端A在连接参数里设置了遗言主题及数据，当客户端A非正常掉线的时候，服务器即发布该遗言主题信息。</item>
+	///            <item>MqttSyncClient: 新增HslCancelToken对象，在文件上传和下载的过程中支持取消操作，MqttServer适配相应的功能实现，取消示例代码增加。</item>
+	///            <item>HttpServer: 新增Action对象DealWithHttpListenerRequest，用来处理定义的Header数据到Session会话中，实现更加复杂自定义的操作。</item>
+	///            <item>Demo: DEMO写入各种PLC的数据功能里，写入的数据支持byte数组，例如数据输入[1,2,3], 点击写入byte，就自动写入new byte[]{ 0x01, 0x02, 0x03};</item>
+	///            <item>Demo: TCP调试界面优化，新增握手报文设置。新增一个测试正则表达式的界面，增加一些常用的正则表达式的内容。CIP浏览节点界面支持正则表达式筛选节点。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-6-9" version="11.0.1" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>HslExtension: 新增了一些扩展方法，现在可以直接从short，int类型获取位及设置位的功能，例如 bool value = shortValue.GetBoolByIndex(10); 设置位也是同理。</item>
+	///            <item>DLT645: Demo界面优化，无论是串口的，还是网口的，都支持了密码及操作者ID的输入。修复了站号输入后，但是站号初始化不成功的bug。</item>
+	///            <item>LogStatisticsBase: 当传入的长度为-1时，表示不限制长度信息，会一直的新增。</item>
+	///            <item>Upgrade.exe: 用于自动升级更新的项目重新优化，支持了下载时候的网速显示，支持了下载百分比显示，删除了自动创建快捷方式的代码。</item>
+	///            <item>SerialBase: 初始化串口的方法SerialPortInni( string portName )支持格式化的输入，例如COM3-9600-8-N-1，COM5-19200-7-E-2。</item>
+	///            <item>MelsecFxSerialOverTcp: 当启动GOT透传时，修复报文封装不正确导致写入失败，读写值不正常的bug。</item>
+	///            <item>InovanceHelper): 汇川的PLC针对M地址的寄存器，支持使用 MX0.0 来对位进行读取操作。支持了MB100读取byte类型的数据。</item>
+	///            <item>Demo: 在Demo所有的设备通信测试界面，几乎所有的设备都支持了显示报文信息，想要查看通信的报文协议，菜单里点击 报文日志 。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-6-28" version="11.0.2" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>LogNet: 修复日志对象在配置了LogThreadID=False时，控制台输出界面仍然显示线程号信息的bug。</item>
+	///            <item>AllenBradleyServer: 新增属性CreateTagWithWrite，当手动设置为true时，从服务器端写入不存在的标签将根据写入的类型自动创建标签。</item>
+	///            <item>NetworkUdpBase: udp的通信基类修复某些设备通信情况下每9次通信就会跟随一次失败的bug，原因来自不停的创建socket，现在修改为连接正常就不重新创建socket</item>
+	///            <item>AllenBradleyServer: ab虚拟plc修复写入short的类型分配不正确的bug，并且增加一个创建byte字节数组的标签的方法接口。</item>
+	///            <item>AllenBradleyNet: 修复同步方法ReadString(string address); 读取字符串返回数据乱码的bug，原因来自调用了基类的字符串解析。</item>
+	///            <item>DLT645: 大面积优化，支持了更多的地址读取，支持了一个地址多个数据读取，修复了部分数据(如电流，功率因数等)不识别正负号的bug。</item>
+	///            <item>PipeSocket: 端口号信息由int型调整为数组，使用SetMultiPorts方法可以设置多个端口号信息，当PLC对象重连时，就会切换端口号，循环反复使用指定的端口号信息。</item>
+	///            <item>PipeSocket: 多端口号使用方法为 plc.GetPipeSocket( ).SetMultiPorts( new int[] {6000, 6001} ); 实例化之后调用一次即可。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-7-22" version="11.0.3" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>MelsecFxSerialOverTcp: 修复在启用GOT透传时，碰到特殊的报文解析异常，最终导致偶尔读写失败的bug。</item>
+	///            <item>InovanceHelper: 修复汇川PLC的AM系列时，读写M区域位地址的数据偏移不正确的bug，例如MX100.0，实际地址应该是MW50的第0位。</item>
+	///            <item>ModbusTcpServer: 新增属性StationDataIsolation，默认为false，表示server只有一个数据区，所有站号用的一个数据区。如果设置为 true，表示server给每个站号开辟一个数据区。</item>
+	///            <item>ModbusTcpServer: 修改Station站号类型为byte，删除属性StationCheck，现在不需要检查站号了。服务器侧读写数据支持了输入站号信息，例如 s=2;100，可以访问不同站号的数据。</item>
+	///            <item>FujiSPBServer: 修复富士SPB虚拟服务器再读写位数据的时候，修复地址偏移解析异常导致bug。</item>
+	///            <item>AllenBradleyServer: CIP协议的虚拟服务器修复当客户端写入bool变量时，无论写入True还是False，服务器都写入True的bug。</item>
+	///            <item>MelsecFxSerialOverTcp: 三菱的编程口协议里，读取的地址长度突破了254字节的长度限制，现在可以读取无限个bool值，或是其他类型的值。</item>
+	///            <item>HslReflectionHelper: 在MRPC及webapi接口的参数数据提取过程中，支持传入JSON对象及JSON对象的字符串，都会自动解析成正确的对象值或是JObject值。</item>
+	///            <item>MelsecA1ENet: 三菱的A1E协议，读取字及位数据时，支持了读取超过64地址长度的数据，内部自动切割重组。</item>
+	///            <item>DLT698: 初步添加DLT698.45的协议实现，使用明文的通信方式。支持读取功率，总功，电压，电流，频率，功率因数等数据。</item>
+	///            <item>XGBCnet: Lsis的XGBCnet协议修复部分的bool读写位置和真实PLC对应不上的bug，bool的读取支持了MW100.2 带小数点表示的方式。</item>
+	///            <item>XGBCnet: 支持了批量的bool数组读取功能（内部自动读取字节，解析出bool数组，不支持写入bool数组）。修复XGBFastEnet在配置XGB型号时读写数据异常的bug。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注，新官网：http://www.hsltechnology.cn/。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>  <revision date="2022-7-27" version="11.0.4" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>NET451: 紧急修复NET451项目因为代码合并时导致签名丢失的问题，否则将导致签名的应用程序无法编译。</item>
+	///            <item>DLT698OverTcp: 新增DLT698的串口透传类，使用串口转网口即可进行通信。</item>
+	///            <item>DLT698TcpNet: 新增基于网口的DLT698协议，存在握手包，还未详细测试。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注，新官网：http://www.hsltechnology.cn/。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-8-12" version="11.0.5" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>ModbusAsciiOverTcp: 新增modbusascii协议的串口转网口透传的通信类。</item>
+	///            <item>DeltaSerialAsciiOverTcp: 新增一个台达的ASCII通信协议的串口转网口透传通信类，和其他的基于modbus的台达类一致的用法，一致的地址格式。</item>
+	///            <item>FujiCommandSettingType: 修复FujiCommandSettingType及其虚拟服务器再解析地址不正确的bug，导致大量的其他地址解析失败，并完善了注释说明。</item>
+	///            <item>MelsecFxSerial: 新增属性AutoChangeBaudRate，默认false，当设置为true时，在串口打开时会和PLC交互改变PLC默认的波特率。</item>
+	///            <item>SerialBase: 新增串口类基类属性ReceiveEmptyDataCount，用来表示接收空白数据次数，然后判断接收完成的标记，单次耗费的时间是 SleepTime。</item>
+	///            <item>Modbus: DEMO相关的界面都默认的DataFormat都调整为 CDAB，因为大多数的设备数据大小端都是这个格式。</item>
+	///            <item>OmronConnectedCipNet: 新增IReadWriteCip接口，欧姆龙的基于连接的CIP协议实现了日期及时间的读写接口。</item>
+	///            <item>MqttServer: MQTT服务器支持向自定义规则的客户端会话发布指定的主题数据，详细查看PublishTopicPayload重载方法</item>
+	///            <item>MqttSyncClient: 上传文件到服务器的功能接口里新增流数据的上传，需要指定服务器保存的文件的名称。</item>
+	///            <item>NetworkConnectedCip: 基于连接的CIP协议的连接id信息初始化时及赋予一个随机数，增加一个新的错误描述信息，连接过多的错误。</item>
+	///            <item>Upgrade.exe: 用于更新的exe修复当文件长度为0时，导致百分比计算异常的bug。</item>
+	///            <item>OmronFinsAddress: 欧姆龙FINS协议的地址，增加支持了定时器TIM,计数器CNT，索引寄存器IR，数据寄存器DR的读写。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注，新官网：http://www.hsltechnology.cn/。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-8-18" version="11.0.6" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>TcpForward: TCP转TCP类新增OnRemoteMessageReceived及OnClientMessageReceive事件，可以捕获所有的通信报文。</item>
+	///            <item>TcpForward: TCP转TCP的对象新增ConnectTimeOut属性，支持设定连接超时</item>
+	///            <item>NetSoftUpdateServer: 更新的服务器新增一个方法，GetDealSizeAndReset每秒调用即可获取当前的下载网速信息</item>
+	///            <item>AllenBradleyNet: 完善了路由信息，支持了一种特殊的路由信息的消息，格式为 1.1.2.130.133.139.61.1.0。</item>
+	///            <item>TcpFoward: TCP转发的类新增一个属性OnlineSessionsCount，获取当前在线会客户端会话数量信息。</item>
+	///            <item>SecsHsms: 新增属性 InitializationS0F0，默认为false，指示是否在初始化的时候，发送功能码 S0F0。</item>
+	///            <item>Lognet: 优化日志存储器在计算过期日志文件并删除的代码，现在触发新增文件时，才进行删除旧的文件信息。</item>
+	///            <item>官网地址： http://www.hslcommunication.cn 官网的界面全新设计过，感谢浏览关注，新官网：http://www.hsltechnology.cn/。</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-9-13" version="11.1.0" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>SiemensS7Net: 新增ReadDate，WriteDate的功能方法，实现了对日期类型的变量的读写操作，PLC测标记为D#2022-8-19</item>
+	///            <item>SecsHsms: 客户端和服务器的程序，都支持了字符串编码属性设置，可以支持其他的编码，默认的编码调整为Default，主要是支持了中文的消息。</item>
+	///            <item>FanucInterfaceNet: fanuc机器人的地址支持了直接的地址，Bool地址支持：SDO, SDI, RDI, RDO, UI, UO, SI, SO ,字单位地址支持：GI, GO, D。修复日志重复记录。</item>
+	///            <item>OmronFinsNet: OmronFinsNet，OmronFinsUdp, OmronHostLink, OmronHostLinkOverTcp支持0104功能码，批量读取随机字地址，使用方法 Read(string[])</item>
+	///            <item>OmronFinsServer: fins虚拟服务器支持了0104随机读取地址的功能码，对代码进行了优化，提炼了重复的代码。</item>
+	///            <item>MqttRpcDevice: 新增基于MQTT-RPC接口的设备对象，用来访问使用MQTTServer注册plc对象为RPC接口的设备，让单连接的PLC瞬间支持N连接，参考：https://www.cnblogs.com/dathlin/p/16632767.html</item>
+	///            <item>Toledo: 托利多电子秤增加通信报文日志记录，支持了扩展模式下的输出格式，并对数据分析增加异常捕获，日志记录。优化串口的通信接收，增加是否配置和校验的属性。</item>
+	///            <item>MqttClient: 每个订阅的主题升级为SubscribeTopic类对象，携带一个事件，支持每个主题绑定不同的事件内容。方便子窗体使用同一个MqttClient对象订阅不同的主题并触发不同的事件。</item>
+	///            <item>SiemensS7Server: 优化字符串的读写操作，支持WString字符串的读写，自动使用S7格式的字符串，在demo写入字符串数据的时候，客户端也可以正确的读取。</item>
+	///            <item>ILogNet: ILogNet日志接口新增一个属性LogStxAsciiCode用来配置是否在每条日志开头记录0x02的ASCII码字符，默认为true，设置false后也就无法使用hsl自带的日志分析工具。</item>
+	///            <item>RedisClient: redis客户端类支持了集群的服务器情况，当标签A在另一个服务器时，redisclient会自动连接到对应的服务器进行获取。</item>
+	///            <item>FanucSeries0i: fanuc机床的通信类支持了ReadOperatorMessage方法，用来读取机床的操作信息。</item>
+	///            <item>MqttServer: 修复Mqtt服务器在进行订阅结果反馈时，没有将topic主题的Qos也返回的bug，在某些情况下，客户端会引发异常。</item>
+	///            <item>NetworkDataServerBase: 新增加属性ForceSerialReceiveOnce，默认为false，当多个modbusserver使用485总线串到一起时，需要设置为true</item>
+	///            <item>Iec104: 修复连接失败的bug，修复在I帧消息号返回接收的id信息数量不正确的bug，现在可以正确的接收设备的数据。</item>
+	///            <item>Demo界面新增一个各种校验码测试的界面，主要用于测试CRC16，LRC，FCS（异或校验）,ACC(和校验)，欧姆龙的Fins协议Demo界面上支持配置字符串是否翻转。</item>
+	///            <item>Json: 依赖的json组件 Newtonsoft.Json 更新到最新的 v13.0.1 版本。</item>
+	///            <item>新官网：http://www.hsltechnology.cn/，还有全新的使用文档的地址：http://www.hsltechnology.cn/Doc/HslCommunication</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-10-12" version="11.1.1" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>Demo: 修复山武设备串口通讯调试界面，站号设置无效的bug。</item>
+	///            <item>MelsecMcServer： MC协议的虚拟服务器支持L寄存器的读写操作，原先的D寄存器范围为 D0~D65535 扩展到 D0~D131071</item>
+	///            <item>MqttSession: Mqtt会话新增属性DeveloperPermissions，标记开发者权限，服务器可以自由控制会话是否具有遍历MRPC接口的权限。</item>
+	///            <item>DLT: DLT645及DLT698协议及其网口透传类新增属性：EnableCodeFE, 莫认false，当设置为True时每次发报文到设备时都会追加FEFEFEFE的指令头。</item>
+	///            <item>OmronConnectedCipNet: 新增属性ConnectionTimeoutMultiplier用来设置异常超时时间，默认02表示32秒。</item>
+	///            <item>SiemensS7Server: 优化握手报文的数据信息，现在支持了node-red的s7功能节点的读写数据，支持了s7netplus组件的连接及读写。</item>
+	///            <item>SoftBasic: 新增从XML元素获取泛型值的便捷方法，DEMO程序的一些界面优化，串口调试界面优化，webapi服务器接口界面支持接口存储。</item>
+	///            <item>OmronFinsTcp: FinsTcp协议优化，在接收fins消息报文时，即使前面有多个无用字节数据，依然可以正确的接收并处理数据。</item>
+	///            <item>SiemensS7Server: 西门子的s7虚拟服务器的DB块优化，采用词典存储，内置DB1，2，3，其他DB块需要使用AddDbBlock方法来手动增加，否则无法读写。</item>
+	///            <item>YokogawaLinkServer: 修复横河PLC虚拟服务器的读取bool数据时，无论输入什么地址类型，都会读取m寄存器的bug。</item>
+	///            <item>HslExtension: ToHexString 的扩展方法以及SoftBasic.ByteToHexString 方法在转换byte[]到string时，支持格式化的参数，默认 {0:X2}</item>
+	///            <item>SerialBase: 修复在特殊情况下读取数据导致没有响应，也不触发超时的bug，优化modbusrtu在错误码报文下的接收完成判断。</item>
+	///            <item>MemobusTcpNet: 安川PLC修复读写扩展寄存器失败的bug，通信细节进行优化，支持对扩展寄存器的随机字读取和写入操作。并增加MemobusUdpNet类，基于UDP的实现。</item>
+	///            <item>MemobusTcpServer: 新增加安川PLC的虚拟服务器实现，支持功能码为 01 02 03 04 05 06 08 09 0A 0B 0D 0E 0F 10</item>
+	///            <item>新官网：http://www.hsltechnology.cn/，还有全新的使用文档的地址：http://www.hsltechnology.cn/Doc/HslCommunication</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-10-25" version="11.2.0" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>SoftBasic: 新增对url字符串编码和解码的方法，UrlEncode及UrlDecode方法，主要是中文和%开头的互转，代码参考微软实现。例如 AB好 和 AB%E5%A5%BD 互转</item>
+	///            <item>HttpServer: 新增委托HandleFileUpload，当客户端上传文件时触发，然后获取到文件名和内容，可以自己进行存储，目前仅支持单个文件上传。</item>
+	///            <item>DLT645-2007: 网口串口代码优化，相同的逻辑代码提炼，并增加属性 DLTType，返回枚举：DLT645Type.DLT2007</item>
+	///            <item>DLT645With1997: 新增 DLT645/1997 协议的实现，使用ReadDouble来读取相关的数据，例如地址：B6-11 读取电压A数据。</item>
+	///            <item>DLT645With1997OverTcp: 新增 DLT645/1997 网口透传实现的版本，使用TCP/IP通信并数据交互，使用方法和 DLT645With1997 一致。</item>
+	///            <item>SiemensPPI: 优化西门子PPI协议数据接收时完整性判断，数据一旦接收完成，立即返回。因为在某些特殊情况下，数据接收不完整时会发生异常。</item>
+	///            <item>SiemensPPIOverTcp: 接收数据时循环接收，并判断数据完整性，数据一旦接收完成，立即返回，增加循环超时时间，为ReceiveTimeout。</item>
+	///            <item>CJT188: 新增CJT188-2004的水表（燃气表）协议，使用ReadDouble 和 ReadStringArray通信，地址示例：90-1F读取当前的累积流量，同时添加网口透传的版本。</item>
+	///            <item>FanucSeries0i: fanuc的机床新增属性OperatePath，默认为1，当机床为多路径的时候，可以设置为2，然后对路径2进行相关的操作，例如读取报警，读取程序。</item>
+	///            <item>MqttServer: 优化安全性，当没有指定RSA密钥时，针对每个连接的客户端对象，都创建随机的RSA密钥，来提升安全性。</item>
+	///            <item>ILogNet: 日志类接口新增属性HourDeviation，如果需要日志记录时进行时间偏移操作，可以设置该属性实现，如果为-8，就是所有时间往前挪8小时。</item>
+	///            <item>新官网：http://www.hsltechnology.cn/，还有全新的使用文档的地址：http://www.hsltechnology.cn/Doc/HslCommunication</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-11-1" version="11.2.1" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>SiemensPPIOverTcp: 修复在通信速率比较慢的情况下，数据包发生多次接收的时候，接收不正确的bug。</item>
+	///            <item>SecsValue: 修复在创建None类型的数据时，引发空对象的异常。</item>
+	///            <item>SecsHsms: 优化Secs协议的客户端和服务器的心跳接收，修复了和其他客户端测试连接不正常的bug，DEMO界面添加大量的测试信息。</item>
+	///            <item>CJT188: CJT188OverTcp 协议新增属性 StationMatch 用来标记是否匹配到站号一致的报文再返回，默认为false，修复读取数据失败时，直接报异常的bug。</item>
+	///            <item>SiemensS7Server: 修复西门子虚拟PLC在使用node-red的s7组件访问时频繁在线，掉线的bug，原因来自消息id不匹配。</item>
+	///            <item>DLTTransform: 当没有遇到内置转换DLT数据的时候，不再返回失败，返回数据的HEX字符串形式，用来支持扩展的情况读取。</item>
+	///            <item>HslCommunication的netstandard版本的库所依赖的System.IO.Port 版本调整为 6.0.0</item>
+	///            <item>Demo: 完善TCP/UDP调试窗体，Server端修复选择文本不显示字节长度的bug，修复关闭时连接不断开的bug，界面位置调整优化。</item>
+	///            <item>新官网：http://www.hsltechnology.cn/，还有全新的使用文档的地址：http://www.hsltechnology.cn/Doc/HslCommunication</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-11-18" version="11.2.2" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>SharpList: 修复Add一个新的值的时候，每隔指定长度次数时数据丢失一次的bug。新增LastValue( )方法获取最后一个值。</item>
+	///            <item>AllenBradleyNet: ReadBool(string address, short length); 支持读取以int类型为基础的bool数组，支持从中间任意位置开始读，返回任意长度。地址前加i=,例如i=AAA[10]</item>
+	///            <item>NetSoftUpdateServer: 修复路径在linux下运行时，路径分隔符识别不正确，导致文件下载失败的bug。</item>
+	///            <item>Modbus: modbus的地址支持自定义写入功能码，例如自定义的服务器有个数据区，读使用07功能码，写使用08功能码，那么地址可以表示为 x=7;w=8;100  依然可以支持站号。</item>
+	///            <item>CJT188Helper: 修复CJT188协议再读取水表数据的时候，数据位颠倒的bug。</item>
+	///            <item>Omron: 在欧姆龙Fins协议里，当读取位数据超过1998时会发生错误，现在根据1998长度自动切割，也就是支持任意长度了。</item>
+	///            <item>ReverseBytesTransform: 修复指定DataFormat对象实例化的时候，指定DataFormat无效的bug。</item>
+	///            <item>NetworkDoubleBase: 基础的网络设备通信基类支持了使用MQTT中转读取的方式，指定mqtt对象，读Topic，写Topic就可以远程读写PLC信息。可以配合我司的边缘网关系统的设备转MQTT使用。使用手册后面推出。</item>
+	///            <item>DLT645With1997: 修复DLT645-2007解析数据异常的bug，修复读取电压倍率不对的bug。</item>
+	///            <item>ModbusHelper: 修复汇川PLC读取bool时，当指定MX500.7能读bool值，但是MX501.7 这种地址时，获取不到正确的值的bug。</item>
+	///            <item>Authorization: 支持一种在线激活方式，使用指定ip，端口，令牌获取远程激活码来激活的操作，后续扩展临时激活授权测试的功能。</item>
+	///            <item>FanucSeries0i: 读取程序的API接口ReadProgram再接收完程序后，再接收一次0x18指令的报文。</item>
+	///            <item>OmronHostLinkHelper: 欧姆龙HostLink协议在解析报文的错误码时，当解析失败时，增加错误捕获，并提示原始报文。</item>
+	///            <item>新官网：http://www.hsltechnology.cn/，还有全新的使用文档的地址：http://www.hsltechnology.cn/Doc/HslCommunication</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-12-9" version="11.3.0" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>byte[]: 类型byte[]新增加一个扩展方法，ReverseByWord，直接可以调用按照字反转字节数据信息。</item>
+	///            <item>OmronCipNet: 欧姆龙的CIP协议优化，写入数组时，根据地址是否带索引，来自动确认写入的长度信息。</item>
+	///            <item>MelsecMcServer: MC协议的虚拟PLC部分，在二进制下支持了随机字读取（0403）和块读取（0406）的功能码。</item>
+	///            <item>WebSocketServer: 现在服务端新增属性：TopicWildcard，如果客户端使用通配符订阅数据点。规则和MQTT的通配符一致。</item>
+	///            <item>HttpServer: 修复request.ContentType为空的情况下引发的异常，原因来自对文件上传的判断。</item>
+	///            <item>SiemensS7Net: 修复西门子PLC在不连接的情况下，直接同步方法读写PLC相关的值的时候，因为pdu初始值不正常导致第一次读写失败的bug。</item>
+	///            <item>Demo: Tcp的服务器调试界面里，修复点击发送客户端时，发送的数据不显示的bug。</item>
+	///            <item>DLT645With1997OverTcp: 修复使用异步ReadDoubleAsync读取数据的时候，数据结果解析不正确的bug。</item>
+	///            <item>OpenProtocolNet: 完善开放以太网协议，并且基本测试通过，支持自定义的功能码读取，支持订阅操作。</item>
+	///            <item>新官网：http://www.hsltechnology.cn/，还有全新的使用文档的地址：http://www.hsltechnology.cn/Doc/HslCommunication</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
+	///     </revision>
+	///     <revision date="2022-12-28" version="11.3.1" author="Richard.Hu">
+	///         <list type="bullet">
+	///            <item>Dll: 用于激活的类Authorization新增一个方法SetDllContact，用于设置提醒激活的联系方式，可以设置自定义的联系方式。</item>
+	///            <item>Demo: 修复安川的MemobusUdpNet的测试界面的点击实例化按钮后，界面还是灰的bug。</item>
+	///            <item>AllenBradleyNet: 修复ab-plc的CIP协议，当触发0x64错误码的时候，一直重复读写无法恢复成功的bug，现在会自动重连操作。</item>
+	///            <item>SiemensS7Net: 新增对DTL格式的时间数据读写的API接口，使用ReadDTLDataTime和WriteDTLTime来读写操作</item>
+	///            <item>LogStatisticsBase: 修复当系统的时间往回调的时候引发异常的bug，原因来自索引偏移位置会变成负数。</item>
+	///            <item>websocketServer: Websocket服务器header接收订阅时，支持url转义，以及修复开启通配符模式情况下，消息驻留发送失败的bug。</item>
+	///            <item>Demo: 串口调试界面以及网口调试界面，返回的数据支持勾选自动返回，只要在发送框里提前输入数据。</item>
+	///            <item>Dlt645: DLT645的地址支持reverse标记，用来支持在某些不标准的协议的设备，数据顺序没有颠倒的情况，例如：reverse=false;02-01-01-00</item>
+	///            <item>Inovance: 汇川的AM系列的地址，支持MD的地址格式解析，同时适用于读写操作，MD100=MW200</item>
+	///            <item>SiemensS7Helper: 修复了西门子虚拟PLC及SiemensS7Net的写入字符串的同步方法，字符创长度信息和实际不匹配的bug。</item>
+	///            <item>新官网：http://www.hsltechnology.cn/，还有全新的使用文档的地址：http://www.hsltechnology.cn/Doc/HslCommunication</item>
+	///            <item>本软件已经申请软件著作权，软著登记号：2020SR0340826，任何盗用软件，破解软件，未经正式合同授权而商业使用均视为侵权。</item>
+	///         </list>
 	///     </revision>
 	/// </revisionHistory>
 	[System.Runtime.CompilerServices.CompilerGeneratedAttribute( )]
@@ -1700,39 +2192,58 @@ namespace HslCommunication
 	}
 
 
-	// 工作的备忘录
-	// 1. python新增对ab plc的支持。
-	// 2. .net端对安川机器人的支持，已经有协议文档。
-	// 3. 增加空间坐标变换的类
+    // 工作的备忘录
+    // 1. python新增对ab plc的支持。
+    // 2. 增加空间坐标变换的类
 
-	// 组件之外的计划
-	// 1. 研究 ML.NET 的机器学习的平台
-	// 2. 工业网关的深入集成
-	// 3. HslCommunication官网集成项目发布接收及案例展示平台
+    // 组件之外的计划
+    // 1. 研究 ML.NET 的机器学习的平台
+    // 2. 工业网关的深入集成
+    // 3. HslCommunication官网集成项目发布接收及案例展示平台
 
-	// 提交的问题
-	// 1. 发那科机器人的SO 有15个，HSL只能读取10个？UO的读不出来，读了之后全是0              QQ:30738130
-	// 2. 倍福PLC在读取变量数据的时候，成功，失败，成功，失败，交替出现。                    QQ:442304081
-	// 3. 欧姆龙的CIP协议存在一点问题，
-	// 4. PLC為 Micro 850 程式用 Micro 800 去連線                                         QQ:2147371956
-	//    PLC建立一個名為 "TEST" 的String 程式用 ReadString 去讀取 
-	//    當PLC的 TEST 內容小於等於4個字元, 則讀取沒問題
-	//    若是大於 4個字元, 例如值為"12345", 則讀取會出現 System.ArgumentOutOfRangeException 這個Error寫入則是一直失敗
-	// 5. HSL采集fanuc 数控系统，然后是一个长连接，每一个属性方法（状态啊、产量、转速）                                    QQ:318672895
-	//    都开一个线程，然后运行一天或者两天后 会自动停掉。程序没崩，就是线程自动停掉了
-	// 6. 检查超时的方法，增加进入标记，返回标记后。运行一段时间，该标记会越来越高。                                        QQ: 3320839893
-	// 7. 基恩士里面的字符串读写是反着的                                                                                 QQ: 553424250
-	// 8. 构建一个实时的数据库对象，存储单个的数据，绑定时间，然后按照时间进行反查。RealTimeData<T>, ReadTimeHistory(DateTime start, DateTime end)
-	// 9. AB-PLC的ByteTransform的transString是否需要继承重写，就像西门子PLC的一样，比较方便。
-	// 10.AB-PLC和西门子PLC因为支持多变量批量读取，按道理可以实现Read<T>读取一个类的多个变量
-	// 11.有机会新增一个数据库的辅助类，可以支持多种不同的数据库，方便的操作表，执行语句，查询单数据，查询队列，方便的重连服务器
-	// 12.有机会新增一个性能监视工具，监视内存，各种请求信息，活动信息的功能，并方便的监视，远程传输，图表化查看。
-	// 13.HslCommunicationDemo程序的PLC调试界面，新增一个脚本调试器，连接上PLC之后，可以进行一些高级的脚本调试。
-	// 14.Java的S7200不能读取PLC数据，但是C#的确实可以的
-	// 15. 1.无法直接读写自定义结构体2.word,byte类型无法写3.bool数组无法批量读           QQ:337280168
+    // 提交的问题
+    // 1. 发那科机器人的SO 有15个，HSL只能读取10个？UO的读不出来，读了之后全是0              QQ:30738130
+    // 2. 倍福PLC在读取变量数据的时候，成功，失败，成功，失败，交替出现。                    QQ:442304081
+    // 3. 欧姆龙的CIP协议存在一点问题，
+    // 4. PLC為 Micro 850 程式用 Micro 800 去連線                                         QQ:2147371956
+    //    PLC建立一個名為 "TEST" 的String 程式用 ReadString 去讀取 
+    //    當PLC的 TEST 內容小於等於4個字元, 則讀取沒問題
+    //    若是大於 4個字元, 例如值為"12345", 則讀取會出現 System.ArgumentOutOfRangeException 這個Error寫入則是一直失敗
+    // 5. HSL采集fanuc 数控系统，然后是一个长连接，每一个属性方法（状态啊、产量、转速）                                    QQ:318672895
+    //    都开一个线程，然后运行一天或者两天后 会自动停掉。程序没崩，就是线程自动停掉了
+    // 6. 检查超时的方法，增加进入标记，返回标记后。运行一段时间，该标记会越来越高。                                        QQ: 3320839893
+    // 7. 基恩士里面的字符串读写是反着的                                                                                 QQ: 553424250
+    // 8. 构建一个实时的数据库对象，存储单个的数据，绑定时间，然后按照时间进行反查。RealTimeData<T>, ReadTimeHistory(DateTime start, DateTime end)
+    // 9. AB-PLC的ByteTransform的transString是否需要继承重写，就像西门子PLC的一样，比较方便。
+    // 10.AB-PLC和西门子PLC因为支持多变量批量读取，按道理可以实现Read<T>读取一个类的多个变量
+    // 11.有机会新增一个数据库的辅助类，可以支持多种不同的数据库，方便的操作表，执行语句，查询单数据，查询队列，方便的重连服务器
+    // 12.有机会新增一个性能监视工具，监视内存，各种请求信息，活动信息的功能，并方便的监视，远程传输，图表化查看。
+    // 13.HslCommunicationDemo程序的PLC调试界面，新增一个脚本调试器，连接上PLC之后，可以进行一些高级的脚本调试。
+    // 14.Java的S7200不能读取PLC数据，但是C#的确实可以的
+    // 15. 1.无法直接读写自定义结构体2.word,byte类型无法写3.bool数组无法批量读           QQ:337280168
 
 
-	/*
+
+    // TODO: RedisDesktop的指定的DB块数据清除失败，都会清除DB0的数据。
+    // TODO: 台达机器人的支持: qq:305758752
+    // TODO: MqttSyncClient上传下载文件时，控制台项目定义再外面的时，会报错，QQ：351326891
+    // TODO: hslcontrols的历史曲线控件支持显示点的曲线 QQ: 809271476
+    // TODO: IEC104协议的完善。微信: 顾江其
+    // TODO: demo客户端程序的写入增加定时写入，定时读取功能。MQTT定时发布功能
+    // TODO: fanuc机器人读取R10以上的数据，mobjNumReg4 = mobjDataTable.AddNumReg(FRRJIf.FRIF_DATA_TYPE.NUMREG_REAL, 60, 60); 微信：love-mu2011
+    // TODO: DF1协议在对等模式下进行通信的研究，微信：adao3823
+    // TODO: fanuc机床无法读取辅助宏 QQ：490384184
+    // TODO: 编写一个内网本地端口转发云服务器端口的程序，这样就可以通过映射，让内网的PLC支持外网访问，方便让大家远程测试PLC
+    // TODO: fanuc机床新增API：cnc_diagnoss 读取调试信息
+    // TODO: Websocket接收数据乱码，测试时发现部分文本从payload解析不出来，发送数据也不一样，用wirshake测试也是如此。
+    // TODO: DLT645运行一段时间后，一直发生读取超时，但是软件重启就好的，微信:ZS_wangjian
+    // TODO: 基恩士GT高度传感器，的协议集成：1278281953
+    // TODO: 汇川的TCP协议（modbus），直接支持读写MB，MD
+    // TODO: DLT645协议解析数据时，支持是否翻转数据，以及有个数据返回异常。微信，映翰通
+    // TODO: MQTT服务器长时间运行会发生异常，错误日志见桌面文件
+    // TODO: Websocket服务器header接收订阅时，碰到特殊符号，支持url转义。开启通配符的时候，客户端连接后，第一次订阅的消息没有收到: 企业商业群
+
+    /*
 	 *  // 适用windows的后台分析进程，获取当前进程对象
 		private Process cur = null;
 		private PerformanceCounter curpcp = null;
@@ -1750,14 +2261,14 @@ namespace HslCommunication
 		RamInfo = (curpcp.NextValue() / MB_DIV).ToString("F1") + "MB";
 	 */
 
-	//git checkout A
-	//git log
-	//找出要合并的commit ID :
-	//例如
-	//0128660c08e325d410cb845616af355c0c19c6fe
-	//然后切换到B分支上
-	//git checkout B
-	//git cherry-pick  0128660c08e325d410cb845616af355c0c19c6fe
+    //git checkout A
+    //git log
+    //找出要合并的commit ID :
+    //例如
+    //0128660c08e325d410cb845616af355c0c19c6fe
+    //然后切换到B分支上
+    //git checkout B
+    //git cherry-pick  0128660c08e325d410cb845616af355c0c19c6fe
 
-	//然后就将A分支的某个commit合并到了B分支了
+    //然后就将A分支的某个commit合并到了B分支了
 }

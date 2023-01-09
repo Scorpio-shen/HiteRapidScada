@@ -101,19 +101,7 @@ namespace HslCommunication.Enthernet
 		/// <param name="endPoint">终结点</param>
 		protected override void ThreadPoolLogin( Socket socket, IPEndPoint endPoint )
 		{
-			AppSession session = new AppSession( );
-
-			session.WorkSocket = socket;
-			try
-			{
-				session.IpEndPoint = endPoint;
-				session.IpAddress = session.IpEndPoint.Address.ToString( );
-			}
-			catch (Exception ex)
-			{
-				LogNet?.WriteException( ToString( ), StringResources.Language.GetClientIpAddressFailed, ex );
-			}
-
+			AppSession session = new AppSession( socket );
 			LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOnlineInfo, session.IpEndPoint ) );
 
 			try
@@ -154,7 +142,7 @@ namespace HslCommunication.Enthernet
 				if (protocol == HslProtocol.ProtocolCheckSecends)
 				{
 					// 初始化时候的测试消息
-					appSession.HeartTime = DateTime.Now;
+					appSession.UpdateHeartTime( );
 					SendMessage( appSession, customer, content );
 					LogNet?.WriteDebug( ToString( ), string.Format( "Heart Check From {0}", appSession.IpEndPoint ) );
 				}

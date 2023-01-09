@@ -24,12 +24,15 @@ namespace HslCommunication.LogNet
 		/// and also need to specify the number of statistics, such as 30 days by day.
 		/// </summary>
 		/// <param name="generateMode">时间的统计方式</param>
-		/// <param name="arrayLength">数据的数量信息</param>
+		/// <param name="arrayLength">数据的数量信息，如果本值为-1，则表示数据一直增长</param>
 		public LogStatisticsBase( GenerateMode generateMode, int arrayLength )
 		{
 			this.generateMode         = generateMode;
-			this.arrayLength            = arrayLength;
-			this.statistics           = new T[arrayLength];
+			this.arrayLength          = arrayLength;
+			if (this.arrayLength >= 0)
+				this.statistics = new T[arrayLength];
+			else
+				this.statistics = new T[1024];
 			this.lastDataMark         = GetDataMarkFromDateTime( DateTime.Now );
 			this.lockStatistics       = new object( );
 		}
@@ -55,20 +58,26 @@ namespace HslCommunication.LogNet
 		/// <param name="lastDataMark">最后一次标记的内容</param>
 		public void Reset( T[] statistics, long lastDataMark )
 		{
-			if (statistics.Length > this.arrayLength)
+			if (this.arrayLength >= 0)
 			{
-				Array.Copy( statistics, statistics.Length - this.arrayLength, this.statistics, 0, this.arrayLength );
-			}
-			else if (statistics.Length < this.arrayLength)
-			{
-				Array.Copy( statistics, 0, this.statistics, this.arrayLength - statistics.Length, statistics.Length );
+				if (statistics.Length > this.arrayLength)
+				{
+					Array.Copy( statistics, statistics.Length - this.arrayLength, this.statistics, 0, this.arrayLength );
+				}
+				else if (statistics.Length < this.arrayLength)
+				{
+					Array.Copy( statistics, 0, this.statistics, this.arrayLength - statistics.Length, statistics.Length );
+				}
+				else
+				{
+					this.statistics = statistics;
+				}
+				this.arrayLength = statistics.Length;
 			}
 			else
 			{
 				this.statistics = statistics;
 			}
-
-			this.arrayLength = statistics.Length;
 			this.lastDataMark = lastDataMark;
 		}
 
@@ -110,7 +119,7 @@ namespace HslCommunication.LogNet
 				if (this.lastDataMark != newDataMark)
 				{
 					int leftMove = (int)(newDataMark - lastDataMark);
-					this.statistics = GetLeftMoveTimes( leftMove );
+					if (leftMove > 0) this.statistics = GetLeftMoveTimes( leftMove );
 
 					this.lastDataMark = newDataMark;
 				}
@@ -242,10 +251,22 @@ namespace HslCommunication.LogNet
 		private long GetYearFromTime(   DateTime dateTime ) => dateTime.Year - 1970;
 		private T[] GetLeftMoveTimes( int times )
 		{
-			if (times >= statistics.Length) return new T[this.arrayLength];
-			T[] newArray = new T[this.arrayLength];
-			Array.Copy( statistics, times, newArray, 0, statistics.Length - times );
-			return newArray;
+			if (this.arrayLength >= 0)
+			{
+				if (times >= statistics.Length || times <= -statistics.Length) return new T[this.arrayLength];
+				T[] newArray = new T[this.arrayLength];
+				if (times >= 0)
+					Array.Copy( statistics, times, newArray, 0, statistics.Length - times );
+				else
+					Array.Copy( statistics, 0, newArray, -times, statistics.Length + times );
+				return newArray;
+			}
+			else
+			{
+				T[] newArray = new T[statistics.Length + times];
+				Array.Copy( statistics, 0, newArray, 0, Math.Min( statistics.Length, newArray.Length ) );
+				return newArray;
+			}
 		}
 
 		private T[] statistics = null;                                   // 实际存储的数据信息

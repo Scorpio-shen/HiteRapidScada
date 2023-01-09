@@ -9,6 +9,9 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using HslCommunication.BasicFramework;
+using System.Security.Cryptography;
+using HslCommunication.Core.Security;
+using static HslCommunication.MQTT.MqttClient;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -30,6 +33,11 @@ namespace HslCommunication.MQTT
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MQTTClient.cs" region="Test4" title="发布示例" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MQTTClient.cs" region="Test5" title="订阅示例" />
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MQTTClient.cs" region="Test8" title="网络重连示例" />
+	/// 当我们在一个多窗体的客户端里使用了<see cref="MqttClient"/>类，可能很多界面都需要订阅主题，显示一些实时数据信息。只由主窗体来订阅再把数据传递给子窗体却不是很容易操作。
+	/// 所以在hsl里提供了更加便捷的操作方法。方便在每个子窗体界面中，订阅，显示，取消订阅操作。核心代码如下：
+	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\MQTT\MQTTClient.cs" region="Test9" title="子窗体订阅操作" />
+	/// 以下的例子是DEMO程序的一个例子代码，也可以作为参考
+	/// <code lang="cs" source="TestProject\HslCommunicationDemo\MQTT\FormMqttSubscribe.cs" region="Sample" title="DEMO子窗体" />
 	/// </example>
 	public class MqttClient : NetworkXBase, IDisposable
 	{
@@ -42,13 +50,13 @@ namespace HslCommunication.MQTT
 		public MqttClient( MqttConnectionOptions options )
 		{
 			this.connectionOptions = options;
-			this.incrementCount = new SoftIncrementCount( ushort.MaxValue, 1 );
-			this.listLock = new object( );
-			this.publishMessages = new List<MqttPublishMessage>( );
-			this.subcribeTopics = new List<string>( );
-			this.activeTime = DateTime.Now;
-			this.subcribeLock = new object( );
-			this.connectLock = new object( );
+			this.incrementCount    = new SoftIncrementCount( ushort.MaxValue, 1 );
+			this.listLock          = new object( );
+			this.publishMessages   = new List<MqttPublishMessage>( );
+			this.subscribeTopics   = new Dictionary<string, SubscribeTopic>( );
+			this.activeTime        = DateTime.Now;
+			this.subscribeLock      = new object( );
+			this.connectLock       = new object( );
 		}
 
 		#endregion
@@ -67,7 +75,31 @@ namespace HslCommunication.MQTT
 			OperateResult<Socket> connect = CreateSocketAndConnect( this.connectionOptions.IpAddress, this.connectionOptions.Port, this.connectionOptions.ConnectTimeout );
 			if (!connect.IsSuccess) return connect;
 
-			OperateResult<byte[]> command = MqttHelper.BuildConnectMqttCommand( this.connectionOptions );
+			// 连接对象加密处理，和服务器进行交换密钥处理
+			RSACryptoServiceProvider rsa = null;
+			if (this.connectionOptions.UseRSAProvider)
+			{
+				cryptoServiceProvider = new RSACryptoServiceProvider( );
+
+				OperateResult sendKey = Send( connect.Content, MqttHelper.BuildMqttCommand( 0xFF, null, HslSecurity.ByteEncrypt( cryptoServiceProvider.GetPEMPublicKey( ) ) ).Content );
+				if (!sendKey.IsSuccess) return sendKey;
+
+				OperateResult<byte, byte[]> key = ReceiveMqttMessage( connect.Content, 10_000 );
+				if (!key.IsSuccess) return key;
+
+				try
+				{
+					byte[] serverPublicToken = cryptoServiceProvider.DecryptLargeData( HslSecurity.ByteDecrypt( key.Content2 ) );
+					rsa = RSAHelper.CreateRsaProviderFromPublicKey( serverPublicToken );
+				}
+				catch (Exception ex)
+				{
+					connect.Content?.Close( );
+					return new OperateResult( "RSA check failed: " + ex.Message );
+				}
+			}
+
+			OperateResult<byte[]> command = MqttHelper.BuildConnectMqttCommand( this.connectionOptions, "MQTT", rsa );
 			if (!command.IsSuccess) return command;
 
 			// 发送连接的报文信息
@@ -82,6 +114,12 @@ namespace HslCommunication.MQTT
 			OperateResult check = MqttHelper.CheckConnectBack( receive.Content1, receive.Content2 );
 			if (!check.IsSuccess) { connect.Content?.Close( ); return check; }
 
+			if (this.connectionOptions.UseRSAProvider)
+			{
+				string key = Encoding.UTF8.GetString( cryptoServiceProvider.Decrypt( receive.Content2.RemoveBegin( 2 ), false ) );
+				this.aesCryptography = new AesCryptography( key );
+			}
+
 			this.incrementCount.ResetCurrentValue( );          // 重置消息计数
 			this.closed = false;                               // 重置关闭状态
 
@@ -94,15 +132,16 @@ namespace HslCommunication.MQTT
 				return new OperateResult( ex.Message );
 			}
 
-			CoreSocket?.Close( );
-			CoreSocket = connect.Content;
-			OnClientConnected?.Invoke( this );
+			this.CoreSocket?.Close( );
+			this.CoreSocket = connect.Content;
+			this.IsConnected = true;
+			this.OnClientConnected?.Invoke( this );
 			// 开启心跳检测
 			this.timerCheck?.Dispose( );
 			this.activeTime = DateTime.Now;
-			if (UseTimerCheckDropped && (int)this.connectionOptions.KeepAliveSendInterval.TotalMilliseconds > 0)
+			if (this.UseTimerCheckDropped && (int)this.connectionOptions.KeepAliveSendInterval.TotalMilliseconds > 0)
 			{
-				timerCheck = new Timer( new TimerCallback( TimerCheckServer ), null, 2000, (int)this.connectionOptions.KeepAliveSendInterval.TotalMilliseconds );
+				this.timerCheck = new Timer( new TimerCallback( TimerCheckServer ), null, 2000, (int)this.connectionOptions.KeepAliveSendInterval.TotalMilliseconds );
 			}
 			return OperateResult.CreateSuccessResult( );
 		}
@@ -113,12 +152,12 @@ namespace HslCommunication.MQTT
 		/// </summary>
 		public void ConnectClose( )
 		{
-			lock (connectLock) { closed = true; }
+			lock (connectLock) { closed = true; this.IsConnected = false; }
 			OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( MqttControlMessage.DISCONNECT, 0x00, null, null );
-			if (command.IsSuccess) Send( CoreSocket, command.Content );
+			if (command.IsSuccess) Send( this.CoreSocket, command.Content );
 			timerCheck?.Dispose( );
 			Thread.Sleep( 20 );
-			CoreSocket?.Close( );
+			this.CoreSocket?.Close( );
 		}
 
 		#endregion
@@ -133,7 +172,31 @@ namespace HslCommunication.MQTT
 			OperateResult<Socket> connect = await CreateSocketAndConnectAsync( this.connectionOptions.IpAddress, this.connectionOptions.Port, this.connectionOptions.ConnectTimeout );
 			if (!connect.IsSuccess) return connect;
 
-			OperateResult<byte[]> command = MqttHelper.BuildConnectMqttCommand( this.connectionOptions );
+			// 连接对象加密处理，和服务器进行交换密钥处理
+			RSACryptoServiceProvider rsa = null;
+			if (this.connectionOptions.UseRSAProvider)
+			{
+				cryptoServiceProvider = new RSACryptoServiceProvider( );
+
+				OperateResult sendKey = await SendAsync( connect.Content, MqttHelper.BuildMqttCommand( 0xFF, null, HslSecurity.ByteEncrypt( cryptoServiceProvider.GetPEMPublicKey( ) ) ).Content );
+				if (!sendKey.IsSuccess) return sendKey;
+
+				OperateResult<byte, byte[]> key = await ReceiveMqttMessageAsync( connect.Content, 10_000 );
+				if (!key.IsSuccess) return key;
+
+				try
+				{
+					byte[] serverPublicToken = cryptoServiceProvider.DecryptLargeData( HslSecurity.ByteDecrypt( key.Content2 ) );
+					rsa = RSAHelper.CreateRsaProviderFromPublicKey( serverPublicToken );
+				}
+				catch (Exception ex)
+				{
+					connect.Content?.Close( );
+					return new OperateResult( "RSA check failed: " + ex.Message );
+				}
+			}
+
+			OperateResult<byte[]> command = MqttHelper.BuildConnectMqttCommand( this.connectionOptions, "MQTT", rsa );
 			if (!command.IsSuccess) return command;
 
 			// 发送连接的报文信息
@@ -148,6 +211,12 @@ namespace HslCommunication.MQTT
 			OperateResult check = MqttHelper.CheckConnectBack( receive.Content1, receive.Content2 );
 			if (!check.IsSuccess) { connect.Content?.Close( ); return check; }
 
+			if (this.connectionOptions.UseRSAProvider)
+			{
+				string key = Encoding.UTF8.GetString( cryptoServiceProvider.Decrypt( receive.Content2.RemoveBegin( 2 ), false ) );
+				this.aesCryptography = new AesCryptography( key );
+			}
+
 			this.incrementCount.ResetCurrentValue( );          // 重置消息计数
 			this.closed = false;                               // 重置关闭状态
 
@@ -160,15 +229,16 @@ namespace HslCommunication.MQTT
 				return new OperateResult( ex.Message );
 			}
 
-			CoreSocket?.Close( );
-			CoreSocket = connect.Content;
-			OnClientConnected?.Invoke( this );
+			this.CoreSocket?.Close( );
+			this.CoreSocket = connect.Content;
+			this.OnClientConnected?.Invoke( this );
+			this.IsConnected = true;
 			// 开启心跳检测
 			this.timerCheck?.Dispose( );
 			this.activeTime = DateTime.Now;
-			if (UseTimerCheckDropped && (int)this.connectionOptions.KeepAliveSendInterval.TotalMilliseconds > 0)
+			if (this.UseTimerCheckDropped && (int)this.connectionOptions.KeepAliveSendInterval.TotalMilliseconds > 0)
 			{
-				timerCheck = new Timer( new TimerCallback( TimerCheckServer ), null, 2000, (int)this.connectionOptions.KeepAliveSendInterval.TotalMilliseconds );
+				this.timerCheck = new Timer( new TimerCallback( TimerCheckServer ), null, 2000, (int)this.connectionOptions.KeepAliveSendInterval.TotalMilliseconds );
 			}
 			return OperateResult.CreateSuccessResult( );
 		}
@@ -176,12 +246,12 @@ namespace HslCommunication.MQTT
 		/// <inheritdoc cref="ConnectClose"/>
 		public async Task ConnectCloseAsync( )
 		{
-			lock (connectLock) { closed = true; }
+			lock (connectLock) { closed = true; this.IsConnected = true; }
 			OperateResult<byte[]> command = MqttHelper.BuildMqttCommand( MqttControlMessage.DISCONNECT, 0x00, null, null );
-			if (command.IsSuccess) await SendAsync( CoreSocket, command.Content );
+			if (command.IsSuccess) await SendAsync( this.CoreSocket, command.Content );
 			timerCheck?.Dispose( );
 			Thread.Sleep( 20 );
-			CoreSocket?.Close( );
+			this.CoreSocket?.Close( );
 		}
 #endif
 		#endregion
@@ -207,17 +277,17 @@ namespace HslCommunication.MQTT
 				Message = message,
 			};
 
-			OperateResult<byte[]> command = MqttHelper.BuildPublishMqttCommand( publishMessage );
+			OperateResult<byte[]> command = MqttHelper.BuildPublishMqttCommand( publishMessage, this.aesCryptography );
 			if (!command.IsSuccess) return command;
 
 			if (message.QualityOfServiceLevel == MqttQualityOfServiceLevel.AtMostOnce)
 			{
-				return Send( CoreSocket, command.Content );
+				return Send( this.CoreSocket, command.Content );
 			}
 			else
 			{
 				AddPublishMessage( publishMessage );
-				return Send( CoreSocket, command.Content );
+				return Send( this.CoreSocket, command.Content );
 			}
 		}
 
@@ -234,17 +304,17 @@ namespace HslCommunication.MQTT
 				Message = message,
 			};
 
-			OperateResult<byte[]> command = MqttHelper.BuildPublishMqttCommand( publishMessage );
+			OperateResult<byte[]> command = MqttHelper.BuildPublishMqttCommand( publishMessage, this.aesCryptography );
 			if (!command.IsSuccess) return command;
 
 			if (message.QualityOfServiceLevel == MqttQualityOfServiceLevel.AtMostOnce)
 			{
-				return await SendAsync( CoreSocket, command.Content );
+				return await SendAsync( this.CoreSocket, command.Content );
 			}
 			else
 			{
 				AddPublishMessage( publishMessage );
-				return await SendAsync( CoreSocket, command.Content );
+				return await SendAsync( this.CoreSocket, command.Content );
 			}
 		}
 #endif
@@ -292,7 +362,7 @@ namespace HslCommunication.MQTT
 			OperateResult<byte[]> command = MqttHelper.BuildSubscribeMqttCommand( subcribeMessage );
 			if (!command.IsSuccess) return command;
 
-			OperateResult send = Send( CoreSocket, command.Content );
+			OperateResult send = Send( this.CoreSocket, command.Content );
 			if (!send.IsSuccess) return send;
 
 			AddSubTopics( subcribeMessage.Topics );
@@ -301,16 +371,33 @@ namespace HslCommunication.MQTT
 
 		private void AddSubTopics( string[] topics )
 		{
-			lock (subcribeLock)
+			lock (subscribeLock)
 			{
 				for (int i = 0; i < topics.Length; i++)
 				{
-					if (!subcribeTopics.Contains( topics[i] ))
-					{
-						subcribeTopics.Add( topics[i] );
-					}
+					if (!subscribeTopics.ContainsKey( topics[i] )) subscribeTopics.Add( topics[i], new SubscribeTopic( topics[i] ) );
+					subscribeTopics[topics[i]].AddSubscribeTick( );
 				}
 			}
+		}
+
+		/// <summary>
+		/// 获取已经订阅的主题信息，方便针对不同的界面订阅不同的主题。<br />
+		/// Get subscribed topic information, which is convenient for subscribing to different topics for different interfaces.
+		/// </summary>
+		/// <param name="topic">主题信息</param>
+		/// <returns>订阅主题信息</returns>
+		public SubscribeTopic GetSubscribeTopic( string topic )
+		{
+			SubscribeTopic subscribeTopic = null;
+			lock (subscribeLock)
+			{
+				if (subscribeTopics.ContainsKey( topic ))
+				{
+					subscribeTopic = subscribeTopics[topic];
+				}
+			}
+			return subscribeTopic;
 		}
 
 		/// <summary>
@@ -335,7 +422,7 @@ namespace HslCommunication.MQTT
 			OperateResult<byte[]> command = MqttHelper.BuildUnSubscribeMqttCommand( subcribeMessage );
 			if (!command.IsSuccess) return command;
 
-			OperateResult send = Send( CoreSocket, command.Content );
+			OperateResult send = Send( this.CoreSocket, command.Content );
 			if (!send.IsSuccess) return send;
 
 			RemoveSubTopics( topics );
@@ -343,7 +430,8 @@ namespace HslCommunication.MQTT
 		}
 
 		/// <summary>
-		/// 取消订阅置顶的主题信息
+		/// 取消订阅指定的主题信息，取消之后，就不再接收当前主题的数据，除非服务器强制推送<br />
+		/// Unsubscribe from the specified topic information. After cancellation, the data of the current topic will no longer be received unless the server forces push
 		/// </summary>
 		/// <param name="topic">主题信息</param>
 		/// <returns>取消订阅结果</returns>
@@ -354,18 +442,20 @@ namespace HslCommunication.MQTT
 		/// </example>
 		public OperateResult UnSubscribeMessage( string topic ) => UnSubscribeMessage( new string[] { topic } );
 
-		private void RemoveSubTopics( string[] topics )
+		private bool RemoveSubTopics( string[] topics )
 		{
-			lock (subcribeLock)
+			bool remove = true;
+			lock (subscribeLock)
 			{
 				for (int i = 0; i < topics.Length; i++)
 				{
-					if (subcribeTopics.Contains( topics[i] ))
+					if (subscribeTopics.ContainsKey( topics[i] ))
 					{
-						subcribeTopics.Remove( topics[i] );
+						subscribeTopics.Remove( topics[i] );
 					}
 				}
 			}
+			return remove;
 		}
 
 		#endregion
@@ -391,7 +481,7 @@ namespace HslCommunication.MQTT
 			if (!command.IsSuccess) return command;
 
 			AddSubTopics( topics );
-			return await SendAsync( CoreSocket, command.Content );
+			return await SendAsync( this.CoreSocket, command.Content );
 		}
 
 		/// <inheritdoc cref="UnSubscribeMessage(string[])"/>
@@ -405,7 +495,7 @@ namespace HslCommunication.MQTT
 
 			OperateResult<byte[]> command = MqttHelper.BuildUnSubscribeMqttCommand( subcribeMessage );
 			RemoveSubTopics( topics );
-			return await SendAsync( CoreSocket, command.Content );
+			return await SendAsync( this.CoreSocket, command.Content );
 		}
 
 		/// <inheritdoc cref="UnSubscribeMessage(string)"/>
@@ -423,6 +513,7 @@ namespace HslCommunication.MQTT
 			{
 				try
 				{
+					this.IsConnected = false;
 					this.timerCheck?.Dispose( );
 					this.timerCheck = null;
 					if (OnNetworkError == null)
@@ -509,48 +600,23 @@ namespace HslCommunication.MQTT
 					OnMqttNetworkError( );
 					return;
 				}
-				byte mqttCode = read.Content1;
-				byte[] data = read.Content2;
 
-				if (mqttCode >> 4 == MqttControlMessage.PUBACK)
+				byte mqttCode = read.Content1;
+				byte[] data   = read.Content2;
+
+				int code = mqttCode >> 4;
+				if      (code == MqttControlMessage.PUBACK) LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] Publish Ack: {SoftBasic.ByteToHexString( data, ' ' )}" ); // Qos1的发布确认
+				else if (code == MqttControlMessage.PUBREC) // Qos2的发布收到
 				{
-					// Qos1的发布确认
-					LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] Publish Ack: {SoftBasic.ByteToHexString( data, ' ' )}" );
-				}
-				else if (mqttCode >> 4 == MqttControlMessage.PUBREC)
-				{
-					// Qos2的发布收到
 					Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.PUBREL, 0x02, data, new byte[0] ).Content );
 					LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] Publish Rec: {SoftBasic.ByteToHexString( data, ' ' )}" );
 				}
-				else if (mqttCode >> 4 == MqttControlMessage.PUBCOMP)
-				{
-					// Qos2的发布完成
-					LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] Publish Complete: {SoftBasic.ByteToHexString( data, ' ' )}" );
-				}
-				else if (mqttCode >> 4 == MqttControlMessage.PINGRESP)
-				{
-					// 心跳响应
-					activeTime = DateTime.Now;
-					LogNet?.WriteDebug( ToString( ), $"Heart Code Check!" );
-				}
-				else if (mqttCode >> 4 == MqttControlMessage.PUBLISH)
-				{
-					// 订阅反馈
-					ExtraPublishData( mqttCode, data );
-				}
-				else if (mqttCode >> 4 == MqttControlMessage.SUBACK)
-				{
-					LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] Subscribe Ack: {SoftBasic.ByteToHexString( data, ' ' )}" );
-				}
-				else if (mqttCode >> 4 == MqttControlMessage.UNSUBACK)
-				{
-					LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] UnSubscribe Ack: {SoftBasic.ByteToHexString( data, ' ' )}" );
-				}
-				else
-				{
-					LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] {SoftBasic.ByteToHexString( data, ' ' )}" );
-				}
+				else if (code == MqttControlMessage.PUBCOMP)  LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] Publish Complete: {SoftBasic.ByteToHexString( data, ' ' )}" );  // Qos2的发布完成
+				else if (code == MqttControlMessage.PINGRESP) { activeTime = DateTime.Now; LogNet?.WriteDebug( ToString( ), $"Heart Code Check!" ); }                                // 心跳响应
+				else if (code == MqttControlMessage.SUBACK)   LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] Subscribe Ack: {SoftBasic.ByteToHexString( data, ' ' )}" );
+				else if (code == MqttControlMessage.UNSUBACK) LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] UnSubscribe Ack: {SoftBasic.ByteToHexString( data, ' ' )}" );
+				else if (code == MqttControlMessage.PUBLISH)  ExtraPublishData( mqttCode, data );                                                                                    // 收到订阅反馈
+				else LogNet?.WriteDebug( ToString( ), $"Code[{mqttCode:X2}] {SoftBasic.ByteToHexString( data, ' ' )}" );                                                             // 其他未知的指令
 
 				try
 				{
@@ -567,15 +633,19 @@ namespace HslCommunication.MQTT
 		private void ExtraPublishData( byte mqttCode, byte[] data )
 		{
 			activeTime = DateTime.Now;
-			OperateResult<string, byte[]> extra = MqttHelper.ExtraMqttReceiveData( mqttCode, data );
+			OperateResult<string, byte[]> extra = MqttHelper.ExtraMqttReceiveData( mqttCode, data, this.aesCryptography );
 			if (!extra.IsSuccess) { LogNet?.WriteDebug( ToString( ), extra.Message ); return; }
 
 			OnMqttMessageReceived?.Invoke( this, extra.Content1, extra.Content2 );
+
+			// 触发子订阅的消息
+			SubscribeTopic subscribeTopic = GetSubscribeTopic( extra.Content1 );
+			subscribeTopic?.TriggerSubscription( this, extra.Content1, extra.Content2 );
 		}
 
 		private void TimerCheckServer( object obj )
 		{
-			if (CoreSocket != null)
+			if (this.CoreSocket != null)
 			{
 				if ((DateTime.Now - activeTime).TotalSeconds > this.connectionOptions.KeepAliveSendInterval.TotalSeconds * 3)
 				{
@@ -584,7 +654,7 @@ namespace HslCommunication.MQTT
 				}
 				else
 				{
-					if (!Send( CoreSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.PINGREQ, 0x00, new byte[0], new byte[0] ).Content ).IsSuccess)
+					if (!Send( this.CoreSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.PINGREQ, 0x00, new byte[0], new byte[0] ).Content ).IsSuccess)
 						OnMqttNetworkError( );
 				}
 			}
@@ -648,7 +718,6 @@ namespace HslCommunication.MQTT
 			{
 				if (disposing)
 				{
-					// TODO: 释放托管状态(托管对象)
 					this.incrementCount?.Dispose( );
 					this.timerCheck?.Dispose( );
 					this.OnClientConnected = null;
@@ -656,18 +725,9 @@ namespace HslCommunication.MQTT
 					this.OnNetworkError = null;
 				}
 
-				// TODO: 释放未托管的资源(未托管的对象)并重写终结器
-				// TODO: 将大型字段设置为 null
 				disposedValue = true;
 			}
 		}
-
-		// // TODO: 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
-		// ~MqttClient()
-		// {
-		//     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-		//     Dispose(disposing: false);
-		// }
 
 		/// <inheritdoc cref="IDisposable.Dispose"/>
 		public void Dispose( )
@@ -685,14 +745,16 @@ namespace HslCommunication.MQTT
 		private int isReConnectServer = 0;                                    // 是否重连服务器中
 		private List<MqttPublishMessage> publishMessages;                     // 缓存的等待处理的Qos大于0的消息
 		private object listLock;                                              // 缓存的处理的消息的队列
-		private List<string> subcribeTopics;                                  // 缓存的等待处理的订阅的消息内容
+		private Dictionary<string, SubscribeTopic> subscribeTopics;           // 缓存的等待处理的订阅的消息内容
 		private object connectLock;                                           // 连接服务器的锁
-		private object subcribeLock;                                          // 订阅的主题的队列锁
+		private object subscribeLock;                                          // 订阅的主题的队列锁
 		private SoftIncrementCount incrementCount;                            // 自增的数据id对象
 		private bool closed = false;                                          // 客户端是否关闭
 		private MqttConnectionOptions connectionOptions;                      // 连接服务器时的配置信息
 		private Timer timerCheck;                                             // 定时器，用来心跳校验的
 		private bool disposedValue;
+		private RSACryptoServiceProvider cryptoServiceProvider = null;        // 账户验证加密对象
+		private AesCryptography aesCryptography = null;                       // 数据请求加密对象
 
 		#endregion
 
@@ -705,11 +767,30 @@ namespace HslCommunication.MQTT
 		public MqttConnectionOptions ConnectionOptions => this.connectionOptions;
 
 		/// <summary>
-		/// 获取或设置是否启动定时器去检测当前客户端是否超时掉线。默认为 True<br />
-		/// Get or set whether to start the timer to detect whether the current client timeout and disconnection. Default is True
+		/// 获取或设置是否启动定时器去检测当前客户端是否超时掉线。默认为 <c>True</c><br />
+		/// Get or set whether to start the timer to detect whether the current client timeout and disconnection. Default is <c>True</c>
 		/// </summary>
 		public bool UseTimerCheckDropped { get; set; } = true;
 
+		/// <summary>
+		/// 获取或设置当前的服务器连接是否成功，定时获取本属性可用于实时更新连接状态信息。<br />
+		/// Get or set whether the current server connection is successful or not. 
+		/// This property can be obtained regularly and can be used to update the connection status information in real time.
+		/// </summary>
+		public bool IsConnected { get; private set; } = false;
+
+		/// <summary>
+		/// 获取当前的客户端对象已经订阅的所有的Topic信息<br />
+		/// Get all Topic information that the current client object has subscribed to
+		/// </summary>
+		public string[] SubcribeTopics 
+		{
+			get
+			{
+				lock (subscribeLock)
+					return subscribeTopics.Keys.ToArray( );
+			}
+		}
 		#endregion
 
 		#region Object Override
@@ -718,5 +799,79 @@ namespace HslCommunication.MQTT
 		public override string ToString( ) => $"MqttClient[{this.connectionOptions.IpAddress}:{this.connectionOptions.Port}]";
 
 		#endregion
+	}
+
+	/// <summary>
+	/// 订阅的主题信息<br />
+	/// Subscribed topic information
+	/// </summary>
+	public class SubscribeTopic
+	{
+		/// <summary>
+		/// 使用指定的主题初始化<br />
+		/// Initialize with the specified theme
+		/// </summary>
+		/// <param name="topic">主题信息</param>
+		public SubscribeTopic( string topic )
+		{
+			this.Topic = topic;
+		}
+
+		/// <summary>
+		/// 主题信息<br />
+		/// topic information
+		/// </summary>
+		public string Topic { get; set; }
+
+		/// <summary>
+		/// 主题被订阅的次数<br />
+		/// The number of times the topic was subscribed
+		/// </summary>
+		public long SubscribeTick => this.subscribeTick;
+
+
+		private long subscribeTick = 0;                                  // 当前主题被订阅的次数
+
+		/// <summary>
+		/// 当接收到Mqtt订阅的信息的时候触发的事件<br />
+		/// Event triggered when a message subscribed to by Mqtt is received
+		/// </summary>
+		public event MqttMessageReceiveDelegate OnMqttMessageReceived;
+
+		/// <summary>
+		/// 使用指定的参数，触发订阅主题的事件<br />
+		/// Using the specified parameters, trigger the event of the subscribed topic
+		/// </summary>
+		/// <param name="client">客户端会话信息</param>
+		/// <param name="topic">主题信息</param>
+		/// <param name="payload">数据负载</param>
+		public void TriggerSubscription( MqttClient client, string topic, byte[] payload )
+		{
+			OnMqttMessageReceived?.Invoke( client, topic, payload );
+		}
+
+		/// <summary>
+		/// 增加一个订阅的计数信息，不需要手动调用，在 <see cref="MqttClient"/> 订阅主题之后，会自动增加<br />
+		/// Add a subscription count information, no need to manually call it, it will be automatically added after <see cref="MqttClient"/> subscribes to the topic
+		/// </summary>
+		/// <returns>返回增加计数后的值</returns>
+		public long AddSubscribeTick( )
+		{
+			return Interlocked.Increment( ref this.subscribeTick );
+		}
+
+		/// <summary>
+		/// 减少一个订阅的计数信息，用户可以手动调用，比如判断是否是最后一次移除，然后决定是否通过 <see cref="MqttClient"/> 取消订阅主题<br />
+		/// Reduce the count information of a subscription, the user can call it manually, such as judging whether it is the last removal, 
+		/// and then decide whether to unsubscribe the topic through <see cref="MqttClient"/>
+		/// </summary>
+		/// <returns>返回减少计数后的值</returns>
+		public long RemoveSubscribeTick( )
+		{
+			return Interlocked.Decrement( ref this.subscribeTick );
+		}
+
+		/// <inheritdoc/>
+		public override string ToString( ) => $"SubscribeTopic[{Topic}]";
 	}
 }

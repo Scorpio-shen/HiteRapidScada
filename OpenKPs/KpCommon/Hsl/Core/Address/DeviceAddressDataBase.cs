@@ -37,5 +37,6 @@ namespace HslCommunication.Core.Address
 
 		/// <inheritdoc/>
 		public override string ToString( ) => AddressStart.ToString( );
+
 	}
 }

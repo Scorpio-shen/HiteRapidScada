@@ -7,6 +7,7 @@ using System.Text;
 using HslCommunication.Core;
 using HslCommunication.Core.Address;
 using HslCommunication.Reflection;
+using System.IO;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -35,18 +36,20 @@ namespace HslCommunication.ModBus
 		/// </summary>
 		public ModbusRtu( ) 
 		{
-			this.ByteTransform = new ReverseWordTransform( );
+			this.ByteTransform            = new ReverseWordTransform( );
+			this.ReceiveEmptyDataCount    = 5;
 		}
 
 		/// <summary>
-		/// 指定客户端自己的站号来初始化<br />
-		/// Specify the client's own station number to initialize
+		/// 指定Modbus从站的站号来初始化<br />
+		/// Specify the station number of the Modbus slave to initialize
 		/// </summary>
-		/// <param name="station">客户端自身的站号</param>
+		/// <param name="station">Modbus从站的站号</param>
 		public ModbusRtu( byte station = 0x01 )
 		{
-			this.station       = station;
-			this.ByteTransform = new ReverseWordTransform( );
+			this.station               = station;
+			this.ByteTransform         = new ReverseWordTransform( );
+			this.ReceiveEmptyDataCount = 5;
 		}
 
 		#endregion
@@ -88,6 +91,12 @@ namespace HslCommunication.ModBus
 			set { ByteTransform.IsStringReverseByteWord = value; }
 		}
 
+		/// <summary>
+		/// 获取或设置是否启用CRC16校验码的检查功能，默认启用，如果需要忽略检查CRC16，则设置为 false 即可。<br />
+		/// Gets or sets whether to enable the check function of CRC16 check code. It is enabled by default. If you need to ignore the check of CRC16, you can set it to false.
+		/// </summary>
+		public bool Crc16CheckEnable { get; set; } = true;
+
 		/// <inheritdoc cref="IModbus.TranslateToModbusAddress(string,byte)"/>
 		public virtual OperateResult<string> TranslateToModbusAddress( string address, byte modbusCode )
 		{
@@ -99,10 +108,29 @@ namespace HslCommunication.ModBus
 		#region Core Interative
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command ) => ModbusInfo.PackCommandToRtu( command );
+		public override byte[] PackCommandWithHeader( byte[] command ) => ModbusInfo.PackCommandToRtu( command );
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => ModbusHelper.ExtraRtuResponseContent( send, response );
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => ModbusHelper.ExtraRtuResponseContent( send, response, Crc16CheckEnable );
+
+		/// <summary>
+		/// 将Modbus报文数据发送到当前的通道中，并从通道中接收Modbus的报文，通道将根据当前连接自动获取，本方法是线程安全的。<br />
+		/// Send Modbus message data to the current channel, and receive Modbus messages from the channel. The channel will automatically obtain it according to the current connection. This method is thread-safe.
+		/// </summary>
+		/// <param name="send">发送的完整的报文信息</param>
+		/// <returns>接收到的Modbus报文信息</returns>
+		/// <remarks>
+		/// 需要注意的是，本方法的发送和接收都只需要输入Modbus核心报文，例如读取寄存器0的字数据 01 03 00 00 00 01，最后面两个字节的CRC是自动添加的，收到的数据也是只有modbus核心报文，例如：01 03 02 00 00 , 已经成功校验CRC校验并移除了，所以在解析的时候需要注意。<br />
+		/// It should be noted that the sending and receiving of this method only need to input Modbus core messages, for example, read the word data 01 03 00 00 00 01 of register 0, the last two bytes of CRC are automatically added, 
+		/// and received The data is also only modbus core messages, for example: 01 03 02 00 00, CRC has been successfully checked and removed, so you need to pay attention when parsing.
+		/// </remarks>
+		public override OperateResult<byte[]> ReadFromCoreServer( byte[] send ) => base.ReadFromCoreServer( send );
+
+		/// <inheritdoc/>
+		protected override bool CheckReceiveDataComplete( MemoryStream ms )
+		{
+			return ModbusInfo.CheckRtuReceiveDataComplete( ms.ToArray( ) );
+		}
 
 		#endregion
 

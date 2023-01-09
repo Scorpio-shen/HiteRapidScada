@@ -8,7 +8,7 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// Modbus-Tcp协议支持的消息解析类
 	/// </summary>
-	public class ModbusTcpMessage : INetMessage
+	public class ModbusTcpMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 8;
@@ -37,7 +37,7 @@ namespace HslCommunication.Core.IMessage
 				}
 				else
 				{
-					return length - 2;
+					return Math.Min( length - 2, 300 );
 				}
 			}
 			else
@@ -45,7 +45,7 @@ namespace HslCommunication.Core.IMessage
 		}
 
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token )
+		public override bool CheckHeadBytesLegal( byte[] token )
 		{
 			if (IsCheckMessageId)
 			{
@@ -60,16 +60,7 @@ namespace HslCommunication.Core.IMessage
 		}
 
 		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => HeadBytes[0] * 256 + HeadBytes[1];
-
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
+		public override int GetHeadBytesIdentity( ) => HeadBytes[0] * 256 + HeadBytes[1];
 
 		/// <summary>
 		/// 获取或设置是否进行检查返回的消息ID和发送的消息ID是否一致，默认为true，也就是检查<br />

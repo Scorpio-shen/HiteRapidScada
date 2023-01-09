@@ -179,17 +179,10 @@ namespace HslCommunication.Enthernet
 			if (!readResult.IsSuccess) return;
 
 			// 登录成功
-			AppSession session = new AppSession( )
+			AppSession session = new AppSession( socket )
 			{
-				WorkSocket = socket,
 				LoginAlias = readResult.Content2,
 			};
-
-			session.IpEndPoint = endPoint;
-			session.IpAddress = endPoint == null ? string.Empty : endPoint.Address.ToString( );
-
-			if (readResult.Content1 == 1) session.ClientType = "Windows";
-			else if (readResult.Content1 == 2) session.ClientType = "Android";
 
 			try
 			{
@@ -252,7 +245,7 @@ namespace HslCommunication.Enthernet
 					BitConverter.GetBytes( DateTime.Now.Ticks ).CopyTo( content, 8 );
 					LogNet?.WriteDebug( ToString( ), string.Format( "Heart Check From {0}", appSession.IpEndPoint ) );
 					if (Send( appSession.WorkSocket, HslProtocol.CommandBytes( HslProtocol.ProtocolCheckSecends, customer, Token, content ) ).IsSuccess)
-						appSession.HeartTime = DateTime.Now;
+						appSession.UpdateHeartTime( );
 				}
 				else if (protocol == HslProtocol.ProtocolClientQuit)
 				{

@@ -5,6 +5,8 @@ using HslCommunication.BasicFramework;
 using HslCommunication.Core;
 using HslCommunication.Core.Net;
 using HslCommunication.Core.IMessage;
+using HslCommunication.Reflection;
+using HslCommunication.Instrument.DLT.Helper;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -22,7 +24,10 @@ namespace HslCommunication.Instrument.DLT
 	/// 如果一对多的模式，地址可以携带地址域访问，例如 "s=2;00-00-00-00"，主要使用 <see cref="ReadDouble(string, ushort)"/> 方法来读取浮点数，
 	/// <see cref="NetworkDeviceBase.ReadString(string, ushort)"/> 方法来读取字符串
 	/// </remarks>
-	public class DLT645OverTcp : NetworkDeviceBase
+	/// <example>
+	/// <inheritdoc cref="DLT645" path="example"/>
+	/// </example>
+	public class DLT645OverTcp : NetworkDeviceBase, IDlt645
 	{
 		#region Constructor
 
@@ -49,6 +54,14 @@ namespace HslCommunication.Instrument.DLT
 		/// <inheritdoc/>
 		protected override INetMessage GetNewNetMessage( ) => new DLT645Message( );
 
+		/// <inheritdoc/>
+		public override byte[] PackCommandWithHeader( byte[] command )
+		{
+			if (EnableCodeFE)
+				return SoftBasic.SpliceArray( new byte[] { 0xfe, 0xfe, 0xfe, 0xfe }, command );
+			return base.PackCommandWithHeader( command );
+		}
+
 		#endregion
 
 		#region Public Method
@@ -56,339 +69,73 @@ namespace HslCommunication.Instrument.DLT
 		/// <inheritdoc cref="DLT645.ActiveDeveice"/>
 		public OperateResult ActiveDeveice( ) => ReadFromCoreServer( new byte[] { 0xFE, 0xFE, 0xFE, 0xFE }, false );
 
-		private OperateResult<byte[]> ReadWithAddress( string address, byte[] dataArea )
-		{
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( address, DLTControl.ReadData, dataArea );
-			if (!command.IsSuccess) return command;
-
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			OperateResult check = DLT645.CheckResponse( read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
-
-			if (read.Content.Length < 16) return OperateResult.CreateSuccessResult( new byte[0] );
-			return OperateResult.CreateSuccessResult( read.Content.SelectMiddle( 14, read.Content.Length - 16 ) );
-		}
-
 		/// <inheritdoc cref="DLT645.Read(string, ushort)"/>
-		public override OperateResult<byte[]> Read( string address, ushort length )
-		{
-			OperateResult<string, byte[]> analysis = DLT645.AnalysisBytesAddress( address, this.station, length );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-
-			return ReadWithAddress( analysis.Content1, analysis.Content2 );
-		}
+		[HslMqttApi( "ReadByteArray", "" )]
+		public override OperateResult<byte[]> Read( string address, ushort length ) => Helper.DLT645Helper.Read( this, address, length );
 
 		/// <inheritdoc/>
-		public override OperateResult<double[]> ReadDouble(string address, ushort length)
-		{
-			OperateResult<string, byte[]> analysis = DLT645.AnalysisBytesAddress( address, this.station, length );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<double[]>( analysis );
-
-			OperateResult<byte[]> read = ReadWithAddress( analysis.Content1, analysis.Content2 );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<double[]>( read );
-
-			return DLTTransform.TransDoubleFromDLt( read.Content, length, DLT645.GetFormatWithDataArea( analysis.Content2 ) );
-		}
+		[HslMqttApi( "ReadDoubleArray", "" )]
+		public override OperateResult<double[]> ReadDouble(string address, ushort length) => Helper.DLT645Helper.ReadDouble( this, address, length );
 
 		/// <inheritdoc/>
-		public override OperateResult<string> ReadString( string address, ushort length, Encoding encoding )
-		{
-			OperateResult<byte[]> read = Read( address, 1 );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
+		public override OperateResult<string> ReadString( string address, ushort length, Encoding encoding ) => ByteTransformHelper.GetResultFromArray( ReadStringArray( address ) );
 
-			return DLTTransform.TransStringFromDLt( read.Content, length );
-		}
+		/// <inheritdoc cref="DLT645.ReadStringArray(string)"/>
+		public OperateResult<string[]> ReadStringArray( string address ) => Helper.DLT645Helper.ReadStringArray( this, address );
 
 #if !NET35 && !NET20
 
 		/// <inheritdoc cref="DLT645.ActiveDeveice"/>
-		public async Task<OperateResult> ActiveDeveiceAsync( ) => await ReadFromCoreServerAsync( new byte[] { 0xFE, 0xFE, 0xFE, 0xFE }, false );
-
-		private async Task<OperateResult<byte[]>> ReadWithAddressAsync( string address, byte[] dataArea )
-		{
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( address, DLTControl.ReadData, dataArea );
-			if (!command.IsSuccess) return command;
-
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return read;
-
-			OperateResult check = DLT645.CheckResponse( read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
-
-			if (read.Content.Length < 16) return OperateResult.CreateSuccessResult( new byte[0] );
-			return OperateResult.CreateSuccessResult( read.Content.SelectMiddle( 14, read.Content.Length - 16 ) );
-		}
+		public async Task<OperateResult> ActiveDeveiceAsync( ) => await ReadFromCoreServerAsync( new byte[] { 0xFE, 0xFE, 0xFE, 0xFE }, hasResponseData: false, usePackAndUnpack: false );
 
 		/// <inheritdoc cref="DLT645.Read(string, ushort)"/>
-		public async override Task<OperateResult<byte[]>> ReadAsync( string address, ushort length )
-		{
-			OperateResult<string, byte[]> analysis = DLT645.AnalysisBytesAddress( address, this.station, length );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-
-			return await ReadWithAddressAsync( analysis.Content1, analysis.Content2 );
-		}
+		public async override Task<OperateResult<byte[]>> ReadAsync( string address, ushort length ) => await Helper.DLT645Helper.ReadAsync( this, address, length );
 
 		/// <inheritdoc cref="ReadDouble(string, ushort)"/>
-		public async override Task<OperateResult<double[]>> ReadDoubleAsync( string address, ushort length )
-		{
-			OperateResult<string, byte[]> analysis = DLT645.AnalysisBytesAddress( address, this.station, length );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<double[]>( analysis );
-
-			OperateResult<byte[]> read = await ReadWithAddressAsync( analysis.Content1, analysis.Content2 );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<double[]>( read );
-
-			return DLTTransform.TransDoubleFromDLt( read.Content, length, DLT645.GetFormatWithDataArea( analysis.Content2 ) );
-		}
+		public async override Task<OperateResult<double[]>> ReadDoubleAsync( string address, ushort length ) => await Helper.DLT645Helper.ReadDoubleAsync( this, address, length );
 
 		/// <inheritdoc/>
-		public async override Task<OperateResult<string>> ReadStringAsync( string address, ushort length, Encoding encoding )
-		{
-			OperateResult<byte[]> read = await ReadAsync( address, 1 );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
+		public async override Task<OperateResult<string>> ReadStringAsync( string address, ushort length, Encoding encoding ) => ByteTransformHelper.GetResultFromArray( await ReadStringArrayAsync( address ) );
 
-			return DLTTransform.TransStringFromDLt( read.Content, length );
-		}
+		/// <inheritdoc cref="DLT645.ReadStringArray(string)"/>
+		public async Task<OperateResult<string[]>> ReadStringArrayAsync( string address ) => await Helper.DLT645Helper.ReadStringArrayAsync( this, address );
 #endif
 		/// <inheritdoc cref="DLT645.Write(string, byte[])"/>
-		public override OperateResult Write( string address, byte[] value )
-		{
-			OperateResult<string, byte[]> analysis = DLT645.AnalysisBytesAddress( address, this.station );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-
-			byte[] content = SoftBasic.SpliceArray<byte>( analysis.Content2, password.ToHexBytes( ), opCode.ToHexBytes( ), value );
-
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( analysis.Content1, DLTControl.WriteAddress, content );
-			if (!command.IsSuccess) return command;
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			return DLT645.CheckResponse( read.Content );
-		}
+		public override OperateResult Write( string address, byte[] value ) => Helper.DLT645Helper.Write( this, this.password, this.opCode, address, value );
 
 		/// <inheritdoc cref="DLT645.ReadAddress"/>
-		public OperateResult<string> ReadAddress( )
-		{
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( "AAAAAAAAAAAA", DLTControl.ReadAddress, null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<string>( command );
-
-			OperateResult<byte[]> read = base.ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-			OperateResult check = DLT645.CheckResponse( read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<string>( check );
-
-			this.station = read.Content.SelectMiddle( 1, 6 ).Reverse( ).ToArray( ).ToHexString( );
-			return OperateResult.CreateSuccessResult( read.Content.SelectMiddle( 1, 6 ).Reverse( ).ToArray( ).ToHexString( ) );
-		}
+		public OperateResult<string> ReadAddress( ) => Helper.DLT645Helper.ReadAddress( this );
 
 		/// <inheritdoc cref="DLT645.WriteAddress(string)"/>
-		public OperateResult WriteAddress(string address)
-		{
-			OperateResult<byte[]> add = DLT645.GetAddressByteFromString(address);
-			if (!add.IsSuccess) return add;
-
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand("AAAAAAAAAAAA", DLTControl.WriteAddress, add.Content);
-			if (!command.IsSuccess) return command;
-
-			OperateResult<byte[]> read = ReadFromCoreServer(command.Content);
-			OperateResult check = DLT645.CheckResponse(read.Content);
-			if (!check.IsSuccess) return check;
-
-			if (SoftBasic.IsTwoBytesEquel(read.Content.SelectMiddle(1, 6), DLT645.GetAddressByteFromString(address).Content))
-				return OperateResult.CreateSuccessResult();
-			else
-				return new OperateResult(StringResources.Language.DLTErrorWriteReadCheckFailed);
-		}
+		public OperateResult WriteAddress(string address) => Helper.DLT645Helper.WriteAddress( this, address );
 
 		/// <inheritdoc cref="DLT645.BroadcastTime(DateTime)"/>
-		public OperateResult BroadcastTime(DateTime dateTime)
-		{
-			string hex = $"{dateTime.Second:D2}{dateTime.Minute:D2}{dateTime.Hour:D2}{dateTime.Day:D2}{dateTime.Month:D2}{dateTime.Year % 100:D2}";
-
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand("999999999999", DLTControl.Broadcast, hex.ToHexBytes());
-			if (!command.IsSuccess) return command;
-
-			return ReadFromCoreServer(command.Content, false);
-		}
+		public OperateResult BroadcastTime( DateTime dateTime ) => Helper.DLT645Helper.BroadcastTime( this, dateTime );
 
 		/// <inheritdoc cref="DLT645.FreezeCommand(string)"/>
-		public OperateResult FreezeCommand( string dataArea )
-		{
-			OperateResult<string, byte[]> analysis = DLT645.AnalysisBytesAddress( dataArea, this.station );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( analysis.Content1, DLTControl.FreezeCommand, analysis.Content2 );
-			if (!command.IsSuccess) return command;
-
-			if (analysis.Content1 == "999999999999")
-			{
-				// 广播操作
-				return ReadFromCoreServer( command.Content, false );
-			}
-			else
-			{
-				// 点对点操作
-				OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-				if (!read.IsSuccess) return read;
-
-				return DLT645.CheckResponse( read.Content );
-			}
-		}
+		public OperateResult FreezeCommand( string dataArea ) => Helper.DLT645Helper.FreezeCommand( this, dataArea );
 
 		/// <inheritdoc cref="DLT645.ChangeBaudRate(string)"/>
-		public OperateResult ChangeBaudRate( string baudRate )
-		{
-			OperateResult<string, int> analysis = DLT645.AnalysisIntegerAddress( baudRate, this.station );
-			if (!analysis.IsSuccess) return analysis;
-
-			byte code = 0x00;
-			switch (analysis.Content2)
-			{
-				case 600:   code = 0x02; break;
-				case 1200:  code = 0x04; break;
-				case 2400:  code = 0x08; break;
-				case 4800:  code = 0x10; break;
-				case 9600:  code = 0x20; break;
-				case 19200: code = 0x40; break;
-				default: return new OperateResult( StringResources.Language.NotSupportedFunction );
-			}
-
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( analysis.Content1, DLTControl.ChangeBaudRate, new byte[] { code } );
-			if (!command.IsSuccess) return command;
-
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			OperateResult check = DLT645.CheckResponse( read.Content );
-			if (!check.IsSuccess) return check;
-
-			if (read.Content[10] == code)
-				return OperateResult.CreateSuccessResult( );
-			else
-				return new OperateResult( StringResources.Language.DLTErrorWriteReadCheckFailed );
-		}
+		public OperateResult ChangeBaudRate( string baudRate ) => Helper.DLT645Helper.ChangeBaudRate( this, baudRate );
 
 #if !NET20 && !NET35
-		/// <inheritdoc cref="Write(string, byte[])"/>
-		public async override Task<OperateResult> WriteAsync( string address, byte[] value )
-		{
-			OperateResult<string, byte[]> analysis = DLT645.AnalysisBytesAddress( address, this.station );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+		/// <inheritdoc cref="Helper.DLT645Helper.Write(IDlt645,string, string, string, byte[])"/>
+		public async override Task<OperateResult> WriteAsync( string address, byte[] value ) => await Helper.DLT645Helper.WriteAsync( this, this.password, this.opCode, address, value );
 
-			byte[] content = SoftBasic.SpliceArray( analysis.Content2, password.ToHexBytes( ), opCode.ToHexBytes( ), value );
+		/// <inheritdoc cref="Helper.DLT645Helper.ReadAddress(IDlt645)"/>
+		public async Task<OperateResult<string>> ReadAddressAsync( ) => await Helper.DLT645Helper.ReadAddressAsync( this );
 
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( analysis.Content1, DLTControl.WriteAddress, content );
-			if (!command.IsSuccess) return command;
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return read;
+		/// <inheritdoc cref="Helper.DLT645Helper.WriteAddress(IDlt645,string)"/>
+		public async Task<OperateResult> WriteAddressAsync( string address ) => await Helper.DLT645Helper.WriteAddressAsync( this, address );
 
-			return DLT645.CheckResponse( read.Content );
-		}
+		/// <inheritdoc cref="Helper.DLT645Helper.BroadcastTime(IDlt645,DateTime)"/>
+		public async Task<OperateResult> BroadcastTimeAsync( DateTime dateTime ) => await Helper.DLT645Helper.BroadcastTimeAsync( this, dateTime, this.ReadFromCoreServerAsync );
 
-		/// <inheritdoc cref="DLT645.ReadAddress"/>
-		public async Task<OperateResult<string>> ReadAddressAsync( )
-		{
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( "AAAAAAAAAAAA", DLTControl.ReadAddress, null );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<string>( command );
+		/// <inheritdoc cref="Helper.DLT645Helper.FreezeCommand(IDlt645,string)"/>
+		public async Task<OperateResult> FreezeCommandAsync( string dataArea ) => await Helper.DLT645Helper.FreezeCommandAsync( this, dataArea );
 
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-			OperateResult check = DLT645.CheckResponse( read.Content );
-			if (!check.IsSuccess) return OperateResult.CreateFailedResult<string>( check );
-
-			this.station = read.Content.SelectMiddle( 1, 6 ).Reverse( ).ToArray( ).ToHexString( );
-			return OperateResult.CreateSuccessResult( read.Content.SelectMiddle( 1, 6 ).Reverse( ).ToArray( ).ToHexString( ) );
-		}
-
-		/// <inheritdoc cref="DLT645.WriteAddress(string)"/>
-		public async Task<OperateResult> WriteAddressAsync( string address )
-		{
-			OperateResult<byte[]> add = DLT645.GetAddressByteFromString( address );
-			if (!add.IsSuccess) return add;
-
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( "AAAAAAAAAAAA", DLTControl.WriteAddress, add.Content );
-			if (!command.IsSuccess) return command;
-
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			OperateResult check = DLT645.CheckResponse( read.Content );
-			if (!check.IsSuccess) return check;
-
-			if (SoftBasic.IsTwoBytesEquel( read.Content.SelectMiddle( 1, 6 ), DLT645.GetAddressByteFromString( address ).Content ))
-				return OperateResult.CreateSuccessResult( );
-			else
-				return new OperateResult( StringResources.Language.DLTErrorWriteReadCheckFailed );
-		}
-
-		/// <inheritdoc cref="DLT645.BroadcastTime(DateTime)"/>
-		public async Task<OperateResult> BroadcastTimeAsync( DateTime dateTime )
-		{
-			string hex = $"{dateTime.Second:D2}{dateTime.Minute:D2}{dateTime.Hour:D2}{dateTime.Day:D2}{dateTime.Month:D2}{dateTime.Year % 100:D2}";
-
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( "999999999999", DLTControl.Broadcast, hex.ToHexBytes( ) );
-			if (!command.IsSuccess) return command;
-
-			return await ReadFromCoreServerAsync( command.Content, false );
-		}
-
-		/// <inheritdoc cref="DLT645.FreezeCommand(string)"/>
-		public async Task<OperateResult> FreezeCommandAsync( string dataArea )
-		{
-			OperateResult<string, byte[]> analysis = DLT645.AnalysisBytesAddress( dataArea, this.station );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
-
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( analysis.Content1, DLTControl.FreezeCommand, analysis.Content2 );
-			if (!command.IsSuccess) return command;
-
-			if (analysis.Content1 == "999999999999")
-			{
-				// 广播操作
-				return await ReadFromCoreServerAsync( command.Content, false );
-			}
-			else
-			{
-				// 点对点操作
-				OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-				if (!read.IsSuccess) return read;
-
-				return DLT645.CheckResponse( read.Content );
-			}
-		}
-
-		/// <inheritdoc cref="DLT645.ChangeBaudRate(string)"/>
-		public async Task<OperateResult> ChangeBaudRateAsync( string baudRate )
-		{
-			OperateResult<string, int> analysis = DLT645.AnalysisIntegerAddress( baudRate, this.station );
-			if (!analysis.IsSuccess) return analysis;
-
-			byte code = 0x00;
-			switch (analysis.Content2)
-			{
-				case 600:   code = 0x02; break;
-				case 1200:  code = 0x04; break;
-				case 2400:  code = 0x08; break;
-				case 4800:  code = 0x10; break;
-				case 9600:  code = 0x20; break;
-				case 19200: code = 0x40; break;
-				default: return new OperateResult( StringResources.Language.NotSupportedFunction );
-			}
-
-			OperateResult<byte[]> command = DLT645.BuildEntireCommand( analysis.Content1, DLTControl.ChangeBaudRate, new byte[] { code } );
-			if (!command.IsSuccess) return command;
-
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return read;
-
-			OperateResult check = DLT645.CheckResponse( read.Content );
-			if (!check.IsSuccess) return check;
-
-			if (read.Content[10] == code)
-				return OperateResult.CreateSuccessResult( );
-			else
-				return new OperateResult( StringResources.Language.DLTErrorWriteReadCheckFailed );
-		}
+		/// <inheritdoc cref="Helper.DLT645Helper.ChangeBaudRate(IDlt645,string)"/>
+		public async Task<OperateResult> ChangeBaudRateAsync( string baudRate ) => await Helper.DLT645Helper.ChangeBaudRateAsync( this, baudRate );
 #endif
 		#endregion
 
@@ -396,6 +143,12 @@ namespace HslCommunication.Instrument.DLT
 
 		/// <inheritdoc cref="DLT645.Station"/>
 		public string Station { get => this.station; set => this.station = value; }
+
+		/// <inheritdoc cref="DLT645.EnableCodeFE"/>
+		public bool EnableCodeFE { get; set; }
+
+		/// <inheritdoc cref="IDlt645.DLTType"/>
+		public DLT645Type DLTType { get; } = DLT645Type.DLT2007;
 
 		#endregion
 

@@ -24,7 +24,7 @@ namespace HslCommunication.LogNet
 
         private void FormLogNetView_Load(object sender, EventArgs e)
         {
-
+            if (Authorization.nzugaydgwadawdibbas( )) toolStripStatusLabel1.Visible = false;
         }
 
         private void userButton1_Click(object sender, EventArgs e)

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 
 namespace HslCommunication.Serial
 {
@@ -56,5 +57,57 @@ namespace HslCommunication.Serial
 			}
 			return false;
 		}
+
+		/// <inheritdoc cref="CalculateAcc(byte[], int, int)"/>
+		public static int CalculateAcc( byte[] buffer )
+		{
+			return CalculateAcc( buffer, 0, 0 );
+		}
+
+		/// <summary>
+		/// 根据传入的原始字节数组，计算和校验信息，可以指定起始的偏移地址和尾部的字节数量信息<br />
+		/// Calculate and check the information according to the incoming original byte array, you can specify the starting offset address and the number of bytes at the end
+		/// </summary>
+		/// <param name="buffer">原始字节数组信息</param>
+		/// <param name="headCount">起始的偏移地址信息</param>
+		/// <param name="lastCount">尾部的字节数量信息</param>
+		/// <returns>和校验的结果</returns>
+		public static int CalculateAcc( byte[] buffer, int headCount, int lastCount )
+		{
+			int count = 0;
+			for (int i = headCount; i < buffer.Length - lastCount; i++)
+			{
+				count += buffer[i];
+			}
+			return count;
+		}
+
+		/// <summary>
+		/// 计算数据的和校验，并且输入和校验的值信息<br />
+		/// Calculate the sum check of the data, and enter the value information of the sum check
+		/// </summary>
+		/// <param name="buffer">原始字节数组信息</param>
+		/// <param name="headCount">起始的偏移地址信息</param>
+		/// <param name="lastCount">尾部的字节数量信息</param>
+		public static void CalculateAccAndFill( byte[] buffer, int headCount, int lastCount )
+		{
+			byte acc = (byte)CalculateAcc( buffer, headCount, lastCount );
+			Encoding.ASCII.GetBytes( acc.ToString( "X2" ) ).CopyTo( buffer, buffer.Length - lastCount );
+		}
+
+		/// <summary>
+		/// 计算数据的和校验，并且和当前已经存在的和校验信息进行匹配，返回是否匹配成功<br />
+		/// Calculate the sum check of the data, and match it with the existing sum check information, and return whether the match is successful
+		/// </summary>
+		/// <param name="buffer">原始字节数组信息</param>
+		/// <param name="headCount">起始的偏移地址信息</param>
+		/// <param name="lastCount">尾部的字节数量信息</param>
+		/// <returns>和校验是否检查通过</returns>
+		public static bool CalculateAccAndCheck( byte[] buffer, int headCount, int lastCount )
+		{
+			byte acc = (byte)CalculateAcc( buffer, headCount, lastCount );
+			return acc.ToString( "X2" ) == Encoding.ASCII.GetString( buffer, buffer.Length - lastCount, 2 );
+		}
+
 	}
 }

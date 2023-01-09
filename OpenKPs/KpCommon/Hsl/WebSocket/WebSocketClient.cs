@@ -119,7 +119,7 @@ namespace HslCommunication.WebSocket
 		/// If the return fails, please call this method to connect again after a period of time.
 		/// </summary>
 		/// <returns>连接是否成功</returns>
-		public OperateResult ConnectServer(  ) => ConnectServer( null );
+		public OperateResult ConnectServer(  ) => ConnectServer( this.subcribeTopics );
 
 		/// <summary>
 		/// 连接服务器，实例化客户端之后，至少要调用成功一次，如果返回失败，那些请过一段时间后重新调用本方法连接。<br />
@@ -184,7 +184,7 @@ namespace HslCommunication.WebSocket
 		#region Async Connect DisConnect
 #if !NET35 && !NET20
 		/// <inheritdoc cref="ConnectServer()"/>
-		public async Task<OperateResult> ConnectServerAsync( ) => await ConnectServerAsync( null );
+		public async Task<OperateResult> ConnectServerAsync( ) => await ConnectServerAsync( this.subcribeTopics );
 
 		/// <inheritdoc cref="ConnectServer(string[])"/>
 		public async Task<OperateResult> ConnectServerAsync( string[] subscribes )
@@ -477,24 +477,15 @@ namespace HslCommunication.WebSocket
 			{
 				if (disposing)
 				{
-					// TODO: 释放托管状态(托管对象)
+					// 释放托管状态(托管对象)
 					this.OnClientApplicationMessageReceive = null;
 					this.OnClientConnected = null;
 					this.OnNetworkError = null;
 				}
 
-				// TODO: 释放未托管的资源(未托管的对象)并重写终结器
-				// TODO: 将大型字段设置为 null
 				disposedValue = true;
 			}
 		}
-
-		// // TODO: 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
-		// ~WebSocketServer()
-		// {
-		//     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-		//     Dispose(disposing: false);
-		// }
 
 		/// <inheritdoc cref="IDisposable.Dispose"/>
 		public void Dispose( )

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Net;
+using HslCommunication.MQTT;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -64,13 +65,28 @@ namespace HslCommunication.WebSocket
 		/// 检查当前的连接对象是否在
 		/// </summary>
 		/// <param name="topic">主题信息</param>
+		/// <param name="willcard">是否启用通配符订阅操作</param>
 		/// <returns>是否包含的结果信息</returns>
-		public bool IsClientSubscribe( string topic )
+		public bool IsClientSubscribe( string topic, bool willcard )
 		{
 			bool ret = false;
 			lock (objLock)
 			{
-				ret = Topics.Contains( topic );
+				if (willcard)
+				{
+					for (int i = 0; i < Topics.Count; i++)
+					{
+						if (MqttHelper.CheckMqttTopicWildcards( topic, Topics[i] ))
+						{
+							ret = true;
+							break;
+						}
+					}
+				}
+				else
+				{
+					ret = Topics.Contains( topic );
+				}
 			}
 			return ret;
 		}

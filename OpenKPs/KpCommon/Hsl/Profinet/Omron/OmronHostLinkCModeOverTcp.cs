@@ -5,6 +5,8 @@ using System.Text;
 using HslCommunication.Core;
 using HslCommunication.Reflection;
 using HslCommunication.BasicFramework;
+using System.Net.Sockets;
+using HslCommunication.Core.IMessage;
 #if !NET20 && !NET35
 using System.Threading.Tasks;
 #endif
@@ -18,7 +20,7 @@ namespace HslCommunication.Profinet.Omron
 	/// Address supports carrying station number information, for example: s=2;D100
 	/// </summary>
 	/// <remarks>
-	/// 暂时只支持的字数据的读写操作，不支持位的读写操作。
+	/// 暂时只支持的字数据的读写操作，不支持位的读写操作。另外本模式下，程序要在监视模式运行才能写数据，欧姆龙官方回复的。
 	/// </remarks>
 	public class OmronHostLinkCModeOverTcp : NetworkDeviceBase
 	{
@@ -31,7 +33,8 @@ namespace HslCommunication.Profinet.Omron
 			this.WordLength                            = 1;
 			this.ByteTransform.DataFormat              = DataFormat.CDAB;
 			this.ByteTransform.IsStringReverseByteWord = true;
-			this.SleepTime                             = 20;
+			this.LogMsgFormatBinary                    = false;
+			//this.SleepTime                             = 20;
 		}
 
 		/// <inheritdoc cref="OmronCipNet(string,int)"/>
@@ -40,6 +43,9 @@ namespace HslCommunication.Profinet.Omron
 			this.IpAddress = ipAddress;
 			this.Port      = port;
 		}
+
+		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => new SpecifiedCharacterMessage( AsciiControl.CR );
 
 		#endregion
 
@@ -50,94 +56,61 @@ namespace HslCommunication.Profinet.Omron
 
 		#endregion
 
+		#region Override
+
+		///// <inheritdoc/>
+		//protected override OperateResult<byte[]> ReceiveByMessage( Socket socket, int timeOut, INetMessage netMessage, Action<long, long> reportProgress = null )
+		//{
+		//	System.IO.MemoryStream ms = new System.IO.MemoryStream( );
+		//	while (true)
+		//	{
+		//		OperateResult<byte[]> read = ReceiveCommandLineFromSocket( socket, 0x0D, this.receiveTimeOut );
+		//		if (!read.IsSuccess) return read;
+
+		//		if(read.Content.Length > 1)
+		//		{
+		//			if (read.Content[read.Content.Length - 1] == 0x0D && read.Content[read.Content.Length - 1] == '*') // 接收完毕
+		//			{
+		//				if (read.Content[0] == '@') ms.Write( read.Content, 7, read.Content.Length - 11 );
+		//				else ms.Write( read.Content, 0, read.Content.Length - 4 );
+		//				return OperateResult.CreateSuccessResult( ms.ToArray( ) );
+		//			}
+		//			else // 还没接收完毕
+		//			{
+		//				if (read.Content[0] == '@') ms.Write( read.Content, 7, read.Content.Length - 10 );
+		//				else ms.Write( read.Content, 0, read.Content.Length - 3 );
+
+		//				// 回发一个 Delimiter
+		//				OperateResult send = Send( socket, new byte[] { 0x0D } );
+		//				if (!send.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( send );
+		//			}
+		//		}
+		//		else
+		//		{
+		//			return new OperateResult<byte[]>( StringResources.Language.ReceiveDataLengthTooShort + " Data: " + read.Content.ToHexString( ' ' ) );
+		//		}
+		//	}
+		//}
+
+		#endregion
+
 		#region Read Write Support
 
-		/// <inheritdoc cref="OmronFinsNet.Read(string, ushort)"/>
+		/// <inheritdoc cref="Helper.OmronHostLinkCModeHelper.Read(IReadWriteDevice, byte, string, ushort)"/>
 		[HslMqttApi( "ReadByteArray", "" )]
-		public override OperateResult<byte[]> Read( string address, ushort length )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.UnitNumber );
+		public override OperateResult<byte[]> Read( string address, ushort length ) => Helper.OmronHostLinkCModeHelper.Read( this, this.UnitNumber, address, length );
 
-			// 解析地址
-			var command = OmronHostLinkCMode.BuildReadCommand( address, length, false );
-			if (!command.IsSuccess) return command;
-
-			// 核心交互
-			OperateResult<byte[]> read = ReadFromCoreServer( OmronHostLinkCMode.PackCommand( command.Content, station ) );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
-
-			// 数据有效性分析
-			OperateResult<byte[]> valid = OmronHostLinkCMode.ResponseValidAnalysis( read.Content, true );
-			if (!valid.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( valid );
-
-			// 读取到了正确的数据
-			return OperateResult.CreateSuccessResult( valid.Content );
-		}
-
-		/// <inheritdoc cref="OmronFinsNet.Write(string, byte[])"/>
+		/// <inheritdoc cref="Helper.OmronHostLinkCModeHelper.Write(IReadWriteDevice, byte, string, byte[])"/>
 		[HslMqttApi( "WriteByteArray", "" )]
-		public override OperateResult Write( string address, byte[] value )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.UnitNumber );
+		public override OperateResult Write( string address, byte[] value ) => Helper.OmronHostLinkCModeHelper.Write( this, this.UnitNumber, address, value );
 
-			// 获取指令
-			var command = OmronHostLinkCMode.BuildWriteWordCommand( address, value ); ;
-			if (!command.IsSuccess) return command;
-
-			// 核心数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( OmronHostLinkCMode.PackCommand( command.Content, station ) );
-			if (!read.IsSuccess) return read;
-
-			// 数据有效性分析
-			OperateResult<byte[]> valid = OmronHostLinkCMode.ResponseValidAnalysis( read.Content, false );
-			if (!valid.IsSuccess) return valid;
-
-			// 成功
-			return OperateResult.CreateSuccessResult( );
-		}
 #if !NET20 && !NET35
 
-		/// <inheritdoc cref="OmronHostLinkCMode.Read(string, ushort)"/>
-		public async override Task<OperateResult<byte[]>> ReadAsync( string address, ushort length )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.UnitNumber );
+		/// <inheritdoc cref="Read(string, ushort)"/>
+		public async override Task<OperateResult<byte[]>> ReadAsync( string address, ushort length ) => await Helper.OmronHostLinkCModeHelper.ReadAsync( this, this.UnitNumber, address, length );
 
-			// 解析地址
-			var command = OmronHostLinkCMode.BuildReadCommand( address, length, false );
-			if (!command.IsSuccess) return command;
-
-			// 核心交互
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( OmronHostLinkCMode.PackCommand( command.Content, station ) );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( read );
-
-			// 数据有效性分析
-			OperateResult<byte[]> valid = OmronHostLinkCMode.ResponseValidAnalysis( read.Content, true );
-			if (!valid.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( valid );
-
-			// 读取到了正确的数据
-			return OperateResult.CreateSuccessResult( valid.Content );
-		}
-
-		/// <inheritdoc cref="OmronHostLinkCMode.Write(string, byte[])"/>
-		public async override Task<OperateResult> WriteAsync( string address, byte[] value )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.UnitNumber );
-
-			// 获取指令
-			var command = OmronHostLinkCMode.BuildWriteWordCommand( address, value ); ;
-			if (!command.IsSuccess) return command;
-
-			// 核心数据交互
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( OmronHostLinkCMode.PackCommand( command.Content, station ) );
-			if (!read.IsSuccess) return read;
-
-			// 数据有效性分析
-			OperateResult<byte[]> valid = OmronHostLinkCMode.ResponseValidAnalysis( read.Content, false );
-			if (!valid.IsSuccess) return valid;
-
-			// 成功
-			return OperateResult.CreateSuccessResult( );
-		}
+		/// <inheritdoc cref="Write(string, byte[])"/>
+		public async override Task<OperateResult> WriteAsync( string address, byte[] value ) => await Helper.OmronHostLinkCModeHelper.WriteAsync( this, this.UnitNumber, address, value );
 #endif
 		#endregion
 
@@ -148,25 +121,26 @@ namespace HslCommunication.Profinet.Omron
 
 		#region Public Method
 
-		/// <summary>
-		/// 读取PLC的当前的型号信息
-		/// </summary>
-		/// <returns>型号</returns>
-		[HslMqttApi]
-		public OperateResult<string> ReadPlcModel( )
-		{
-			// 核心数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( OmronHostLinkCMode.PackCommand( Encoding.ASCII.GetBytes( "MM" ), UnitNumber ) );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
+		/// <inheritdoc cref="Helper.OmronHostLinkCModeHelper.ReadPlcType(IReadWriteDevice, byte)"/>
+		[HslMqttApi( "读取PLC的当前的型号信息" )]
+		public OperateResult<string> ReadPlcType( ) => ReadPlcType( this.UnitNumber );
 
-			// 数据有效性分析
-			int err = Convert.ToInt32( Encoding.ASCII.GetString( read.Content, 5, 2 ), 16 );
-			if (err > 0) return new OperateResult<string>( err, "Unknown Error" );
+		/// <inheritdoc cref="Helper.OmronHostLinkCModeHelper.ReadPlcType(IReadWriteDevice, byte)"/>
+		public OperateResult<string> ReadPlcType( byte unitNumber ) => Helper.OmronHostLinkCModeHelper.ReadPlcType( this, unitNumber );
 
-			// 成功
-			string model = Encoding.ASCII.GetString( read.Content, 7, 2 );
-			return OmronHostLinkCMode.GetModelText( model );
-		}
+		/// <inheritdoc cref="Helper.OmronHostLinkCModeHelper.ReadPlcMode(IReadWriteDevice, byte)"/>
+		[HslMqttApi( "读取PLC当前的操作模式，0: 编程模式  1: 运行模式  2: 监视模式" )]
+		public OperateResult<int> ReadPlcMode( ) => ReadPlcMode( this.UnitNumber );
+
+		/// <inheritdoc cref="Helper.OmronHostLinkCModeHelper.ReadPlcMode(IReadWriteDevice, byte)"/>
+		public OperateResult<int> ReadPlcMode( byte unitNumber ) => Helper.OmronHostLinkCModeHelper.ReadPlcMode( this, unitNumber );
+
+		/// <inheritdoc cref="Helper.OmronHostLinkCModeHelper.ChangePlcMode(IReadWriteDevice, byte, byte)"/>
+		[HslMqttApi( "将当前PLC的模式变更为指定的模式，0: 编程模式  1: 运行模式  2: 监视模式" )]
+		public OperateResult ChangePlcMode( byte mode ) => ChangePlcMode( this.UnitNumber, mode );
+
+		/// <inheritdoc cref="Helper.OmronHostLinkCModeHelper.ChangePlcMode(IReadWriteDevice, byte, byte)"/>
+		public OperateResult ChangePlcMode( byte unitNumber, byte mode ) => Helper.OmronHostLinkCModeHelper.ChangePlcMode( this, unitNumber, mode );
 
 		#endregion
 

@@ -80,15 +80,18 @@ namespace HslCommunication.ModBus
 			return OperateResult.CreateSuccessResult( address );
 		}
 
+		/// <inheritdoc cref="ModbusRtu.Crc16CheckEnable"/>
+		public bool Crc16CheckEnable { get; set; } = true;
+
 		#endregion
 
 		#region Core Interative
 
 		/// <inheritdoc/>
-		protected override byte[] PackCommandWithHeader( byte[] command ) => ModbusInfo.PackCommandToRtu( command );
+		public override byte[] PackCommandWithHeader( byte[] command ) => ModbusInfo.PackCommandToRtu( command );
 
 		/// <inheritdoc/>
-		protected override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => ModbusHelper.ExtraRtuResponseContent( send, response );
+		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => ModbusHelper.ExtraRtuResponseContent( send, response, Crc16CheckEnable );
 
 		#endregion
 
@@ -215,7 +218,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<int[]> ReadInt32( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => transform.TransInt32( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => transform.TransInt32( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32(string, ushort)"/>
@@ -223,7 +226,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<uint[]> ReadUInt32( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => transform.TransUInt32( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => transform.TransUInt32( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloat(string, ushort)"/>
@@ -231,7 +234,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<float[]> ReadFloat( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 2) ), m => transform.TransSingle( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 2 ) ), m => transform.TransSingle( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64(string, ushort)"/>
@@ -239,7 +242,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<long[]> ReadInt64( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => transform.TransInt64( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => transform.TransInt64( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64(string, ushort)"/>
@@ -247,7 +250,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<ulong[]> ReadUInt64( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => transform.TransUInt64( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => transform.TransUInt64( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDouble(string, ushort)"/>
@@ -255,7 +258,7 @@ namespace HslCommunication.ModBus
 		public override OperateResult<double[]> ReadDouble( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( Read( address, (ushort)(length * WordLength * 4) ), m => transform.TransDouble( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( Read( address, GetWordLength( address, length, 4 ) ), m => transform.TransDouble( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, int[])"/>
@@ -311,42 +314,42 @@ namespace HslCommunication.ModBus
 		public override async Task<OperateResult<int[]>> ReadInt32Async( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => transform.TransInt32( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => transform.TransInt32( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt32Async(string, ushort)"/>
 		public override async Task<OperateResult<uint[]>> ReadUInt32Async( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => transform.TransUInt32( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => transform.TransUInt32( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadFloatAsync(string, ushort)"/>
 		public override async Task<OperateResult<float[]>> ReadFloatAsync( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 2) ), m => transform.TransSingle( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 2 ) ), m => transform.TransSingle( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadInt64Async(string, ushort)"/>
 		public override async Task<OperateResult<long[]>> ReadInt64Async( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => transform.TransInt64( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => transform.TransInt64( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadUInt64Async(string, ushort)"/>
 		public override async Task<OperateResult<ulong[]>> ReadUInt64Async( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => transform.TransUInt64( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => transform.TransUInt64( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadDoubleAsync(string, ushort)"/>
 		public override async Task<OperateResult<double[]>> ReadDoubleAsync( string address, ushort length )
 		{
 			IByteTransform transform = HslHelper.ExtractTransformParameter( ref address, this.ByteTransform );
-			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, (ushort)(length * WordLength * 4) ), m => transform.TransDouble( m, 0, length ) );
+			return ByteTransformHelper.GetResultFromBytes( await ReadAsync( address, GetWordLength( address, length, 4 ) ), m => transform.TransDouble( m, 0, length ) );
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.WriteAsync(string, int[])"/>

@@ -8,9 +8,8 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// Memobus协议的消息定义
 	/// </summary>
-	public class MemobusMessage : INetMessage
+	public class MemobusMessage : NetMessageBase, INetMessage
 	{
-
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 12;
 
@@ -19,25 +18,12 @@ namespace HslCommunication.Core.IMessage
 		{
 			if (HeadBytes?.Length >= ProtocolHeadBytesLength)
 			{
-				return BitConverter.ToUInt16( HeadBytes, 6 );
+				int length = BitConverter.ToUInt16( HeadBytes, 6 ) - 12;
+				if (length < 0) length = 0;
+				return length;
 			}
 			else
 				return 0;
 		}
-
-		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token ) => true;
-
-		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => 0;
-
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
 	}
 }

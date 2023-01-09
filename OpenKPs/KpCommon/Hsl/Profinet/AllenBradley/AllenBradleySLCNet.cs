@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Sockets;
 using HslCommunication.Reflection;
 using System.Text;
+using HslCommunication.Core.Address;
 #if !NET20 && !NET35
 using System.Threading.Tasks;
 #endif
@@ -19,6 +20,9 @@ namespace HslCommunication.Profinet.AllenBradley
 	/// AllenBradley brand PLC, for the realization of SLC series communication, the test PLC is 1747.
 	/// </summary>
 	/// <remarks>
+	/// 地址支持的举例：A9:0, N9:0, B9:0, F9:0, S:0, ST1:0, C9:0, I:0/10, O:0/1, R9:0, T9:0, L9:0
+	/// </remarks>
+	/// <example>
 	/// 地址格式如下：
 	/// <list type="table">
 	///   <listheader>
@@ -31,65 +35,77 @@ namespace HslCommunication.Profinet.AllenBradley
 	///     <term>A</term>
 	///     <term>A9:0</term>
 	///     <term>A9:0/1 或 A9:0.1</term>
-	///     <term></term>
+	///     <term>ASCII</term>
 	///   </item>
 	///   <item>
 	///     <term>B</term>
 	///     <term>B9:0</term>
 	///     <term>B9:0/1 或 B9:0.1</term>
-	///     <term></term>
+	///     <term>Bit</term>
 	///   </item>
 	///   <item>
 	///     <term>N</term>
 	///     <term>N9:0</term>
 	///     <term>N9:0/1 或 N9:0.1</term>
-	///     <term></term>
+	///     <term>Integer</term>
 	///   </item>
 	///   <item>
 	///     <term>F</term>
 	///     <term>F9:0</term>
 	///     <term>F9:0/1 或 F9:0.1</term>
-	///     <term></term>
+	///     <term>Floating point</term>
 	///   </item>
 	///   <item>
 	///     <term>S</term>
 	///     <term>S:0</term>
 	///     <term>S:0/1 或 S:0.1</term>
-	///     <term>S:0 等同于 S2:0</term>
+	///     <term>Status  S:0 等同于 S2:0</term>
+	///   </item>
+	///   <item>
+	///     <term>ST</term>
+	///     <term>ST1:0</term>
+	///     <term></term>
+	///     <term>String</term>
 	///   </item>
 	///   <item>
 	///     <term>C</term>
 	///     <term>C9:0</term>
 	///     <term>C9:0/1 或 C9:0.1</term>
-	///     <term></term>
+	///     <term>Counter</term>
 	///   </item>
 	///   <item>
 	///     <term>I</term>
-	///     <term>I9:0</term>
-	///     <term>I9:0/1 或 I9:0.1</term>
-	///     <term></term>
+	///     <term>I:0</term>
+	///     <term>I:0/1 或 I9:0.1</term>
+	///     <term>Input</term>
 	///   </item>
 	///   <item>
 	///     <term>O</term>
-	///     <term>O9:0</term>
-	///     <term>O9:0/1 或 O9:0.1</term>
-	///     <term></term>
+	///     <term>O:0</term>
+	///     <term>O:0/1 或 O9:0.1</term>
+	///     <term>Output</term>
 	///   </item>
 	///   <item>
 	///     <term>R</term>
 	///     <term>R9:0</term>
 	///     <term>R9:0/1 或 R9:0.1</term>
-	///     <term></term>
+	///     <term>Control</term>
 	///   </item>
 	///   <item>
 	///     <term>T</term>
 	///     <term>T9:0</term>
 	///     <term>T9:0/1 或 T9:0.1</term>
-	///     <term></term>
+	///     <term>Timer</term>
+	///   </item>
+	///   <item>
+	///     <term>L</term>
+	///     <term>L9:0</term>
+	///     <term>L9:0/1 或 L9:0.1</term>
+	///     <term>long integer</term>
 	///   </item>
 	/// </list>
 	/// 感谢 seedee 的测试支持。
-	/// </remarks>
+	/// </example>
 	public class AllenBradleySLCNet : NetworkDeviceBase
 	{
 		#region Constructor
@@ -99,7 +115,7 @@ namespace HslCommunication.Profinet.AllenBradley
 		/// </summary>
 		public AllenBradleySLCNet( )
 		{
-			WordLength = 2;
+			WordLength    = 2;
 			ByteTransform = new RegularByteTransform( );
 		}
 
@@ -108,12 +124,10 @@ namespace HslCommunication.Profinet.AllenBradley
 		/// </summary>
 		/// <param name="ipAddress">PLC IpAddress</param>
 		/// <param name="port">PLC Port</param>
-		public AllenBradleySLCNet( string ipAddress, int port = 44818 )
+		public AllenBradleySLCNet( string ipAddress, int port = 44818 ) : this( )
 		{
-			WordLength = 2;
 			IpAddress = ipAddress;
-			Port = port;
-			ByteTransform = new RegularByteTransform( );
+			Port      = port;
 		}
 
 		/// <inheritdoc/>
@@ -341,55 +355,6 @@ namespace HslCommunication.Profinet.AllenBradley
 		}
 
 		/// <summary>
-		/// 分析当前的地址信息，返回类型代号，区块号，起始地址<br />
-		/// Analyze the current address information, return the type code, block number, and actual address
-		/// </summary>
-		/// <param name="address">地址信息</param>
-		/// <returns>结果内容对象</returns>
-		public static OperateResult<byte, byte, ushort> AnalysisAddress( string address )
-		{
-			if (!address.Contains( ":" )) return new OperateResult<byte, byte, ushort>( "Address can't find ':', example : A9:0" );
-			string[] adds = address.Split( new char[] { ':' } );
-
-			try
-			{
-				OperateResult<byte, byte, ushort> result = new OperateResult<byte, byte, ushort>( );
-				switch (adds[0][0])
-				{
-					case 'A': result.Content1 = 0x8E; break;
-					case 'B': result.Content1 = 0x85; break;
-					case 'N': result.Content1 = 0x89; break;
-					case 'F': result.Content1 = 0x8A; break;
-					case 'S': result.Content1 = 0x84; break;
-					case 'C': result.Content1 = 0x87; break;
-					case 'I': result.Content1 = 0x83; break;
-					case 'O': result.Content1 = 0x82; break;
-					case 'R': result.Content1 = 0x88; break;
-					case 'T': result.Content1 = 0x86; break;
-					default: throw new Exception( "Address code wrong, must be A,B,N,F,S,C,I,O,R,T" );
-				};
-				if (result.Content1 == 0x84)
-				{
-					// S开头的地址，可以直接写成 S:24
-					result.Content2 = 2;
-				}
-				else
-				{
-					result.Content2 = byte.Parse( adds[0].Substring( 1 ) );
-				}
-				result.Content3 = ushort.Parse( adds[1] );
-				result.IsSuccess = true;
-				result.Message = StringResources.Language.SuccessText;
-				return result;
-
-			}
-			catch (Exception ex)
-			{
-				return new OperateResult<byte, byte, ushort>( "Wrong Address formate: " + ex.Message );
-			}
-		}
-
-		/// <summary>
 		/// 构建读取的指令信息
 		/// </summary>
 		/// <param name="address">地址信息，举例：A9:0</param>
@@ -397,13 +362,13 @@ namespace HslCommunication.Profinet.AllenBradley
 		/// <returns>是否成功</returns>
 		public static OperateResult<byte[]> BuildReadCommand( string address, ushort length )
 		{
-			var analysis = AnalysisAddress( address );
+			var analysis = AllenBradleySLCAddress.ParseFrom( address );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
 			if (length < 2) length = 2;
-			if (analysis.Content1 == 0x8E)
+			if (analysis.Content.DataCode == 0x8E)
 			{
-				analysis.Content3 /= 2;
+				analysis.Content.AddressStart /= 2;
 			}
 
 			byte[] command = new byte[14];
@@ -417,9 +382,9 @@ namespace HslCommunication.Profinet.AllenBradley
 			command[7] = 0x01;
 			command[8] = 0xA2;
 			command[9] = (byte)length;                                         // 读取字节数
-			command[10] = analysis.Content2;                                   // 数据区块号
-			command[11] = analysis.Content1;                                   // 数据类型号
-			BitConverter.GetBytes( analysis.Content3 ).CopyTo( command, 12 );  // 起始地址
+			command[10] = (byte)analysis.Content.DbBlock;                      // 数据区块号
+			command[11] = analysis.Content.DataCode;                           // 数据类型号
+			BitConverter.GetBytes( (ushort)analysis.Content.AddressStart ).CopyTo( command, 12 );  // 起始地址
 			return OperateResult.CreateSuccessResult( command );
 		}
 
@@ -431,12 +396,12 @@ namespace HslCommunication.Profinet.AllenBradley
 		/// <returns>是否成功的结果对象</returns>
 		public static OperateResult<byte[]> BuildWriteCommand(string address, byte[] value )
 		{
-			var analysis = AnalysisAddress( address );
+			var analysis = AllenBradleySLCAddress.ParseFrom( address );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
-			if (analysis.Content1 == 0x8E)
+			if (analysis.Content.DataCode == 0x8E)
 			{
-				analysis.Content3 /= 2;
+				analysis.Content.AddressStart /= 2;
 			}
 
 			byte[] command = new byte[18 + value.Length];
@@ -452,9 +417,9 @@ namespace HslCommunication.Profinet.AllenBradley
 			command[9] = 0xFF;
 			command[10] = BitConverter.GetBytes( value.Length )[0];             // 写入的字节数
 			command[11] = BitConverter.GetBytes( value.Length )[1];             //
-			command[12] = analysis.Content2;                                    // 数据区块号
-			command[13] = analysis.Content1;                                    // 数据类型号
-			BitConverter.GetBytes( analysis.Content3 ).CopyTo( command, 14 );   // 起始地址
+			command[12] = (byte)analysis.Content.DbBlock;                       // 数据区块号
+			command[13] = analysis.Content.DataCode;                            // 数据类型号
+			BitConverter.GetBytes( (ushort)analysis.Content.AddressStart ).CopyTo( command, 14 );   // 起始地址
 			command[16] = 0xFF;
 			command[17] = 0xFF;
 			value.CopyTo( command, 18 );
@@ -471,12 +436,12 @@ namespace HslCommunication.Profinet.AllenBradley
 		{
 			address = AnalysisBitIndex( address, out int bitIndex );
 
-			var analysis = AnalysisAddress( address );
+			var analysis = AllenBradleySLCAddress.ParseFrom( address );
 			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
 
-			if (analysis.Content1 == 0x8E)
+			if (analysis.Content.DataCode == 0x8E)
 			{
-				analysis.Content3 /= 2;
+				analysis.Content.AddressStart /= 2;
 			}
 
 			int bitPow = 0x01 << bitIndex;
@@ -488,15 +453,15 @@ namespace HslCommunication.Profinet.AllenBradley
 			command[3] = 0x00;
 			command[4] = 0x0F;
 			command[5] = 0x00;
-			command[6] = 0x00;                                                 // ID信息
+			command[6] = 0x00;                                                         // ID信息
 			command[7] = 0x01;
 			command[8] = 0xAB;
 			command[9] = 0xFF;
-			command[10] = 0x02;                                                 // 写入的字节数
+			command[10] = 0x02;                                                        // 写入的字节数
 			command[11] = 0x00;
-			command[12] = analysis.Content2;                                    // 数据区块号
-			command[13] = analysis.Content1;                                    // 数据类型号
-			BitConverter.GetBytes( analysis.Content3 ).CopyTo( command, 14 );   // 起始地址
+			command[12] = (byte)analysis.Content.DbBlock;                              // 数据区块号
+			command[13] = analysis.Content.DataCode;                                   // 数据类型号
+			BitConverter.GetBytes( (ushort)analysis.Content.AddressStart ).CopyTo( command, 14 );   // 起始地址
 			command[16] = BitConverter.GetBytes( bitPow )[0];
 			command[17] = BitConverter.GetBytes( bitPow )[1];
 			if (value)

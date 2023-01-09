@@ -159,6 +159,94 @@ namespace HslCommunication.Core.Net
 
 		#endregion
 
+		#region ReadWrite Customer
+
+		/// <inheritdoc cref="IReadWriteNet.ReadCustomer{T}(string)"/>
+		public static OperateResult<T> ReadCustomer<T>( IReadWriteNet readWriteNet, string address ) where T : IDataTransfer, new()
+		{
+			T Content = new T( );
+			return ReadCustomer( readWriteNet, address, Content );
+		}
+
+		/// <inheritdoc cref="IReadWriteNet.ReadCustomer{T}(string, T)"/>
+		public static OperateResult<T> ReadCustomer<T>( IReadWriteNet readWriteNet, string address, T obj ) where T : IDataTransfer, new()
+		{
+			OperateResult<byte[]> read = readWriteNet.Read( address, obj.ReadCount );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<T>( read );
+
+			obj.ParseSource( read.Content );
+			return OperateResult.CreateSuccessResult( obj );
+		}
+
+		/// <inheritdoc cref="IReadWriteNet.WriteCustomer{T}(string, T)"/>
+		public static OperateResult WriteCustomer<T>( IReadWriteNet readWriteNet, string address, T data ) where T : IDataTransfer, new()
+		{
+			return readWriteNet.Write( address, data.ToSource( ) );
+		}
+#if !NET20 && !NET35
+
+		/// <inheritdoc cref="IReadWriteNet.ReadCustomer{T}(string)"/>
+		public static async Task<OperateResult<T>> ReadCustomerAsync<T>( IReadWriteNet readWriteNet, string address ) where T : IDataTransfer, new()
+		{
+			T Content = new T( );
+			return await ReadCustomerAsync( readWriteNet, address, Content );
+		}
+
+		/// <inheritdoc cref="IReadWriteNet.ReadCustomer{T}(string, T)"/>
+		public static async Task<OperateResult<T>> ReadCustomerAsync<T>( IReadWriteNet readWriteNet, string address, T obj ) where T : IDataTransfer, new()
+		{
+			OperateResult<byte[]> read = await readWriteNet.ReadAsync( address, obj.ReadCount );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<T>( read );
+
+			obj.ParseSource( read.Content );
+			return OperateResult.CreateSuccessResult( obj );
+		}
+
+		/// <inheritdoc cref="IReadWriteNet.WriteCustomerAsync{T}(string, T)"/>
+		public static async Task<OperateResult> WriteCustomerAsync<T>( IReadWriteNet readWriteNet, string address, T data ) where T : IDataTransfer, new()
+		{
+			return await readWriteNet.WriteAsync( address, data.ToSource( ) );
+		}
+#endif
+		#endregion
+
+		#region Struct ReadWrite
+
+		/// <inheritdoc cref="IReadWriteNet.ReadStruct{T}(string, ushort)"/>
+		public static OperateResult<T> ReadStruct<T>( IReadWriteNet readWriteNet, string address, ushort length, IByteTransform byteTransform, int startIndex = 0 ) where T : class, new()
+		{
+			OperateResult<byte[]> read = readWriteNet.Read( address, length );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<T>( read );
+
+			try
+			{
+				return OperateResult.CreateSuccessResult( HslCommunication.Reflection.HslReflectionHelper.PraseStructContent<T>( read.Content, startIndex, byteTransform ) );
+			}
+			catch ( Exception ex)
+			{
+				return new OperateResult<T>( "Prase struct faild: " + ex.Message + Environment.NewLine + "Source Data: " + read.Content.ToHexString( ' ' ) );
+			}
+		}
+#if !NET20 && !NET35
+		/// <inheritdoc cref="ReadStruct{T}(IReadWriteNet, string, ushort, IByteTransform, int)"/>
+		public static async Task<OperateResult<T>> ReadStructAsync<T>( IReadWriteNet readWriteNet, string address, ushort length, IByteTransform byteTransform, int startIndex = 0 ) where T : class, new()
+		{
+			OperateResult<byte[]> read = await readWriteNet.ReadAsync( address, length );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<T>( read );
+
+			try
+			{
+				return OperateResult.CreateSuccessResult( HslCommunication.Reflection.HslReflectionHelper.PraseStructContent<T>( read.Content, startIndex, byteTransform ) );
+			}
+			catch (Exception ex)
+			{
+				return new OperateResult<T>( "Prase struct faild: " + ex.Message + Environment.NewLine + "Source Data: " + read.Content.ToHexString( ' ' ) );
+			}
+		}
+
+#endif
+		#endregion
+
 		#region Wait Support
 #if !NET20 && !NET35
 		/// <inheritdoc cref="IReadWriteNet.Wait(string, bool, int, int)"/>

@@ -13,15 +13,22 @@ using System.Text;
 namespace HslCommunication.Core
 {
 	/// <summary>
-	/// 字节倒序的转换类<br />
-	/// Byte reverse order conversion class
+	/// 字节倒序的转换类，字节的顺序和C#的原生字节的顺序是完全相反的，高字节在前，低字节在后。<br />
+	/// In the reverse byte order conversion class, the byte order is completely opposite to the native byte order of C#, 
+	/// with the high byte first and the low byte following.
 	/// </summary>
+	/// <remarks>
+	/// 适用西门子PLC的S7协议的数据转换
+	/// </remarks>
 	public class ReverseBytesTransform : ByteTransformBase
 	{
 		#region Constructor
 
 		/// <inheritdoc cref="ByteTransformBase()"/>
-		public ReverseBytesTransform( ) { }
+		public ReverseBytesTransform( ) 
+		{
+			DataFormat = DataFormat.ABCD;
+		}
 
 		/// <inheritdoc cref="ByteTransformBase(DataFormat)"/>
 		public ReverseBytesTransform( DataFormat dataFormat ) : base( dataFormat ) { }
@@ -46,84 +53,6 @@ namespace HslCommunication.Core
 			tmp[0] = buffer[1 + index];
 			tmp[1] = buffer[0 + index];
 			return BitConverter.ToUInt16( tmp, 0 );
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransInt32(byte[], int)"/>
-		public override int TransInt32( byte[] buffer, int index )
-		{
-			byte[] tmp = new byte[4];
-			tmp[0] = buffer[3 + index];
-			tmp[1] = buffer[2 + index];
-			tmp[2] = buffer[1 + index];
-			tmp[3] = buffer[0 + index];
-			return BitConverter.ToInt32( ByteTransDataFormat4( tmp ), 0 );
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransUInt32(byte[], int)"/>
-		public override uint TransUInt32( byte[] buffer, int index )
-		{
-			byte[] tmp = new byte[4];
-			tmp[0] = buffer[3 + index];
-			tmp[1] = buffer[2 + index];
-			tmp[2] = buffer[1 + index];
-			tmp[3] = buffer[0 + index];
-			return BitConverter.ToUInt32( ByteTransDataFormat4( tmp ), 0 );
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransInt64(byte[], int)"/>
-		public override long TransInt64( byte[] buffer, int index )
-		{
-			byte[] tmp = new byte[8];
-			tmp[0] = buffer[7 + index];
-			tmp[1] = buffer[6 + index];
-			tmp[2] = buffer[5 + index];
-			tmp[3] = buffer[4 + index];
-			tmp[4] = buffer[3 + index];
-			tmp[5] = buffer[2 + index];
-			tmp[6] = buffer[1 + index];
-			tmp[7] = buffer[0 + index];
-			return BitConverter.ToInt64( ByteTransDataFormat8( tmp ), 0 );
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransUInt64(byte[], int)"/>
-		public override ulong TransUInt64( byte[] buffer, int index )
-		{
-			byte[] tmp = new byte[8];
-			tmp[0] = buffer[7 + index];
-			tmp[1] = buffer[6 + index];
-			tmp[2] = buffer[5 + index];
-			tmp[3] = buffer[4 + index];
-			tmp[4] = buffer[3 + index];
-			tmp[5] = buffer[2 + index];
-			tmp[6] = buffer[1 + index];
-			tmp[7] = buffer[0 + index];
-			return BitConverter.ToUInt64( ByteTransDataFormat8( tmp ), 0 );
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransSingle(byte[], int)"/>
-		public override float TransSingle( byte[] buffer, int index )
-		{
-			byte[] tmp = new byte[4];
-			tmp[0] = buffer[3 + index];
-			tmp[1] = buffer[2 + index];
-			tmp[2] = buffer[1 + index];
-			tmp[3] = buffer[0 + index];
-			return BitConverter.ToSingle( ByteTransDataFormat4( tmp ), 0 );
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransDouble(byte[], int)"/>
-		public override double TransDouble( byte[] buffer, int index )
-		{
-			byte[] tmp = new byte[8];
-			tmp[0] = buffer[7 + index];
-			tmp[1] = buffer[6 + index];
-			tmp[2] = buffer[5 + index];
-			tmp[3] = buffer[4 + index];
-			tmp[4] = buffer[3 + index];
-			tmp[5] = buffer[2 + index];
-			tmp[6] = buffer[1 + index];
-			tmp[7] = buffer[0 + index];
-			return BitConverter.ToDouble( ByteTransDataFormat8( tmp ), 0 );
 		}
 
 		#endregion
@@ -157,103 +86,6 @@ namespace HslCommunication.Core
 				byte[] tmp = BitConverter.GetBytes( values[i] );
 				Array.Reverse( tmp );
 				tmp.CopyTo( buffer, 2 * i );
-			}
-
-			return buffer;
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransByte(int[])"/>
-		public override byte[] TransByte( int[] values )
-		{
-			if (values == null) return null;
-
-			byte[] buffer = new byte[values.Length * 4];
-			for (int i = 0; i < values.Length; i++)
-			{
-				byte[] tmp = BitConverter.GetBytes( values[i] );
-				Array.Reverse( tmp );
-				ByteTransDataFormat4( tmp ).CopyTo( buffer, 4 * i );
-			}
-
-			return buffer;
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransByte(uint[])"/>
-		public override byte[] TransByte( uint[] values )
-		{
-			if (values == null) return null;
-
-			byte[] buffer = new byte[values.Length * 4];
-			for (int i = 0; i < values.Length; i++)
-			{
-				byte[] tmp = BitConverter.GetBytes( values[i] );
-				Array.Reverse( tmp );
-				ByteTransDataFormat4( tmp ).CopyTo( buffer, 4 * i );
-			}
-
-			return buffer;
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransByte(long[])"/>
-		public override byte[] TransByte( long[] values )
-		{
-			if (values == null) return null;
-
-			byte[] buffer = new byte[values.Length * 8];
-			for (int i = 0; i < values.Length; i++)
-			{
-				byte[] tmp = BitConverter.GetBytes( values[i] );
-				Array.Reverse( tmp );
-				ByteTransDataFormat8( tmp ).CopyTo( buffer, 8 * i );
-			}
-
-			return buffer;
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransByte(ulong[])"/>
-		public override byte[] TransByte( ulong[] values )
-		{
-			if (values == null) return null;
-
-			byte[] buffer = new byte[values.Length * 8];
-			for (int i = 0; i < values.Length; i++)
-			{
-				byte[] tmp = BitConverter.GetBytes( values[i] );
-				Array.Reverse( tmp );
-				ByteTransDataFormat8( tmp ).CopyTo( buffer, 8 * i );
-			}
-
-			return buffer;
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransByte(float[])"/>
-		public override byte[] TransByte( float[] values )
-		{
-			if (values == null) return null;
-
-			byte[] buffer = new byte[values.Length * 4];
-			for (int i = 0; i < values.Length; i++)
-			{
-				byte[] tmp = BitConverter.GetBytes( values[i] );
-				Array.Reverse( tmp );
-				ByteTransDataFormat4( tmp ).CopyTo( buffer, 4 * i );
-			}
-
-			return buffer;
-		}
-
-		/// <inheritdoc cref="IByteTransform.TransByte(double[])"/>
-		/// <returns>buffer数据</returns>
-		public override byte[] TransByte( double[] values )
-		{
-			if (values == null) return null;
-
-			byte[] buffer = new byte[values.Length * 8];
-			for (int i = 0; i < values.Length; i++)
-			{
-				byte[] tmp = BitConverter.GetBytes( values[i] );
-				Array.Reverse( tmp );
-				ByteTransDataFormat8( tmp ).CopyTo( buffer, 8 * i );
 			}
 
 			return buffer;

@@ -1,13 +1,17 @@
 ﻿using HslCommunication.BasicFramework;
 using HslCommunication.Core;
+using HslCommunication.Core.Security;
 using HslCommunication.Reflection;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -69,13 +73,14 @@ namespace HslCommunication.MQTT
 		/// <param name="flags">标记</param>
 		/// <param name="variableHeader">可变头的字节内容</param>
 		/// <param name="payLoad">负载数据</param>
+		/// <param name="aesCryptography">AES数据加密对象</param>
 		/// <returns>带有是否成功的结果对象</returns>
-		public static OperateResult<byte[]> BuildMqttCommand( byte control, byte flags, byte[] variableHeader, byte[] payLoad )
+		public static OperateResult<byte[]> BuildMqttCommand( byte control, byte flags, byte[] variableHeader, byte[] payLoad, AesCryptography aesCryptography = null )
 		{
 			control = (byte)(control << 4);
 			byte head = (byte)(control | flags);
 
-			return BuildMqttCommand( head, variableHeader, payLoad );
+			return BuildMqttCommand( head, variableHeader, payLoad, aesCryptography );
 		}
 
 		/// <summary>
@@ -85,11 +90,15 @@ namespace HslCommunication.MQTT
 		/// <param name="head">控制码加标记码</param>
 		/// <param name="variableHeader">可变头的字节内容</param>
 		/// <param name="payLoad">负载数据</param>
+		/// <param name="aesCryptography">AES数据加密对象</param>
 		/// <returns>带有是否成功的结果对象</returns>
-		public static OperateResult<byte[]> BuildMqttCommand( byte head, byte[] variableHeader, byte[] payLoad )
+		public static OperateResult<byte[]> BuildMqttCommand( byte head, byte[] variableHeader, byte[] payLoad, AesCryptography aesCryptography = null )
 		{
 			if (variableHeader == null) variableHeader = new byte[0];
 			if (payLoad == null) payLoad = new byte[0];
+
+			// 如果需要加密操作，就对payload进行加密
+			if (aesCryptography != null) payLoad = aesCryptography.Encrypt( payLoad );
 
 			// 先计算长度
 			OperateResult<byte[]> bufferLength = CalculateLengthToMqttLength( variableHeader.Length + payLoad.Length );
@@ -100,9 +109,7 @@ namespace HslCommunication.MQTT
 			ms.Write( bufferLength.Content, 0, bufferLength.Content.Length );
 			if (variableHeader.Length > 0) ms.Write( variableHeader, 0, variableHeader.Length );
 			if (payLoad.Length > 0) ms.Write( payLoad, 0, payLoad.Length );
-			byte[] result = ms.ToArray( );
-			ms.Dispose( );
-			return OperateResult.CreateSuccessResult( result );
+			return OperateResult.CreateSuccessResult( ms.ToArray( ) );
 		}
 
 		/// <summary>
@@ -114,10 +121,17 @@ namespace HslCommunication.MQTT
 		public static byte[] BuildSegCommandByString( string message )
 		{
 			byte[] buffer = string.IsNullOrEmpty( message ) ? new byte[0] : Encoding.UTF8.GetBytes( message );
-			byte[] result = new byte[buffer.Length + 2];
-			buffer.CopyTo( result, 2 );
-			result[0] = (byte)(buffer.Length / 256);
-			result[1] = (byte)(buffer.Length % 256);
+			return BuildSegCommandByString( buffer );
+		}
+
+		/// <inheritdoc cref="BuildSegCommandByString(string)"/>
+		public static byte[] BuildSegCommandByString( byte[] message )
+		{
+			if (message == null) message = new byte[0];
+			byte[] result = new byte[message.Length + 2];
+			message.CopyTo( result, 2 );
+			result[0] = (byte)(message.Length / 256);
+			result[1] = (byte)(message.Length % 256);
 			return result;
 		}
 
@@ -142,13 +156,18 @@ namespace HslCommunication.MQTT
 		/// </summary>
 		/// <param name="buffer">Mqtt的报文</param>
 		/// <param name="index">索引</param>
+		/// <param name="topics">订阅的主题信息</param>
+		/// <param name="qosLevels">订阅的QOs信息</param>
 		/// <returns>值</returns>
-		public static string ExtraSubscribeMsgFromBytes( byte[] buffer, ref int index )
+		public static void ExtraSubscribeMsgFromBytes(byte[] buffer, ref int index, List<string> topics, List<byte> qosLevels)
 		{
-			int indexTmp = index;
 			int length = buffer[index] * 256 + buffer[index + 1];
+			topics.Add(Encoding.UTF8.GetString(buffer, index + 2, length));
+			if (index + 2 + length < buffer.Length)
+				qosLevels.Add(buffer[index + 2 + length]);
+			else
+				qosLevels.Add(0);
 			index = index + 3 + length;
-			return Encoding.UTF8.GetString( buffer, indexTmp + 2, length );
 		}
 
 		/// <summary>
@@ -182,14 +201,19 @@ namespace HslCommunication.MQTT
 		/// </summary>
 		/// <param name="connectionOptions">连接配置</param>
 		/// <param name="protocol">协议的内容</param>
+		/// <param name="rsa">数据加密对象</param>
 		/// <returns>返回是否成功的信息</returns>
-		public static OperateResult<byte[]> BuildConnectMqttCommand( MqttConnectionOptions connectionOptions, string protocol = "MQTT" )
+		public static OperateResult<byte[]> BuildConnectMqttCommand( MqttConnectionOptions connectionOptions, string protocol = "MQTT", RSACryptoServiceProvider rsa = null )
 		{
 			List<byte> variableHeader = new List<byte>( );
 			variableHeader.AddRange( new byte[] { 0x00, 0x04 } );                                                 // 
 			variableHeader.AddRange( Encoding.ASCII.GetBytes( protocol ) );                                       // 协议名称：MQTT
 			variableHeader.Add( 0x04 );                                                                           // 协议版本，3.1.1
 			byte connectFlags = 0x00;
+			if ( connectionOptions.WillMessage != null && !string.IsNullOrEmpty( connectionOptions.WillMessage.Topic) && protocol == "MQTT")
+			{
+				connectFlags = (byte)(connectFlags | 0x04);  // 设置遗嘱
+			}
 			if (connectionOptions.Credentials != null)                                                            // 是否需要验证用户名和密码
 			{
 				connectFlags = (byte)(connectFlags | 0x80);
@@ -206,7 +230,12 @@ namespace HslCommunication.MQTT
 			variableHeader.Add( keepAlivePeriod[0] );
 
 			List<byte> payLoad = new List<byte>( );
-			payLoad.AddRange( BuildSegCommandByString( connectionOptions.ClientId ) );                         // 添加客户端的id信息
+			payLoad.AddRange( BuildSegCommandByString( connectionOptions.ClientId ) );                             // 添加客户端的id信息
+			if (connectionOptions.WillMessage != null && !string.IsNullOrEmpty( connectionOptions.WillMessage.Topic ) && protocol == "MQTT")                    // 添加遗嘱
+			{
+				payLoad.AddRange( BuildSegCommandByString( connectionOptions.WillMessage.Topic ) );
+				payLoad.AddRange( BuildSegCommandByString( connectionOptions.WillMessage.Payload ) );
+			}
 
 			if (connectionOptions.Credentials != null)                                                         // 根据需要选择是否添加用户名和密码
 			{
@@ -214,7 +243,10 @@ namespace HslCommunication.MQTT
 				payLoad.AddRange( BuildSegCommandByString( connectionOptions.Credentials.Password ) );
 			}
 
-			return BuildMqttCommand( MqttControlMessage.CONNECT, 0x00, variableHeader.ToArray( ), payLoad.ToArray( ) );
+			if (rsa == null)
+				return BuildMqttCommand( MqttControlMessage.CONNECT, 0x00, variableHeader.ToArray( ), payLoad.ToArray( ) );
+			else
+				return BuildMqttCommand( MqttControlMessage.CONNECT, 0x00, rsa.EncryptLargeData( variableHeader.ToArray( ) ), rsa.EncryptLargeData( payLoad.ToArray( ) ) );
 		}
 
 		/// <summary>
@@ -259,8 +291,9 @@ namespace HslCommunication.MQTT
 		/// Create Mqtt command to send messages
 		/// </summary>
 		/// <param name="message">封装后的消息内容</param>
+		/// <param name="aesCryptography">AES数据加密对象</param>
 		/// <returns>结果内容</returns>
-		public static OperateResult<byte[]> BuildPublishMqttCommand( MqttPublishMessage message )
+		public static OperateResult<byte[]> BuildPublishMqttCommand( MqttPublishMessage message, AesCryptography aesCryptography = null )
 		{
 			byte flag = 0x00;
 			if (!message.IsSendFirstTime) flag = (byte)(flag | 0x08);
@@ -277,7 +310,7 @@ namespace HslCommunication.MQTT
 				variableHeader.Add( BitConverter.GetBytes( message.Identifier )[0] );
 			}
 
-			return BuildMqttCommand( MqttControlMessage.PUBLISH, flag, variableHeader.ToArray( ), message.Message.Payload );
+			return BuildMqttCommand( MqttControlMessage.PUBLISH, flag, variableHeader.ToArray( ), message.Message.Payload, aesCryptography );
 		}
 
 		/// <summary>
@@ -286,10 +319,11 @@ namespace HslCommunication.MQTT
 		/// </summary>
 		/// <param name="topic">主题消息内容</param>
 		/// <param name="payload">数据负载</param>
+		/// <param name="aesCryptography">AES数据加密对象</param>
 		/// <returns>结果内容</returns>
-		public static OperateResult<byte[]> BuildPublishMqttCommand( string topic, byte[] payload )
+		public static OperateResult<byte[]> BuildPublishMqttCommand( string topic, byte[] payload, AesCryptography aesCryptography = null )
 		{
-			return BuildMqttCommand( MqttControlMessage.PUBLISH, 0x00, BuildSegCommandByString( topic ), payload );
+			return BuildMqttCommand( MqttControlMessage.PUBLISH, 0x00, BuildSegCommandByString( topic ), payload, aesCryptography );
 		}
 
 		/// <summary>
@@ -341,14 +375,61 @@ namespace HslCommunication.MQTT
 			return BuildMqttCommand( MqttControlMessage.UNSUBSCRIBE, 0x02, variableHeader.ToArray( ), payLoad.ToArray( ) );
 		}
 
+		internal static OperateResult<MqttClientApplicationMessage> ParseMqttClientApplicationMessage( MqttSession session, byte code, byte[] data, AesCryptography aesCryptography = null )
+		{
+			bool dup = (code & 0x08) == 0x08;
+			int qos = ((code & 0x04) == 0x04 ? 2 : 0) + ((code & 0x02) == 0x02 ? 1 : 0);
+
+			MqttQualityOfServiceLevel mqttQuality = MqttQualityOfServiceLevel.AtMostOnce;
+			if      (qos == 1) mqttQuality = MqttQualityOfServiceLevel.AtLeastOnce;
+			else if (qos == 2) mqttQuality = MqttQualityOfServiceLevel.ExactlyOnce;
+			else if (qos == 3) mqttQuality = MqttQualityOfServiceLevel.OnlyTransfer;
+
+			bool         retain  = (code & 0x01) == 0x01;
+			int          msgId   = 0;
+			int          index   = 0;
+			string       topic   = MqttHelper.ExtraMsgFromBytes( data, ref index );
+			if (qos > 0) msgId   = MqttHelper.ExtraIntFromBytes( data, ref index );
+			byte[]       payload = SoftBasic.ArrayRemoveBegin( data, index );
+
+			if (session.AesCryptography) // 如果是加密的客户端信息，先进行解密操作
+			{
+				try
+				{
+					if (payload.Length > 0)
+					{
+						payload = aesCryptography.Decrypt( payload );
+					}
+				}
+				catch (Exception ex)
+				{
+					return new OperateResult<MqttClientApplicationMessage>( "AES Decrypt failed: " + ex.Message );
+				}
+			}
+
+			MqttClientApplicationMessage mqttClientApplicationMessage = new MqttClientApplicationMessage( )
+			{
+				ClientId              = session.ClientId,
+				QualityOfServiceLevel = mqttQuality,
+				Retain                = retain,
+				Topic                 = topic,
+				UserName              = session.UserName,
+				Payload               = payload,
+				MsgID                 = msgId,
+			};
+
+			return OperateResult.CreateSuccessResult( mqttClientApplicationMessage );
+		}
+
 		/// <summary>
 		/// 解析从MQTT接受的客户端信息，解析成实际的Topic数据及Payload数据<br />
 		/// Parse the client information received from MQTT and parse it into actual Topic data and Payload data
 		/// </summary>
 		/// <param name="mqttCode">MQTT的命令码</param>
 		/// <param name="data">接收的MQTT原始的消息内容</param>
+		/// <param name="aesCryptography">AES数据加密信息</param>
 		/// <returns>解析的数据结果信息</returns>
-		public static OperateResult<string, byte[]> ExtraMqttReceiveData( byte mqttCode, byte[] data )
+		public static OperateResult<string, byte[]> ExtraMqttReceiveData( byte mqttCode, byte[] data , AesCryptography aesCryptography = null )
 		{
 			if (data.Length < 2) return new OperateResult<string, byte[]>( StringResources.Language.ReceiveDataLengthTooShort + data.Length );
 
@@ -359,6 +440,17 @@ namespace HslCommunication.MQTT
 			byte[] payload = new byte[data.Length - topicLength - 2];
 			Array.Copy( data, topicLength + 2, payload, 0, payload.Length );
 
+			if(aesCryptography != null)
+			{
+				try
+				{
+					payload = aesCryptography.Decrypt( payload );
+				}
+				catch( Exception ex )
+				{
+					return new OperateResult<string, byte[]>( "AES Decrypt failed: " + ex.Message );
+				}
+			}
 			return OperateResult.CreateSuccessResult( topic, payload );
 		}
 
@@ -606,7 +698,7 @@ namespace HslCommunication.MQTT
 #endif
 			sb.Append( " " );
 			sb.Append( apiInformation.ApiTopic );
-			sb.Append( " (" );
+			sb.Append( "(" );
 			for (int i = 0; i < parameters.Length; i++)
 			{
 				if (parameters[i].ParameterType != typeof( ISessionContext ))
@@ -674,6 +766,69 @@ namespace HslCommunication.MQTT
 			return OperateResult.CreateSuccessResult( apiAttribute, apiInformation );
 		}
 
-#endregion
+		#endregion
+
+		/// <summary>
+		/// 判断当前服务器的实际的 topic 的主题，是否满足通配符格式的订阅主题 subTopic
+		/// </summary>
+		/// <param name="topic">服务器的实际的主题信息</param>
+		/// <param name="subTopic">客户端订阅的基于通配符的格式</param>
+		/// <returns>如果返回True, 说明当前匹配成功，应该发送订阅操作</returns>
+		public static bool CheckMqttTopicWildcards( string topic, string subTopic )
+		{
+			if (subTopic == "#") return true;
+			if (subTopic.EndsWith( "/#" ))
+			{
+				if (subTopic.Contains( "/+/" ))   // finance/+/ibm/#
+				{
+					subTopic = subTopic.Replace( "[", "\\[" );
+					subTopic = subTopic.Replace( "]", "\\]" );
+					subTopic = subTopic.Replace( ".", "\\." );
+					subTopic = subTopic.Replace( "*", "\\*" );
+					subTopic = subTopic.Replace( "{", "\\{" );
+					subTopic = subTopic.Replace( "}", "\\}" );
+					subTopic = subTopic.Replace( "?", "\\?" );
+					subTopic = subTopic.Replace( "$", "\\$" );
+
+					subTopic = subTopic.Replace( "/+", "/[^/]+" );
+					subTopic = subTopic.RemoveLast( 2 );
+					subTopic = subTopic + @"(/[\S\s]+$|$)";
+					return Regex.IsMatch( topic, subTopic );
+				}
+				else      // finance/stock/#
+				{
+					if (subTopic.Length == 2) return false;
+					if (topic == subTopic.RemoveLast( 2 )) return true;
+					if (topic.StartsWith( subTopic.RemoveLast( 1 ) )) return true;
+					return false;
+				}
+			}
+			if (subTopic == "+") return !topic.Contains( "/" );
+			if (subTopic.EndsWith( "/+" ))     // finance/stock/+
+			{
+				if (subTopic.Length == 2) return false;
+				if (!topic.StartsWith( subTopic.RemoveLast( 1 ) )) return false;
+				if (topic.Length == subTopic.Length - 1) return false;
+				if (topic.Substring( subTopic.Length - 1 ).Contains( "/" )) return false;
+				return true;
+			}
+			else if (subTopic.Contains( "/+/" ))
+			{
+				// finance/stock/+/currentprice
+				subTopic = subTopic.Replace( "[", "\\[" );
+				subTopic = subTopic.Replace( "]", "\\]" );
+				subTopic = subTopic.Replace( ".", "\\." );
+				subTopic = subTopic.Replace( "*", "\\*" );
+				subTopic = subTopic.Replace( "{", "\\{" );
+				subTopic = subTopic.Replace( "}", "\\}" );
+				subTopic = subTopic.Replace( "?", "\\?" );
+				subTopic = subTopic.Replace( "$", "\\$" );
+
+				subTopic = subTopic.Replace( "/+", "/[^/]+" );
+				return Regex.IsMatch( topic, subTopic );
+			}
+			return topic == subTopic;
+		}
+
 	}
 }

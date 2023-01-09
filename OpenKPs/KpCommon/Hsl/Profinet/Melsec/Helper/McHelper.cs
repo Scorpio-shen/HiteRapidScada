@@ -21,7 +21,7 @@ namespace HslCommunication.Profinet.Melsec.Helper
 		/// </summary>
 		/// <param name="type">MC协议的类型</param>
 		/// <returns>长度信息</returns>
-		private static int GetReadWordLength( McType type )
+		public static int GetReadWordLength( McType type )
 		{
 			if (type == McType.McBinary || type == McType.McRBinary) return 950;
 			return 460;
@@ -32,7 +32,7 @@ namespace HslCommunication.Profinet.Melsec.Helper
 		/// </summary>
 		/// <param name="type">MC协议的类型</param>
 		/// <returns>长度信息</returns>
-		private static int GetReadBoolLength( McType type )
+		public static int GetReadBoolLength( McType type )
 		{
 			if (type == McType.McBinary || type == McType.McRBinary) return 7168;
 			return 3584;
@@ -127,10 +127,19 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			return OperateResult.CreateSuccessResult( );
 		}
 
+		/// <inheritdoc cref="IReadWriteNet.ReadBool(string)"/>
+		/// <remarks>
+		/// 对于X,Y类型的地址，有两种表示方式，十六进制和八进制，默认16进制，比如输入 X10 是16进制的，如果想要输入8进制的地址，地址补0操作，例如 X010
+		/// </remarks>
+		public static OperateResult<bool> ReadBool( IReadWriteMc mc, string address )
+		{
+			return ByteTransformHelper.GetResultFromArray( ReadBool( mc, address, 1 ) );
+		}
 
 		/// <inheritdoc cref="IReadWriteNet.ReadBool(string, ushort)"/>
 		/// <remarks>
-		/// 当读取的长度过大时，会自动进行切割，对于二进制格式，切割长度为7168，对于ASCII格式协议来说，切割长度则是3584
+		/// 当读取的长度过大时，会自动进行切割，对于二进制格式，切割长度为7168，对于ASCII格式协议来说，切割长度则是3584<br />
+		/// 对于X,Y类型的地址，有两种表示方式，十六进制和八进制，默认16进制，比如输入 X10 是16进制的，如果想要输入8进制的地址，地址补0操作，例如 X010
 		/// </remarks>
 		public static OperateResult<bool[]> ReadBool( IReadWriteMc mc, string address, ushort length )
 		{
@@ -188,6 +197,10 @@ namespace HslCommunication.Profinet.Melsec.Helper
 		}
 
 		/// <inheritdoc cref="IReadWriteNet.Write(string, bool[])"/>
+		/// <remarks>
+		/// 当读取的长度过大时，会自动进行切割，对于二进制格式，切割长度为7168，对于ASCII格式协议来说，切割长度则是3584<br />
+		/// 对于X,Y类型的地址，有两种表示方式，十六进制和八进制，默认16进制，比如输入 X10 是16进制的，如果想要输入8进制的地址，地址补0操作，例如 X010
+		/// </remarks>
 		public static OperateResult Write( IReadWriteMc mc, string address, bool[] values )
 		{
 			// 分析地址
@@ -208,7 +221,7 @@ namespace HslCommunication.Profinet.Melsec.Helper
 		}
 
 #if !NET20 && !NET35
-		/// <inheritdoc cref="IReadWriteNet.Read(string, ushort)"/>
+		/// <inheritdoc cref="Read(IReadWriteMc, string, ushort)"/>
 		public static async Task<OperateResult<byte[]>> ReadAsync( IReadWriteMc mc, string address, ushort length )
 		{
 			if (mc.McType == McType.McBinary && address.StartsWith( "s=" ) || address.StartsWith( "S=" ))
@@ -287,7 +300,7 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			return OperateResult.CreateSuccessResult( );
 		}
 
-		/// <inheritdoc cref="IReadWriteNet.ReadBool(string, ushort)"/>
+		/// <inheritdoc cref="ReadBool(IReadWriteMc, string, ushort)"/>
 		public static async Task<OperateResult<bool[]>> ReadBoolAsync( IReadWriteMc mc, string address, ushort length )
 		{
 			if (address.IndexOf( '.' ) > 0)
@@ -405,26 +418,26 @@ namespace HslCommunication.Profinet.Melsec.Helper
 			return OperateResult.CreateSuccessResult( mc.ExtractActualData( read.Content, false ) );
 		}
 
-		/// <summary>
-		/// 随机读取PLC的数据信息，可以跨地址，跨类型组合，每个地址是任意的长度。收到结果后，需要自行解析数据，目前只支持字地址，比如D区，W区，R区，不支持X，Y，M，B，L等等<br />
-		/// Read the data information of the PLC randomly. It can be combined across addresses and types. Each address is of any length. After receiving the results, 
-		/// you need to parse the data yourself. Currently, only word addresses are supported, such as D area, W area, R area. X, Y, M, B, L, etc
-		/// </summary>
-		/// <param name="mc">MC协议通信对象</param>
-		/// <param name="address">所有的地址的集合</param>
-		/// <param name="length">每个地址的长度信息</param>
-		/// <remarks>
-		/// 实际测试不一定所有的plc都可以读取成功，具体情况需要具体分析
-		/// <br />
-		/// 1 块数按照下列要求指定 120 ≧ 字软元件块数 + 位软元件块数
-		/// <br />
-		/// 2 各软元件点数按照下列要求指定 960 ≧ 字软元件各块的合计点数 + 位软元件各块的合计点数
-		/// </remarks>
-		/// <example>
-		/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\melsecTest.cs" region="ReadExample4" title="随机批量字读取示例" />
-		/// </example>
-		/// <returns>结果</returns>
-		public static OperateResult<byte[]> ReadRandom( IReadWriteMc mc, string[] address, ushort[] length )
+        /// <summary>
+        /// 使用块读取PLC的数据信息，可以跨地址，跨类型组合，每个地址是任意的长度。收到结果后，需要自行解析数据，目前只支持字地址，比如D区，W区，R区，不支持X，Y，M，B，L等等<br />
+        /// Read the data information of the PLC randomly. It can be combined across addresses and types. Each address is of any length. After receiving the results, 
+        /// you need to parse the data yourself. Currently, only word addresses are supported, such as D area, W area, R area. X, Y, M, B, L, etc
+        /// </summary>
+        /// <param name="mc">MC协议通信对象</param>
+        /// <param name="address">所有的地址的集合</param>
+        /// <param name="length">每个地址的长度信息</param>
+        /// <remarks>
+        /// 实际测试不一定所有的plc都可以读取成功，具体情况需要具体分析
+        /// <br />
+        /// 1 块数按照下列要求指定 120 ≧ 字软元件块数 + 位软元件块数
+        /// <br />
+        /// 2 各软元件点数按照下列要求指定 960 ≧ 字软元件各块的合计点数 + 位软元件各块的合计点数
+        /// </remarks>
+        /// <example>
+        /// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\melsecTest.cs" region="ReadExample4" title="随机批量字读取示例" />
+        /// </example>
+        /// <returns>结果</returns>
+        public static OperateResult<byte[]> ReadRandom( IReadWriteMc mc, string[] address, ushort[] length )
 		{
 			if (length.Length != address.Length) return new OperateResult<byte[]>( StringResources.Language.TwoParametersLengthIsNotSame );
 

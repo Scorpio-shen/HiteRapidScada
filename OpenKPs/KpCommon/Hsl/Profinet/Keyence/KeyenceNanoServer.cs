@@ -1,7 +1,9 @@
 ﻿using HslCommunication.BasicFramework;
 using HslCommunication.Core;
+using HslCommunication.Core.IMessage;
 using HslCommunication.Core.Net;
 using HslCommunication.Reflection;
+using HslCommunication.Core.Address;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,6 +40,7 @@ namespace HslCommunication.Profinet.Keyence
 
 			ByteTransform = new RegularByteTransform( );
 			WordLength = 1;
+			LogMsgFormatBinary = false;
 		}
 
 		#endregion
@@ -85,13 +88,16 @@ namespace HslCommunication.Profinet.Keyence
 		[HslMqttApi( "ReadByteArray", "" )]
 		public override OperateResult<byte[]> Read( string address, ushort length )
 		{
+			OperateResult<KeyenceNanoAddress> nanoAddress = KeyenceNanoAddress.ParseFrom( address, length );
+			if (!nanoAddress.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( nanoAddress );
+
 			try
 			{
-				if (address.StartsWith( "DM" )) return OperateResult.CreateSuccessResult( dmBuffer.GetBytes( int.Parse( address.Substring( 2 ) ) * 2, length * 2 ) );
-				if (address.StartsWith( "EM" )) return OperateResult.CreateSuccessResult( emBuffer.GetBytes( int.Parse( address.Substring( 2 ) ) * 2, length * 2 ) ); 
-				if (address.StartsWith( "W" ))  return OperateResult.CreateSuccessResult( wBuffer.GetBytes(  int.Parse( address.Substring( 1 ) ) * 2, length * 2 ) ); 
-				if (address.StartsWith( "AT" )) return OperateResult.CreateSuccessResult( atBuffer.GetBytes( int.Parse( address.Substring( 2 ) ) * 4, length * 4 ) );
-				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
+				if (address.StartsWith( "DM" )) return OperateResult.CreateSuccessResult( dmBuffer.GetBytes( nanoAddress.Content.AddressStart * 2, length * 2 ) );
+				if (address.StartsWith( "EM" )) return OperateResult.CreateSuccessResult( emBuffer.GetBytes( nanoAddress.Content.AddressStart * 2, length * 2 ) ); 
+				if (address.StartsWith( "W" ))  return OperateResult.CreateSuccessResult( wBuffer.GetBytes(  nanoAddress.Content.AddressStart * 2, length * 2 ) ); 
+				if (address.StartsWith( "AT" )) return OperateResult.CreateSuccessResult( atBuffer.GetBytes( nanoAddress.Content.AddressStart * 4, length * 4 ) );
+				return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType ); 
 			}
 			catch(Exception ex)
 			{
@@ -103,12 +109,15 @@ namespace HslCommunication.Profinet.Keyence
 		[HslMqttApi( "WriteByteArray", "" )]
 		public override OperateResult Write( string address, byte[] value )
 		{
+			OperateResult<KeyenceNanoAddress> nanoAddress = KeyenceNanoAddress.ParseFrom( address, 0 );
+			if (!nanoAddress.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( nanoAddress );
+
 			try
 			{
-				if      (address.StartsWith( "DM" )) dmBuffer.SetBytes( value, int.Parse( address.Substring( 2 ) ) * 2 );
-				else if (address.StartsWith( "EM" )) emBuffer.SetBytes( value, int.Parse( address.Substring( 2 ) ) * 2 );
-				else if (address.StartsWith( "W" ))  wBuffer. SetBytes(  value,int.Parse( address.Substring( 1 ) ) * 2 );
-				else if (address.StartsWith( "AT" )) atBuffer.SetBytes( value, int.Parse( address.Substring( 2 ) ) * 4 );
+				if      (address.StartsWith( "DM" )) dmBuffer.SetBytes( value,  nanoAddress.Content.AddressStart * 2 );
+				else if (address.StartsWith( "EM" )) emBuffer.SetBytes( value,  nanoAddress.Content.AddressStart * 2 );
+				else if (address.StartsWith( "W" ))  wBuffer. SetBytes(  value, nanoAddress.Content.AddressStart * 2 );
+				else if (address.StartsWith( "AT" )) atBuffer.SetBytes( value,  nanoAddress.Content.AddressStart * 4 );
 				else return new OperateResult<byte[]>( StringResources.Language.NotSupportedDataType );
 				return OperateResult.CreateSuccessResult( );
 			}
@@ -122,14 +131,17 @@ namespace HslCommunication.Profinet.Keyence
 		[HslMqttApi( "ReadBoolArray", "" )]
 		public override OperateResult<bool[]> ReadBool( string address, ushort length )
 		{
+			OperateResult<KeyenceNanoAddress> nanoAddress = KeyenceNanoAddress.ParseFrom( address, 0 );
+			if (!nanoAddress.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( nanoAddress );
+
 			try
 			{
-				if (address.StartsWith( "R" ))  return OperateResult.CreateSuccessResult( rBuffer.GetBytes(  int.Parse( address.Substring( 1 ) ), length ).Select( m => m != 0 ).ToArray( ) );
-				if (address.StartsWith( "B" ))  return OperateResult.CreateSuccessResult( bBuffer.GetBytes(  int.Parse( address.Substring( 1 ) ), length ).Select( m => m != 0 ).ToArray( ) );
-				if (address.StartsWith( "MR" )) return OperateResult.CreateSuccessResult( mrBuffer.GetBytes( int.Parse( address.Substring( 2 ) ), length ).Select( m => m != 0 ).ToArray( ) );
-				if (address.StartsWith( "LR" )) return OperateResult.CreateSuccessResult( lrBuffer.GetBytes( int.Parse( address.Substring( 2 ) ), length ).Select( m => m != 0 ).ToArray( ) );
-				if (address.StartsWith( "CR" )) return OperateResult.CreateSuccessResult( crBuffer.GetBytes( int.Parse( address.Substring( 2 ) ), length ).Select( m => m != 0 ).ToArray( ) );
-				if (address.StartsWith( "VB" )) return OperateResult.CreateSuccessResult( vbBuffer.GetBytes( int.Parse( address.Substring( 2 ) ), length ).Select( m => m != 0 ).ToArray( ) );
+				if (address.StartsWith( "R" ))  return OperateResult.CreateSuccessResult( rBuffer.GetBytes(  nanoAddress.Content.AddressStart, length ).Select( m => m != 0 ).ToArray( ) );
+				if (address.StartsWith( "B" ))  return OperateResult.CreateSuccessResult( bBuffer.GetBytes(  nanoAddress.Content.AddressStart, length ).Select( m => m != 0 ).ToArray( ) );
+				if (address.StartsWith( "MR" )) return OperateResult.CreateSuccessResult( mrBuffer.GetBytes( nanoAddress.Content.AddressStart, length ).Select( m => m != 0 ).ToArray( ) );
+				if (address.StartsWith( "LR" )) return OperateResult.CreateSuccessResult( lrBuffer.GetBytes( nanoAddress.Content.AddressStart, length ).Select( m => m != 0 ).ToArray( ) );
+				if (address.StartsWith( "CR" )) return OperateResult.CreateSuccessResult( crBuffer.GetBytes( nanoAddress.Content.AddressStart, length ).Select( m => m != 0 ).ToArray( ) );
+				if (address.StartsWith( "VB" )) return OperateResult.CreateSuccessResult( vbBuffer.GetBytes( nanoAddress.Content.AddressStart, length ).Select( m => m != 0 ).ToArray( ) );
 				return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType );
 			}
 			catch(Exception ex)
@@ -142,16 +154,19 @@ namespace HslCommunication.Profinet.Keyence
 		[HslMqttApi( "WriteBoolArray", "" )]
 		public override OperateResult Write( string address, bool[] value )
 		{
+			OperateResult<KeyenceNanoAddress> nanoAddress = KeyenceNanoAddress.ParseFrom( address, 0 );
+			if (!nanoAddress.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( nanoAddress );
+
 			try
 			{
 				byte[] values = value.Select( m => m ? (byte)1 : (byte)0 ).ToArray( );
 
-				if      (address.StartsWith( "R" ))  rBuffer. SetBytes( values, int.Parse( address.Substring( 1 ) ) );
-				else if (address.StartsWith( "B" ))  bBuffer. SetBytes( values, int.Parse( address.Substring( 1 ) ) );
-				else if (address.StartsWith( "MR" )) mrBuffer.SetBytes( values, int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "LR" )) lrBuffer.SetBytes( values, int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "CR" )) crBuffer.SetBytes( values, int.Parse( address.Substring( 2 ) ) );
-				else if (address.StartsWith( "VB" )) vbBuffer.SetBytes( values, int.Parse( address.Substring( 2 ) ) );
+				if      (address.StartsWith( "R" ))  rBuffer. SetBytes( values, nanoAddress.Content.AddressStart );
+				else if (address.StartsWith( "B" ))  bBuffer. SetBytes( values, nanoAddress.Content.AddressStart );
+				else if (address.StartsWith( "MR" )) mrBuffer.SetBytes( values, nanoAddress.Content.AddressStart );
+				else if (address.StartsWith( "LR" )) lrBuffer.SetBytes( values, nanoAddress.Content.AddressStart );
+				else if (address.StartsWith( "CR" )) crBuffer.SetBytes( values, nanoAddress.Content.AddressStart );
+				else if (address.StartsWith( "VB" )) vbBuffer.SetBytes( values, nanoAddress.Content.AddressStart );
 				else return new OperateResult<bool[]>( StringResources.Language.NotSupportedDataType );
 				return OperateResult.CreateSuccessResult( );
 			}
@@ -166,10 +181,13 @@ namespace HslCommunication.Profinet.Keyence
 		#region NetServer Override
 
 		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => new SpecifiedCharacterMessage( AsciiControl.CR );
+
+		/// <inheritdoc/>
 		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
 		{
 			// 开始接收数据信息，先接收CR\r的命令
-			OperateResult<byte[]> read = ReceiveCommandLineFromSocket( socket, 0x0D, 5000 );
+			OperateResult<byte[]> read = ReceiveByMessage( socket, 5000, GetNewNetMessage( ) );
 			if(!read.IsSuccess) { socket?.Close( ); return; }
 
 			// 过滤不是CR开头的指令
@@ -178,48 +196,13 @@ namespace HslCommunication.Profinet.Keyence
 			OperateResult send = Send( socket, Encoding.ASCII.GetBytes( "CC\r\n" ) );
 			if(!send.IsSuccess) { return; }
 
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-
-			if (socket.BeginReceiveResult( SocketAsyncCallBack, appSession ).IsSuccess)
-				AddClient( appSession );
-			else
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-
+			base.ThreadPoolLoginAfterClientCheck( socket, endPoint );
 		}
 
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			if (ar.AsyncState is AppSession session)
-			{
-				if (!session.WorkSocket.EndReceiveResult( ar ).IsSuccess) { RemoveClient( session ); return; }
-#if NET20 || NET35
-				OperateResult<byte[]> read1 = ReceiveCommandLineFromSocket( session.WorkSocket, 0x0D, 5000 );
-#else
-				OperateResult<byte[]> read1 = await ReceiveCommandLineFromSocketAsync( session.WorkSocket, 0x0D, 5000 );
-#endif
-				if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-				if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-				LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{read1.Content.ToHexString( ' ' )}" );
-
-				byte[] back = ReadFromNanoCore( read1.Content );
-
-				if (back == null) { RemoveClient( session ); return; }
-				if (!Send( session.WorkSocket, back ).IsSuccess) { RemoveClient( session ); return; }
-
-				LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{back.ToHexString( ' ' )}" );
-
-				session.HeartTime = DateTime.Now;
-				RaiseDataReceived( session, read1.Content );
-				if (!session.WorkSocket.BeginReceiveResult( SocketAsyncCallBack, session ).IsSuccess) RemoveClient( session );
-			}
+			return OperateResult.CreateSuccessResult( ReadFromNanoCore( receive ) );
 		}
 
 		#endregion
@@ -265,6 +248,8 @@ namespace HslCommunication.Profinet.Keyence
 		private byte[] ReadFromNanoCore( byte[] receive )
 		{
 			string[] cmds = Encoding.ASCII.GetString( receive ).Trim( '\r', '\n' ).Split( new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries );
+			if (cmds[0] == "CR") return Encoding.ASCII.GetBytes( "CC\r\n" );
+			if (cmds[0] == "CQ") return Encoding.ASCII.GetBytes( "CF\r\n" );
 			if (cmds[0] == "ER") return Encoding.ASCII.GetBytes( "OK\r\n" );
 			if (cmds[0] == "RD" || cmds[0] == "RDS") return ReadByCommand( cmds );  // 读取数据和连续读取数据
 			if (cmds[0] == "WR" || cmds[0] == "WRS") return WriteByCommand( cmds ); // 写入数据和连续写入数据
@@ -282,21 +267,29 @@ namespace HslCommunication.Profinet.Keyence
 				if (command[1].EndsWith( ".U" ) || command[1].EndsWith( ".S" ) || command[1].EndsWith( ".D" ) ||
 					command[1].EndsWith( ".L" ) || command[1].EndsWith( ".H" )) command[1] = command[1].Remove( command[1].Length - 2 );
 				int length = command.Length > 2 ? int.Parse( command[2] ) : 1;
-				if (length > 256) return Encoding.ASCII.GetBytes( "E0\r\n" ); // 读取的长度太大，返回错误信息
 				if (System.Text.RegularExpressions.Regex.IsMatch( command[1], "^[0-9]+$" )) command[1] = "R" + command[1];  // 如果不指定数据块，就默认为R
 
-				if (command[1].StartsWith( "R" ))  return GetBoolResponseData( rBuffer.GetBytes(  int.Parse( command[1].Substring( 1 ) ), length ) );
-				if (command[1].StartsWith( "B" ))  return GetBoolResponseData( bBuffer.GetBytes(  int.Parse( command[1].Substring( 1 ) ), length ) );
-				if (command[1].StartsWith( "MR" )) return GetBoolResponseData( mrBuffer.GetBytes( int.Parse( command[1].Substring( 2 ) ), length ) );
-				if (command[1].StartsWith( "LR" )) return GetBoolResponseData( lrBuffer.GetBytes( int.Parse( command[1].Substring( 2 ) ), length ) );
-				if (command[1].StartsWith( "CR" )) return GetBoolResponseData( crBuffer.GetBytes( int.Parse( command[1].Substring( 2 ) ), length ) );
-				if (command[1].StartsWith( "VB" )) return GetBoolResponseData( vbBuffer.GetBytes( int.Parse( command[1].Substring( 2 ) ), length ) );
-				if (command[1].StartsWith( "DM" )) return GetWordResponseData( dmBuffer.GetBytes( int.Parse( command[1].Substring( 2 ) ) * 2, length * 2 ) );
-				if (command[1].StartsWith( "EM" )) return GetWordResponseData( emBuffer.GetBytes( int.Parse( command[1].Substring( 2 ) ) * 2, length * 2 ) ); 
-				if (command[1].StartsWith( "W" ))  return GetWordResponseData( wBuffer.GetBytes(  int.Parse( command[1].Substring( 1 ) ) * 2, length * 2 ) ); 
-				if (command[1].StartsWith( "AT" )) return GetDoubleWordResponseData( atBuffer.GetBytes( int.Parse( command[1].Substring( 2 ) ) * 4, length * 4 ) );
-				
-				return Encoding.ASCII.GetBytes( "E0\r\n" );
+				OperateResult<KeyenceNanoAddress> address = KeyenceNanoAddress.ParseFrom( command[1], (ushort)length );
+				if (!address.IsSuccess) return Encoding.ASCII.GetBytes( "E0\r\n" );
+
+				KeyenceNanoAddress nanoAddress = address.Content;
+				if (length > nanoAddress.SplitLength) return Encoding.ASCII.GetBytes( "E0\r\n" ); // 读取的长度太大，返回错误信息
+
+				switch (nanoAddress.DataCode)
+				{
+					case ""   :
+					case "R"  : return GetBoolResponseData(       rBuffer.GetBytes(  nanoAddress.AddressStart, length ) );
+					case "B"  : return GetBoolResponseData(       bBuffer.GetBytes(  nanoAddress.AddressStart, length ) );
+					case "MR" : return GetBoolResponseData(       mrBuffer.GetBytes( nanoAddress.AddressStart, length ) );
+					case "LR" : return GetBoolResponseData(       lrBuffer.GetBytes( nanoAddress.AddressStart, length ) );
+					case "CR" : return GetBoolResponseData(       crBuffer.GetBytes( nanoAddress.AddressStart, length ) );
+					case "VB" : return GetBoolResponseData(       vbBuffer.GetBytes( nanoAddress.AddressStart, length ) );
+					case "DM" : return GetWordResponseData(       dmBuffer.GetBytes( nanoAddress.AddressStart * 2, length * 2 ) );
+					case "EM" : return GetWordResponseData(       emBuffer.GetBytes( nanoAddress.AddressStart * 2, length * 2 ) ); 
+					case "W"  : return GetWordResponseData(       wBuffer.GetBytes(  nanoAddress.AddressStart * 2, length * 2 ) );
+					case "AT" : return GetDoubleWordResponseData( atBuffer.GetBytes( nanoAddress.AddressStart * 4, length * 4 ) );
+					default   : return Encoding.ASCII.GetBytes( "E0\r\n" );
+				}
 			}
 			catch
 			{
@@ -315,31 +308,35 @@ namespace HslCommunication.Profinet.Keyence
 					command[1].EndsWith( ".L" ) || command[1].EndsWith( ".H" ))
 					command[1] = command[1].Remove( command[1].Length - 2 );
 				int length = command[0] == "WRS" ? int.Parse( command[2] ) : 1;
-				if (length > 256) return Encoding.ASCII.GetBytes( "E0\r\n" ); // 读取的长度太大，返回错误信息
-
 				if (System.Text.RegularExpressions.Regex.IsMatch( command[1], "^[0-9]+$" )) command[1] = "R" + command[1];  // 如果不指定数据块，就默认为R
-				
-				if( command[1].StartsWith( "R" )  || command[1].StartsWith( "B" )  || command[1].StartsWith( "MR" ) || 
+
+				OperateResult<KeyenceNanoAddress> address = KeyenceNanoAddress.ParseFrom( command[1], (ushort)length );
+				if (!address.IsSuccess) return Encoding.ASCII.GetBytes( "E0\r\n" );
+
+				KeyenceNanoAddress nanoAddress = address.Content;
+				if (length > nanoAddress.SplitLength) return Encoding.ASCII.GetBytes( "E0\r\n" ); // 读取的长度太大，返回错误信息
+
+				if ( command[1].StartsWith( "R" )  || command[1].StartsWith( "B" )  || command[1].StartsWith( "MR" ) || 
 					command[1].StartsWith( "LR" ) || command[1].StartsWith( "CR" ) || command[1].StartsWith( "VB" ))
 				{
 					byte[] values = command.RemoveBegin( command[0] == "WRS" ? 3 : 2 ).Select( m => byte.Parse( m ) ).ToArray( );
 
-					if      (command[1].StartsWith( "R" ))  rBuffer. SetBytes( values, int.Parse( command[1].Substring( 1 ) ) );
-					else if (command[1].StartsWith( "B" ))  bBuffer. SetBytes( values, int.Parse( command[1].Substring( 1 ) ) );
-					else if (command[1].StartsWith( "MR" )) mrBuffer.SetBytes( values, int.Parse( command[1].Substring( 2 ) ) );
-					else if (command[1].StartsWith( "LR" )) lrBuffer.SetBytes( values, int.Parse( command[1].Substring( 2 ) ) );
-					else if (command[1].StartsWith( "CR" )) crBuffer.SetBytes( values, int.Parse( command[1].Substring( 2 ) ) );
-					else if (command[1].StartsWith( "VB" )) vbBuffer.SetBytes( values, int.Parse( command[1].Substring( 2 ) ) );
+					if      (command[1].StartsWith( "R" ))  rBuffer. SetBytes( values, nanoAddress.AddressStart );
+					else if (command[1].StartsWith( "B" ))  bBuffer. SetBytes( values, nanoAddress.AddressStart );
+					else if (command[1].StartsWith( "MR" )) mrBuffer.SetBytes( values, nanoAddress.AddressStart );
+					else if (command[1].StartsWith( "LR" )) lrBuffer.SetBytes( values, nanoAddress.AddressStart );
+					else if (command[1].StartsWith( "CR" )) crBuffer.SetBytes( values, nanoAddress.AddressStart );
+					else if (command[1].StartsWith( "VB" )) vbBuffer.SetBytes( values, nanoAddress.AddressStart );
 					else return Encoding.ASCII.GetBytes( "E0\r\n" );
 				}
 				else
 				{
 					byte[] values = ByteTransform.TransByte( command.RemoveBegin( command[0] == "WRS" ? 3 : 2 ).Select( m => ushort.Parse( m ) ).ToArray( ) );
 
-					if      (command[1].StartsWith( "DM" )) dmBuffer.SetBytes( values, int.Parse( command[1].Substring( 2 ) ) * 2 );
-					else if (command[1].StartsWith( "EM" )) emBuffer.SetBytes( values, int.Parse( command[1].Substring( 2 ) ) * 2 );
-					else if (command[1].StartsWith( "W" ))  wBuffer.SetBytes(  values, int.Parse( command[1].Substring( 1 ) ) * 2 );
-					else if (command[1].StartsWith( "AT" )) atBuffer.SetBytes( values, int.Parse( command[1].Substring( 2 ) ) * 4 );
+					if      (command[1].StartsWith( "DM" )) dmBuffer.SetBytes( values, nanoAddress.AddressStart * 2 );
+					else if (command[1].StartsWith( "EM" )) emBuffer.SetBytes( values, nanoAddress.AddressStart * 2 );
+					else if (command[1].StartsWith( "W" ))  wBuffer.SetBytes(  values, nanoAddress.AddressStart * 2 );
+					else if (command[1].StartsWith( "AT" )) atBuffer.SetBytes( values, nanoAddress.AddressStart * 4 );
 					else return Encoding.ASCII.GetBytes( "E0\r\n" );
 				}
 
@@ -349,6 +346,16 @@ namespace HslCommunication.Profinet.Keyence
 			{
 				return Encoding.ASCII.GetBytes( "E1\r\n" );
 			}
+		}
+
+		#endregion
+
+		#region Serial Support
+
+		/// <inheritdoc/>
+		protected override bool CheckSerialReceiveDataComplete( byte[] buffer, int receivedLength )
+		{
+			return buffer[receivedLength - 1] == AsciiControl.CR;
 		}
 
 		#endregion

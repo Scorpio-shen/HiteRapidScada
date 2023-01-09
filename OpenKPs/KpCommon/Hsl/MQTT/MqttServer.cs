@@ -13,6 +13,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Security.Cryptography;
+using HslCommunication.Core.Security;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -27,7 +30,8 @@ namespace HslCommunication.MQTT
 	/// For detailed instructions, please refer to the code api document example.
 	/// </summary>
 	/// <remarks>
-	/// 本MQTT服务器功能丰富，可以同时实现，用户名密码验证，在线客户端的管理，数据订阅推送，单纯的数据收发，心跳检测，同步数据访问，文件上传，下载，删除，遍历，详细参照下面的示例说明
+	/// 本MQTT服务器功能丰富，可以同时实现，用户名密码验证，在线客户端的管理，数据订阅推送，单纯的数据收发，心跳检测，订阅通配符，同步数据访问，文件上传，下载，删除，遍历，详细参照下面的示例说明<br />
+	/// 通配符请查看<see cref="TopicWildcard"/>属性，规则参考：http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#appendix-a
 	/// </remarks>
 	/// <example>
 	/// 最简单的使用，就是实例化，启动服务即可
@@ -66,71 +70,79 @@ namespace HslCommunication.MQTT
 		/// 实例化一个MQTT协议的服务器<br />
 		/// Instantiate a MQTT protocol server
 		/// </summary>
-		public MqttServer( )
+		/// <param name="providerServer">
+		/// RSA秘钥对象，默认为空，表示使用随机生成的秘钥信息，如果需要自定义的RSA密钥，则需要实例化当前参数对象，具体通信的时候加密与否，取决于客户端连接的方式。<br />
+		/// The RSA key object, which is empty by default, indicates that the randomly generated key information is used. If a custom RSA key is required, 
+		/// the current parameter object needs to be instantiated. Whether the specific communication is encrypted or not depends on the way the client connects. .
+		/// </param>
+		public MqttServer( RSACryptoServiceProvider providerServer = null )
 		{
-			statisticsDict        = new LogStatisticsDict( GenerateMode.ByEveryDay, 60 );
-			retainKeys            = new Dictionary<string, MqttClientApplicationMessage>( );
-			apiTopicServiceDict   = new Dictionary<string, MqttRpcApiInfo>( );
-			keysLock              = new object( );
-			rpcApiLock            = new object( );
-			timerHeart            = new System.Threading.Timer( ThreadTimerHeartCheck, null, 2000, 10000 );
+			this.statisticsDict        = new LogStatisticsDict( GenerateMode.ByEveryDay, 60 );                      // 对API信息进行统计
+			this.retainKeys            = new Dictionary<string, MqttClientApplicationMessage>( );                   // 对驻留的消息缓存
+			this.apiTopicServiceDict   = new Dictionary<string, MqttRpcApiInfo>( );                                 // API接口缓存
+			this.keysLock              = new object( );                                                             // 驻留消息的锁
+			this.rpcApiLock            = new object( );                                                             // RPC接口的锁
+			this.timerHeart            = new System.Threading.Timer( ThreadTimerHeartCheck, null, 2000, 10000 );    // 心跳定时器处理
 
-			// 文件相关
-			dictionaryFilesMarks  = new Dictionary<string, FileMarkId>( );
-			dictHybirdLock        = new object( );
+			this.dictionaryFilesMarks  = new Dictionary<string, FileMarkId>( );                                      // 文件集合信息
+			this.dictHybirdLock        = new object( );                                                              // 文件集合的锁
+			this.providerMqttServer    = providerServer;                                                             // 如果没有指定RSA密钥，会话连接时就自动随机生成
+			this.aesCryptography       = new AesCryptography( HslHelper.HslRandom.GetBytes( 16 ).ToHexString( ) );   // 生成随机AES密钥
 		}
 
 		#endregion
 
 		#region NetServer Override
-#if NET35 || NET20
 		/// <inheritdoc/>
+#if NET35 || NET20
 		protected override void ThreadPoolLogin( Socket socket, IPEndPoint endPoint )
+#else
+		protected async override void ThreadPoolLogin( Socket socket, IPEndPoint endPoint )
+#endif
 		{
+#if NET35 || NET20
 			OperateResult<byte, byte[]> readMqtt = ReceiveMqttMessage( socket, 10_000 );
-			HandleMqttConnection( socket, endPoint, readMqtt );
-		}
+#else
+			OperateResult<byte, byte[]> readMqtt = await ReceiveMqttMessageAsync( socket, 10_000 );
+#endif
+			if (!readMqtt.IsSuccess) return;
 
-		private void SocketReceiveCallback( IAsyncResult ar )
-		{
-			if (ar.AsyncState is MqttSession mqttSession)
+			RSACryptoServiceProvider clientKey = null;
+			RSACryptoServiceProvider serverKey = null;
+			if (readMqtt.Content1 == 0xFF)    // 客户端使用加密通信，需要事先进行交换RSA密钥的公钥
 			{
 				try
 				{
-					mqttSession.MqttSocket.EndReceive( ar );
+					serverKey = this.providerMqttServer ?? new RSACryptoServiceProvider( );
+					clientKey = RSAHelper.CreateRsaProviderFromPublicKey( HslSecurity.ByteDecrypt( readMqtt.Content2 ) );
+
+					// 交换RSA公共钥匙
+					OperateResult send = Send( socket, MqttHelper.BuildMqttCommand( 0xFF, null, HslSecurity.ByteEncrypt( clientKey.EncryptLargeData( serverKey.GetPEMPublicKey( ) ) ) ).Content );
+					if (!send.IsSuccess) return;
 				}
-				catch(Exception ex)
+				catch( Exception ex )
 				{
-					RemoveAndCloseSession( mqttSession, $"Socket EndReceive -> {ex.Message}" );
+					LogNet?.WriteError( "创建客户端的公钥发生了异常！" + ex.Message );
+					socket?.Close( );
 					return;
 				}
 
-				if (mqttSession.Protocol == "FILE")
-				{
-					if (fileServerEnabled)
-						HandleFileMessage( mqttSession );
-					RemoveAndCloseSession( mqttSession, string.Empty );
-					return;
-				}
-
-				OperateResult<byte, byte[]> readMqtt = null;
-				if (mqttSession.Protocol == "MQTT")
-					readMqtt = ReceiveMqttMessage( mqttSession.MqttSocket, 60_000 );
-				else
-					readMqtt = ReceiveMqttMessage( mqttSession.MqttSocket, 60_000, new Action<long, long>( ( already, total ) => SyncMqttReceiveProgressBack( mqttSession.MqttSocket, already, total ) ) );
-
-				HandleWithReceiveMqtt( mqttSession, readMqtt );
-			}
-		}
+				// 如果之前使用的是加密的通信，那么此处就是正式的接收连接的账户密码数据信息
+#if NET35 || NET20
+				readMqtt = ReceiveMqttMessage( socket, 10_000 );
 #else
-		/// <inheritdoc/>
-		protected async override void ThreadPoolLogin( Socket socket, IPEndPoint endPoint )
-		{
-			OperateResult<byte, byte[]> readMqtt = await ReceiveMqttMessageAsync( socket, 10_000 );
-			HandleMqttConnection( socket, endPoint, readMqtt );
-		}
+				readMqtt = await ReceiveMqttMessageAsync( socket, 10_000 );
+#endif
+				if (!readMqtt.IsSuccess) return;
+			}
 
+			HandleMqttConnection( socket, endPoint, readMqtt, clientKey, serverKey );
+		}
+#if NET35 || NET20
+		private void SocketReceiveCallback( IAsyncResult ar )
+#else
 		private async void SocketReceiveCallback( IAsyncResult ar )
+#endif
 		{
 			if (ar.AsyncState is MqttSession mqttSession)
 			{
@@ -145,42 +157,81 @@ namespace HslCommunication.MQTT
 				}
 
 				if(mqttSession.Protocol == "FILE") 
-				{ 
-					if(fileServerEnabled)
+				{
+					if (fileServerEnabled)
+					{
+#if NET35 || NET20
+						HandleFileMessage( mqttSession );
+#else
 						await HandleFileMessageAsync( mqttSession );
+#endif
+					}
 					RemoveAndCloseSession( mqttSession, string.Empty );
 					return; 
 				}
 
 				OperateResult<byte, byte[]> readMqtt = null;
-				if (mqttSession.Protocol == "MQTT") 
+				if (mqttSession.Protocol == "MQTT")
+				{
+#if NET35 || NET20
+					readMqtt = ReceiveMqttMessage( mqttSession.MqttSocket, 60_000 );
+#else
 					readMqtt = await ReceiveMqttMessageAsync( mqttSession.MqttSocket, 60_000 );
+#endif
+				}
 				else
-					readMqtt = await ReceiveMqttMessageAsync( mqttSession.MqttSocket, 60_000, new Action<long, long>( ( already, total ) => SyncMqttReceiveProgressBack( mqttSession.MqttSocket, already, total ) ) );
+				{
+#if NET35 || NET20
+					readMqtt = ReceiveMqttMessage( mqttSession.MqttSocket, 60_000, new Action<long, long>( ( already, total ) =>
+						SyncMqttReceiveProgressBack( mqttSession.MqttSocket, already, total ) ) );
+#else
+					readMqtt = await ReceiveMqttMessageAsync( mqttSession.MqttSocket, 60_000, new Action<long, long>( ( already, total ) => 
+						SyncMqttReceiveProgressBack( mqttSession.MqttSocket, already, total ) ) );
+#endif
 
+				}
+#if NET35 || NET20
+				HandleWithReceiveMqtt( mqttSession, readMqtt );
+#else
 				await HandleWithReceiveMqtt( mqttSession, readMqtt );
+#endif
 			}
 		}
-#endif
+
 		// 进度报告部分的内容
 		private void SyncMqttReceiveProgressBack( Socket socket, long already, long total )
 		{
 			string topic = total > 0 ? (already * 100 / total).ToString( ) : "100";
 			byte[] payload = new byte[16];
 			BitConverter.GetBytes( already ).CopyTo( payload, 0 );
-			BitConverter.GetBytes( total ).CopyTo( payload, 8 );
+			BitConverter.GetBytes( total ).CopyTo(   payload, 8 );
 
 			Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.REPORTPROGRESS, 0x00, MqttHelper.BuildSegCommandByString( topic ), payload ).Content );
 		}
 
-		private void HandleMqttConnection( Socket socket, IPEndPoint endPoint, OperateResult<byte, byte[]> readMqtt )
+		private void HandleMqttConnection( Socket socket, IPEndPoint endPoint, OperateResult<byte, byte[]> readMqtt, RSACryptoServiceProvider providerClient, RSACryptoServiceProvider providerServer )
 		{
 			if (!readMqtt.IsSuccess) return;
 
-			OperateResult<int, MqttSession> check = CheckMqttConnection( readMqtt.Content1, readMqtt.Content2, socket, endPoint );
+			byte[] encrypt = readMqtt.Content2;
+			if (providerClient != null)   // 如果使用了加密的模式，就先进行解密的操作
+			{
+				try
+				{
+					encrypt = providerServer.DecryptLargeData( encrypt );
+				}
+				catch (Exception ex)
+				{
+					LogNet?.WriteError( ToString( ), $"[{endPoint}] Decrypt the client's logon data exception！" + ex.Message ); ;
+					socket?.Close( );
+					return;
+				}
+			}
+
+			OperateResult<int, MqttSession> check = CheckMqttConnection( readMqtt.Content1, encrypt, socket, endPoint );
 			if (!check.IsSuccess)
 			{
-				LogNet?.WriteInfo( ToString( ), check.Message );
+				LogNet?.WriteInfo( ToString( ), $"[{endPoint}] Check client login failure: " + check.Message );
 				socket?.Close( );
 				return;
 			}
@@ -193,7 +244,15 @@ namespace HslCommunication.MQTT
 			}
 			else
 			{
-				Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.CONNACK, 0x00, null, new byte[] { 0x00, 0x00 } ).Content );
+				check.Content2.AesCryptography = providerClient != null; // 标记该客户端是否加密
+				if (providerClient == null)
+					Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.CONNACK, 0x00, null, new byte[] { 0x00, 0x00 } ).Content );
+				else
+				{
+					// 传送回AES的密钥信息
+					byte[] aesKey = providerClient.Encrypt( Encoding.UTF8.GetBytes( aesCryptography.Key ), false );
+					Send( socket, MqttHelper.BuildMqttCommand( MqttControlMessage.CONNACK, 0x00, new byte[] { 0x00, 0x00 }, aesKey ).Content );
+				}
 			}
 
 			try
@@ -210,7 +269,7 @@ namespace HslCommunication.MQTT
 			if (check.Content2.Protocol == "MQTT") OnClientConnected?.Invoke( check.Content2 );
 		}
 
-		private OperateResult<int, MqttSession> CheckMqttConnection(byte mqttCode, byte[] content, Socket socket, IPEndPoint endPoint )
+		private OperateResult<int, MqttSession> CheckMqttConnection( byte mqttCode, byte[] content, Socket socket, IPEndPoint endPoint )
 		{
 			if (mqttCode >> 4 != MqttControlMessage.CONNECT) return new OperateResult<int, MqttSession>( "Client Send Faied, And Close!" );
 			if (content.Length < 10) return new OperateResult<int, MqttSession>( $"Receive Data Too Short:{SoftBasic.ByteToHexString( content, ' ' )}" );
@@ -230,9 +289,11 @@ namespace HslCommunication.MQTT
 
 				MqttSession mqttSession = new MqttSession( endPoint, protocol )
 				{
-					MqttSocket = socket,
-					ClientId = clientId,
-					UserName = userName,
+					MqttSocket  = socket,
+					ClientId    = clientId,
+					UserName    = userName,
+					WillTopic   = willTopic,
+					WillMessage = Encoding.UTF8.GetBytes( willMessage )
 				};
 				int returnCode = ClientVerification != null ? ClientVerification( mqttSession, clientId, userName, password ) : 0;
 
@@ -262,7 +323,7 @@ namespace HslCommunication.MQTT
 			}
 			catch(Exception ex)
 			{
-				RemoveAndCloseSession( mqttSession, "HandleWithReceiveMqtt:" + ex.Message ); return;               // 发生了异常
+				RemoveAndCloseSession( mqttSession, "HandleWithReceiveMqtt exception:" + ex.Message ); return;               // 发生了异常
 			}
 
 			mqttSession.ActiveTime = DateTime.Now;                         // 更新会话激活时间
@@ -341,45 +402,25 @@ namespace HslCommunication.MQTT
 		private async Task DealWithPublish( MqttSession session, byte code, byte[] data )
 #endif
 		{
-			bool dup = (code & 0x08) == 0x08;
-			int qos = ((code & 0x04) == 0x04 ? 2 : 0) + ((code & 0x02) == 0x02 ? 1 : 0);
+			OperateResult<MqttClientApplicationMessage> messageResult = MqttHelper.ParseMqttClientApplicationMessage( session, code, data, this.aesCryptography );
+			if (!messageResult.IsSuccess) { RemoveAndCloseSession( session, messageResult.Message ); return; }
 
-			MqttQualityOfServiceLevel mqttQuality = MqttQualityOfServiceLevel.AtMostOnce;
-			if      (qos == 1) mqttQuality = MqttQualityOfServiceLevel.AtLeastOnce;
-			else if (qos == 2) mqttQuality = MqttQualityOfServiceLevel.ExactlyOnce;
-			else if (qos == 3) mqttQuality = MqttQualityOfServiceLevel.OnlyTransfer;
-
-			bool         retain  = (code & 0x01) == 0x01;
-			int          msgId   = 0;
-			int          index   = 0;
-			string       topic   = MqttHelper.ExtraMsgFromBytes( data, ref index );
-			if (qos > 0) msgId   = MqttHelper.ExtraIntFromBytes( data, ref index );
-			byte[]       payload = SoftBasic.ArrayRemoveBegin( data, index );
-
-			MqttClientApplicationMessage mqttClientApplicationMessage = new MqttClientApplicationMessage( )
-			{
-				ClientId = session.ClientId,
-				QualityOfServiceLevel = mqttQuality,
-				Retain = retain,
-				Topic = topic,
-				UserName = session.UserName,
-				Payload = payload,
-			};
-
+			MqttClientApplicationMessage mqttClientApplicationMessage = messageResult.Content;
 			if (session.Protocol == "MQTT")
 			{
+				MqttQualityOfServiceLevel mqttQuality = mqttClientApplicationMessage.QualityOfServiceLevel;
 				if (mqttQuality == MqttQualityOfServiceLevel.AtLeastOnce)
-					Send( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.PUBACK, 0x00, null, MqttHelper.BuildIntBytes( msgId ) ).Content );
+					Send( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.PUBACK, 0x00, null, MqttHelper.BuildIntBytes( mqttClientApplicationMessage.MsgID ) ).Content );
 				else if (mqttQuality == MqttQualityOfServiceLevel.ExactlyOnce)
-					Send( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.PUBREC, 0x00, null, MqttHelper.BuildIntBytes( msgId ) ).Content );
+					Send( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.PUBREC, 0x00, null, MqttHelper.BuildIntBytes( mqttClientApplicationMessage.MsgID ) ).Content );
 
 				if (session.ForbidPublishTopic) return;
 				OnClientApplicationMessageReceive?.Invoke( session, mqttClientApplicationMessage );
 
 				if (mqttQuality != MqttQualityOfServiceLevel.OnlyTransfer && !mqttClientApplicationMessage.IsCancelPublish)
 				{
-					PublishTopicPayload( topic, payload, false );
-					if (retain) RetainTopicPayload( topic, mqttClientApplicationMessage );
+					PublishTopicPayload( mqttClientApplicationMessage.Topic, mqttClientApplicationMessage.Payload, false );
+					if (mqttClientApplicationMessage.Retain) RetainTopicPayload( mqttClientApplicationMessage.Topic, mqttClientApplicationMessage );
 				}
 			}
 			else
@@ -412,39 +453,55 @@ namespace HslCommunication.MQTT
 				else if (code >> 4 == MqttControlMessage.SUBSCRIBE)
 				{
 					// 当为RPC同步网络访问的时候，就是请求API接口列表内容
-					ReportOperateResult( session, OperateResult.CreateSuccessResult( JArray.FromObject( GetAllMqttRpcApiInfo( ) ).ToString( ) ) );
+					if (session.DeveloperPermissions)
+						ReportOperateResult( session, OperateResult.CreateSuccessResult( JArray.FromObject( GetAllMqttRpcApiInfo( ) ).ToString( ) ) );
+					else
+						ReportOperateResult( session, StringResources.Language.DeveloperPrivileges );
 				}
 				else if (code >> 4 == MqttControlMessage.PUBACK)
 				{
 					// 当为RPC同步网络访问的时候，就是获取服务器的发布过的Topic列表
-					PublishTopicPayload( session, "", HslProtocol.PackStringArrayToByte( GetAllRetainTopics( ) ) );
+					if (session.DeveloperPermissions)
+						PublishTopicPayload( session, "", HslProtocol.PackStringArrayToByte( GetAllRetainTopics( ) ) );
+					else
+						ReportOperateResult( session, StringResources.Language.DeveloperPrivileges );
 				}
 				else if (code >> 4 == MqttControlMessage.PUBREL)
 				{
 					// 当为RPC同步网络访问的时候，就是获取某个API调用次数的数组信息
-
-					long[] logs = string.IsNullOrEmpty( mqttClientApplicationMessage.Topic ) ?
+					if (session.DeveloperPermissions)
+					{
+						long[] logs = string.IsNullOrEmpty( mqttClientApplicationMessage.Topic ) ?
 						LogStatistics.LogStat.GetStatisticsSnapshot( ) :
 						LogStatistics.GetStatisticsSnapshot( mqttClientApplicationMessage.Topic );
-					if (logs == null)
-						ReportOperateResult( session, new OperateResult<string>( $"{session} RPC:{mqttClientApplicationMessage.Topic} has no data or not exist." ) );
+						if (logs == null)
+							ReportOperateResult( session, new OperateResult<string>( $"{session} RPC:{mqttClientApplicationMessage.Topic} has no data or not exist." ) );
+						else
+							ReportOperateResult( session, OperateResult.CreateSuccessResult( logs.ToArrayString( ) ) );
+					}
 					else
-						ReportOperateResult( session, OperateResult.CreateSuccessResult( logs.ToArrayString( ) ) );
+						ReportOperateResult( session, StringResources.Language.DeveloperPrivileges );
 				}
 				else if (code >> 4 == MqttControlMessage.PUBREC)
 				{
 					// 当为RPC同步网络访问的时候，读取指定的Topic信息
-					lock (keysLock)
+					if (session.DeveloperPermissions)
 					{
-						if (retainKeys.ContainsKey( mqttClientApplicationMessage.Topic ))
+						lock (keysLock)
 						{
-							PublishTopicPayload( session, mqttClientApplicationMessage.Topic, Encoding.UTF8.GetBytes( retainKeys[mqttClientApplicationMessage.Topic].ToJsonString( ) ) );
-						}
-						else
-						{
-							ReportOperateResult( session, StringResources.Language.KeyIsNotExist );
+							if (retainKeys.ContainsKey( mqttClientApplicationMessage.Topic ))
+							{
+								byte[] responsePayload = Encoding.UTF8.GetBytes( retainKeys[mqttClientApplicationMessage.Topic].ToJsonString( ) );
+								PublishTopicPayload( session, mqttClientApplicationMessage.Topic, responsePayload );
+							}
+							else
+							{
+								ReportOperateResult( session, StringResources.Language.KeyIsNotExist );
+							}
 						}
 					}
+					else
+						ReportOperateResult( session, StringResources.Language.DeveloperPrivileges );
 				}
 			}
 		}
@@ -506,29 +563,52 @@ namespace HslCommunication.MQTT
 
 			msgId = MqttHelper.ExtraIntFromBytes( data, ref index );
 			List<string> topics = new List<string>( );
-			while (index < data.Length - 1)
+			List<byte> qosLevels = new List<byte>( );
+			try
 			{
-				topics.Add( MqttHelper.ExtraSubscribeMsgFromBytes( data, ref index ) );
+				while (index < data.Length - 1)
+				{
+					MqttHelper.ExtraSubscribeMsgFromBytes(data, ref index, topics, qosLevels);
+				}
+			}
+			catch(Exception ex)
+			{
+				this.LogNet?.WriteError( ToString( ), $"{session} DealWithSubscribe exception: " + ex.Message + " Source: " + data.ToHexString( ' ' ) );
+				return;
 			}
 
 			// 返回订阅成功
-			if (index < data.Length)
-			{
-				Send( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.SUBACK, 0x00, MqttHelper.BuildIntBytes( msgId ), new byte[] { data[index] } ).Content );
-			}
-			else
-			{
-				Send( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.SUBACK, 0x00, null, MqttHelper.BuildIntBytes( msgId ) ).Content );
-			}
+			Send( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.SUBACK, 0x00, MqttHelper.BuildIntBytes( msgId ), qosLevels.ToArray( )).Content );
+
 			lock (keysLock)
 			{
-				for (int i = 0; i < topics.Count; i++)
-					if (retainKeys.ContainsKey( topics[i] ))
-						Send( session.MqttSocket, MqttHelper.BuildPublishMqttCommand( topics[i], retainKeys[topics[i]].Payload ).Content );
+				if (topicWildcard)
+				{
+					foreach (var item in retainKeys)
+					{
+						for (int i = 0; i < topics.Count; i++)
+						{
+							if(MqttHelper.CheckMqttTopicWildcards( item.Key, topics[i] ))
+							{
+								Send( session.MqttSocket, MqttHelper.BuildPublishMqttCommand( item.Key, item.Value.Payload,
+									session.AesCryptography ? this.aesCryptography : null ).Content );
+							}
+						}
+					}
+				}
+				else
+				{
+					for (int i = 0; i < topics.Count; i++)
+					{
+						if (retainKeys.ContainsKey( topics[i] ))
+							Send( session.MqttSocket, MqttHelper.BuildPublishMqttCommand( topics[i], retainKeys[topics[i]].Payload,
+								session.AesCryptography ? this.aesCryptography : null ).Content );
+					}
+				}
 			}
 			// 添加订阅信息
 			session.AddSubscribe( topics.ToArray( ) );
-			LogNet?.WriteDebug( ToString( ), session.ToString( ) + " Subscribe: " + topics.ToArray( ).ToArrayString( ) );
+			LogNet?.WriteDebug(ToString(), session.ToString() + $" Subscribe: " + topics.ToArray().ToArrayString());
 		}
 
 		private void DealWithUnSubscribe( MqttSession session, byte code, byte[] data )
@@ -551,9 +631,9 @@ namespace HslCommunication.MQTT
 			LogNet?.WriteDebug( ToString( ), session.ToString( ) + " UnSubscribe: " + topics.ToArray( ).ToArrayString( ) );
 		}
 
-		#endregion
+#endregion
 
-		#region Publish Message
+#region Publish Message
 
 		/// <summary>
 		/// 向指定的客户端发送主题及负载数据<br />
@@ -564,9 +644,45 @@ namespace HslCommunication.MQTT
 		/// <param name="payload">消息内容</param>
 		public void PublishTopicPayload( MqttSession session, string topic, byte[] payload )
 		{
-			OperateResult send = Send( session.MqttSocket, MqttHelper.BuildPublishMqttCommand( topic, payload ).Content );
-			if (!send.IsSuccess)
-				LogNet?.WriteError( ToString( ), $"{session} PublishTopicPayload Failed:" + send.Message );
+			OperateResult send = Send( session.MqttSocket, MqttHelper.BuildPublishMqttCommand( topic, payload, session.AesCryptography ? this.aesCryptography : null ).Content );
+			if (!send.IsSuccess) LogNet?.WriteError( ToString( ), $"{session} PublishTopicPayload Failed:" + send.Message );
+		}
+
+		/// <summary>
+		/// 使用指定的规则向客户端发布主题及负载数据，可以根据会话的登录用户名，客户端ID信息进行筛选，例如只发布用户名admin的账户：( session ) => session.UserName == "admin"<br />
+		/// Use the specified rules to publish topic and load data to the client, which can be filtered according to the session login user name and client ID information. 
+		/// For example, only the account with the user name admin is published: ( session ) => session.UserName == "admin"
+		/// </summary>
+		/// <param name="topic">主题</param>
+		/// <param name="payload">消息内容</param>
+		/// <param name="retain">是否在服务器驻留</param>
+		/// <param name="check">会话的检查委托</param>
+		public void PublishTopicPayload( string topic, byte[] payload, bool retain, Func<MqttSession, bool> check )
+		{
+			lock (sessionsLock)
+			{
+				for (int i = 0; i < mqttSessions.Count; i++)
+				{
+					MqttSession session = mqttSessions[i];
+					// 向订阅消息的客户端进行发送数据，构建数据缓存，不再重复创建报文，提升发布性能
+					byte[] sendData = null;
+					byte[] sendEncrypt = null;
+					if (session.Protocol == "MQTT" && check( session ))
+					{
+						if (session.AesCryptography)
+						{
+							if (sendEncrypt == null) sendEncrypt = MqttHelper.BuildPublishMqttCommand( topic, payload, this.aesCryptography ).Content;
+						}
+						else
+						{
+							if (sendData == null) sendData = MqttHelper.BuildPublishMqttCommand( topic, payload, null ).Content;
+						}
+						OperateResult send = Send( session.MqttSocket, session.AesCryptography ? sendEncrypt : sendData );
+						if (!send.IsSuccess) LogNet?.WriteError( ToString( ), $"{session} PublishTopicPayload Failed:" + send.Message );
+					}
+				}
+			}
+			if (retain) RetainTopicPayload( topic, payload );
 		}
 
 		/// <summary>
@@ -578,20 +694,7 @@ namespace HslCommunication.MQTT
 		/// <param name="retain">指示消息是否驻留</param>
 		public void PublishTopicPayload( string topic, byte[] payload, bool retain = true )
 		{
-			lock (sessionsLock)
-			{
-				for (int i = 0; i < mqttSessions.Count; i++)
-				{
-					// 向订阅消息的客户端进行发送数据
-					if (mqttSessions[i].IsClientSubscribe( topic ) && mqttSessions[i].Protocol == "MQTT")
-					{
-						OperateResult send = Send( mqttSessions[i].MqttSocket, MqttHelper.BuildPublishMqttCommand( topic, payload ).Content );
-						if (!send.IsSuccess)
-							LogNet?.WriteError( ToString( ), $"{mqttSessions[i]} PublishTopicPayload Failed:" + send.Message );
-					}
-				}
-			}
-			if (retain) RetainTopicPayload( topic, payload );
+			PublishTopicPayload( topic, payload, retain, ( session ) => session.IsClientSubscribe( topic, topicWildcard ) );
 		}
 
 		/// <summary>
@@ -603,19 +706,7 @@ namespace HslCommunication.MQTT
 		/// <param name="retain">指示消息是否驻留</param>
 		public void PublishAllClientTopicPayload( string topic, byte[] payload, bool retain = false )
 		{
-			lock (sessionsLock)
-			{
-				for (int i = 0; i < mqttSessions.Count; i++)
-				{
-					if (mqttSessions[i].Protocol == "MQTT")
-					{
-						OperateResult send = Send( mqttSessions[i].MqttSocket, MqttHelper.BuildPublishMqttCommand( topic, payload ).Content );
-						if (!send.IsSuccess)
-							LogNet?.WriteError( ToString( ), $"{mqttSessions[i]} PublishTopicPayload Failed:" + send.Message );
-					}
-				}
-			}
-			if (retain) RetainTopicPayload( topic, payload );
+			PublishTopicPayload( topic, payload, retain, ( session ) => true );
 		}
 
 		/// <summary>
@@ -628,24 +719,12 @@ namespace HslCommunication.MQTT
 		/// <param name="retain">指示消息是否驻留</param>
 		public void PublishTopicPayload( string clientId, string topic, byte[] payload, bool retain = false )
 		{
-			lock (sessionsLock)
-			{
-				for (int i = 0; i < mqttSessions.Count; i++)
-				{
-					if (mqttSessions[i].ClientId == clientId && mqttSessions[i].Protocol == "MQTT")
-					{
-						OperateResult send = Send( mqttSessions[i].MqttSocket, MqttHelper.BuildPublishMqttCommand( topic, payload ).Content );
-						if (!send.IsSuccess)
-							LogNet?.WriteError( ToString( ), $"{mqttSessions[i]} PublishTopicPayload Failed:" + send.Message );
-					}
-				}
-			}
-			if (retain) RetainTopicPayload( topic, payload );
+			PublishTopicPayload( topic, payload, retain, ( session ) => session.ClientId == clientId );
 		}
 
-		#endregion
+#endregion
 
-		#region Report Progress
+#region Report Progress
 
 		/// <summary>
 		/// 向客户端发布一个进度报告的信息，仅用于同步网络的时候才支持进度报告，将进度及消息发送给客户端，比如你的服务器需要分成5个部分完成，可以按照百分比提示给客户端当前服务器发生了什么<br />
@@ -696,14 +775,16 @@ namespace HslCommunication.MQTT
 			{
 				if (result.IsSuccess)
 				{
-					PublishTopicPayload( session, result.ErrorCode.ToString( ), string.IsNullOrEmpty( result.Content ) ? new byte[0] : Encoding.UTF8.GetBytes( result.Content ) );
+					byte[] back = string.IsNullOrEmpty( result.Content ) ? new byte[0] : Encoding.UTF8.GetBytes( result.Content );
+					PublishTopicPayload( session, result.ErrorCode.ToString( ), back );
 				}
 				else
 				{
 					OperateResult send = Send( session.MqttSocket, MqttHelper.BuildMqttCommand(
-						MqttControlMessage.FAILED, 0x00, MqttHelper.BuildSegCommandByString( result.ErrorCode.ToString( ) ), string.IsNullOrEmpty( result.Message ) ? new byte[0] : Encoding.UTF8.GetBytes( result.Message ) ).Content );
-					if (!send.IsSuccess)
-						LogNet?.WriteError( ToString( ), $"{session} PublishTopicPayload Failed:" + send.Message );
+						MqttControlMessage.FAILED, 0x00, MqttHelper.BuildSegCommandByString( result.ErrorCode.ToString( ) ), 
+						string.IsNullOrEmpty( result.Message ) ? new byte[0] : Encoding.UTF8.GetBytes( result.Message ),
+						session.AesCryptography ? this.aesCryptography : null ).Content );
+					if (!send.IsSuccess) LogNet?.WriteError( ToString( ), $"{session} PublishTopicPayload Failed:" + send.Message );
 				}
 			}
 			else
@@ -741,9 +822,9 @@ namespace HslCommunication.MQTT
 			}
 		}
 
-		#endregion
+#endregion
 
-		#region Mqtt RPC Support
+#region Mqtt RPC Support
 
 		private Dictionary<string, MqttRpcApiInfo> apiTopicServiceDict;
 		private object rpcApiLock;
@@ -822,9 +903,9 @@ namespace HslCommunication.MQTT
 			}
 		}
 
-		#endregion
+#endregion
 
-		#region Mqtt File Server
+#region Mqtt File Server
 
 		private readonly Dictionary<string, FileMarkId> dictionaryFilesMarks;                 // 所有文件操作的词典锁
 		private readonly object dictHybirdLock;                                               // 词典的锁
@@ -969,15 +1050,17 @@ namespace HslCommunication.MQTT
 					ClientId = session.ClientId,
 					UserName = session.UserName,
 					FileName = fileName,
-					Operate = "Download",
-					Groups = HslHelper.PathCombine( groupInfo )
+					Operate  = "Download",
+					Groups   = HslHelper.PathCombine( groupInfo )
 				};
 				fileMonitor.Add( monitorItem );
 				// 发送文件数据
 #if NET20 || NET35
-				OperateResult send = SendMqttFile( session.MqttSocket, ReturnAbsoluteFileName( groupInfo, guidName ), fileName, "", monitorItem.UpdateProgress );
+				OperateResult send = SendMqttFile( session.MqttSocket, ReturnAbsoluteFileName( groupInfo, guidName ), fileName, "", 
+					monitorItem.UpdateProgress, session.AesCryptography ? this.aesCryptography : null );
 #else
-				OperateResult send = await SendMqttFileAsync( session.MqttSocket, ReturnAbsoluteFileName( groupInfo, guidName ), fileName, "", monitorItem.UpdateProgress );
+				OperateResult send = await SendMqttFileAsync( session.MqttSocket, ReturnAbsoluteFileName( groupInfo, guidName ), fileName, "", 
+					monitorItem.UpdateProgress, session.AesCryptography ? this.aesCryptography : null );
 #endif
 				fileMarkId.LeaveReadOperator( );
 				fileMonitor.Remove( monitorItem.UniqueId );
@@ -990,9 +1073,9 @@ namespace HslCommunication.MQTT
 				} );
 
 				if (!send.IsSuccess)
-					LogNet?.WriteError( ToString( ), $"{session} {StringResources.Language.FileDownloadFailed} : {send.Message} :{relativeName} Name:{session.UserName}" + " Spend:" + SoftBasic.GetTimeSpanDescription( DateTime.Now - dateTimeStart ) );
+					LogNet?.WriteError( ToString( ), $"{session} {StringResources.Language.FileDownloadFailed}[{send.Message}]:{relativeName} Name:{session.UserName}" + " Spend:" + SoftBasic.GetTimeSpanDescription( DateTime.Now - dateTimeStart ) );
 				else
-					LogNet?.WriteInfo( ToString( ), $"{session} {StringResources.Language.FileDownloadSuccess} : { relativeName} Spend:{ SoftBasic.GetTimeSpanDescription( DateTime.Now - dateTimeStart ) }" );
+					LogNet?.WriteInfo( ToString( ),  $"{session} {StringResources.Language.FileDownloadSuccess}:{ relativeName} Spend:{ SoftBasic.GetTimeSpanDescription( DateTime.Now - dateTimeStart ) }" );
 			}
 			else if (receiveFileNames.Content1 == MqttControlMessage.FileUpload)
 			{
@@ -1020,8 +1103,8 @@ namespace HslCommunication.MQTT
 					ClientId = session.ClientId,
 					UserName = session.UserName,
 					FileName = fileName,
-					Operate = "Upload",
-					Groups = HslHelper.PathCombine( groupInfo )
+					Operate  = "Upload",
+					Groups   = HslHelper.PathCombine( groupInfo )
 				};
 				fileMonitor.Add( monitorItem );
 
@@ -1046,7 +1129,7 @@ namespace HslCommunication.MQTT
 				}
 				else
 				{
-					LogNet?.WriteError( ToString( ), $"{session} {StringResources.Language.FileUploadFailed}:{relativeName} Spend:{SoftBasic.GetTimeSpanDescription( DateTime.Now - dateTimeStart )}" );
+					LogNet?.WriteError( ToString( ), $"{session} {StringResources.Language.FileUploadFailed}[{receive.Message}]:{relativeName} Spend:{SoftBasic.GetTimeSpanDescription( DateTime.Now - dateTimeStart )}" );
 				}
 			}
 			else if (receiveFileNames.Content1 == MqttControlMessage.FileDelete)
@@ -1076,10 +1159,10 @@ namespace HslCommunication.MQTT
 
 				OnFileChangedEvent?.Invoke( session, new MqttFileOperateInfo( )
 				{
-					Groups = HslHelper.PathCombine( groupInfo ),
+					Groups    = HslHelper.PathCombine( groupInfo ),
 					FileNames = fileNames,
-					Operate = "Delete",
-					TimeCost = DateTime.Now - dateTimeStart
+					Operate   = "Delete",
+					TimeCost  = DateTime.Now - dateTimeStart
 				} );
 			}
 			else if (receiveFileNames.Content1 == MqttControlMessage.FileFolderDelete)
@@ -1102,15 +1185,16 @@ namespace HslCommunication.MQTT
 
 				OnFileChangedEvent?.Invoke( session, new MqttFileOperateInfo( )
 				{
-					Groups = HslHelper.PathCombine( groupInfo ),
+					Groups    = HslHelper.PathCombine( groupInfo ),
 					FileNames = null,
-					Operate = "DeleteFolder",
-					TimeCost = DateTime.Now - dateTimeStart
+					Operate   = "DeleteFolder",
+					TimeCost  = DateTime.Now - dateTimeStart
 				} );
 				LogNet?.WriteInfo( ToString( ), session.ToString( ) + "FolderDelete : " + relativeName );
 			}
 			else if (receiveFileNames.Content1 == MqttControlMessage.FileFolderFiles)
 			{
+				// 遍历指定文件路径的所有文件信息，一个JSON数据列表
 				GroupFileContainer fileManagment = GetGroupFromFilePath( ReturnAbsoluteFilePath( groupInfo ) );
 #if NET20 || NET35
 				Send( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileFolderDelete, null, Encoding.UTF8.GetBytes( fileManagment.JsonArrayContent ) ).Content );
@@ -1120,15 +1204,18 @@ namespace HslCommunication.MQTT
 			}
 			else if (receiveFileNames.Content1 == MqttControlMessage.FileFolderInfo)
 			{
+				// 获取指定路径的文件统计信息，文件数量，总大小，最后更新时间，最后更新的文件信息，以及最后更新的文件的信息
 				GroupFileContainer fileManagment = GetGroupFromFilePath( ReturnAbsoluteFilePath( groupInfo ) );
 #if NET20 || NET35
 				Send( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileFolderInfo, null, Encoding.UTF8.GetBytes( fileManagment.GetGroupFileInfo( ).ToJsonString( ) ) ).Content );
 #else
-				await SendAsync( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileFolderInfo, null, Encoding.UTF8.GetBytes( fileManagment.GetGroupFileInfo( ).ToJsonString( ) ) ).Content );
+				await SendAsync( session.MqttSocket, MqttHelper.BuildMqttCommand( MqttControlMessage.FileFolderInfo, null, Encoding.UTF8.GetBytes( fileManagment.GetGroupFileInfo( true ).ToJsonString( ) ) ).Content );
 #endif
 			}
 			else if (receiveFileNames.Content1 == MqttControlMessage.FileFolderInfos)
 			{
+				bool withLastFileInfo = fileNames?.Length > 0 && fileNames[0] == "1";
+				// 获取指定路径的所有子路径的文件统计信息，并且获得最新上传的文件信息
 				List<GroupFileInfo> folders = new List<GroupFileInfo>( );
 				foreach (var m in GetDirectories( groupInfo ))
 				{
@@ -1137,7 +1224,7 @@ namespace HslCommunication.MQTT
 					path.Add( directory.Name );
 
 					GroupFileContainer fileManagment = GetGroupFromFilePath( ReturnAbsoluteFilePath( path.ToArray( ) ) );
-					GroupFileInfo groupFileInfo = fileManagment.GetGroupFileInfo( );
+					GroupFileInfo groupFileInfo = fileManagment.GetGroupFileInfo( withLastFileInfo );
 					groupFileInfo.PathName = directory.Name;
 					folders.Add( groupFileInfo );
 				}
@@ -1149,6 +1236,7 @@ namespace HslCommunication.MQTT
 			}
 			else if (receiveFileNames.Content1 == MqttControlMessage.FileFolderPaths)
 			{
+				// 获取指定路径的所有子路径文件夹的信息
 				List<string> folders = new List<string>( );
 				foreach (var m in GetDirectories( groupInfo ))
 				{
@@ -1165,6 +1253,7 @@ namespace HslCommunication.MQTT
 			}
 			else if (receiveFileNames.Content1 == MqttControlMessage.FileExists)
 			{
+				// 判断文件是否存在
 				string fileName = fileNames[0];
 				string fullPath = ReturnAbsoluteFilePath( groupInfo );
 				GroupFileContainer fileManagment = GetGroupFromFilePath( fullPath );
@@ -1200,9 +1289,9 @@ namespace HslCommunication.MQTT
 			string fileName = Path.Combine( info.DirectoryName, guidName );
 
 #if NET20 || NET35
-			OperateResult<FileBaseInfo> receive = ReceiveMqttFile( session.MqttSocket, fileName, reportProgress );
+			OperateResult<FileBaseInfo> receive = ReceiveMqttFile( session.MqttSocket, fileName, reportProgress, session.AesCryptography ? this.aesCryptography : null);
 #else
-			OperateResult<FileBaseInfo> receive = await ReceiveMqttFileAsync( session.MqttSocket, fileName, reportProgress );
+			OperateResult<FileBaseInfo> receive = await ReceiveMqttFileAsync( session.MqttSocket, fileName, reportProgress, session.AesCryptography ? this.aesCryptography : null );
 #endif
 			if (!receive.IsSuccess)
 			{
@@ -1289,8 +1378,9 @@ namespace HslCommunication.MQTT
 		/// Through this container, you can access files in the current directory.
 		/// </summary>
 		/// <param name="filePath">路径信息</param>
+		/// <param name="create">是否创建容器，当没有发现该路径的容器的情况</param>
 		/// <returns>文件管理容器信息</returns>
-		private GroupFileContainer GetGroupFromFilePath( string filePath )
+		private GroupFileContainer GetGroupFromFilePath( string filePath, bool create = true )
 		{
 			GroupFileContainer groupFile = null;
 			// 全部修改为大写
@@ -1304,12 +1394,26 @@ namespace HslCommunication.MQTT
 			}
 			else
 			{
-				groupFile = new GroupFileContainer( LogNet, filePath );
-				m_dictionary_group_marks.Add( filePath, groupFile );
+				if (create)
+				{
+					groupFile = new GroupFileContainer( LogNet, filePath );
+					m_dictionary_group_marks.Add( filePath, groupFile );
+				}
 			}
 
 			group_marks_lock.Leave( );
 			return groupFile;
+		}
+
+		/// <summary>
+		/// 根据路径信息获取到文件列表管理容器，如果返回空，表示不存在。<br />
+		/// The file list management container is obtained according to the path information. If the return is empty, it means that it does not exist.
+		/// </summary>
+		/// <param name="groups">文件路径信息</param>
+		/// <returns>文件列表管理容器</returns>
+		public GroupFileContainer GetGroupFromFilePath( string[] groups )
+		{
+			return GetGroupFromFilePath( ReturnAbsoluteFilePath( groups ), create: false );
 		}
 
 		/// <summary>
@@ -1428,13 +1532,21 @@ namespace HslCommunication.MQTT
 		/// <param name="reason">当前下线的原因，如果没有，代表正常下线</param>
 		public void RemoveAndCloseSession( MqttSession session, string reason )
 		{
+			bool removeTrue = false;
 			lock (sessionsLock)
 			{
-				mqttSessions.Remove( session );
+				removeTrue = mqttSessions.Remove( session );
 			}
 			session.MqttSocket?.Close( );
-			LogNet?.WriteDebug( ToString( ), $"{session} Offline {reason}" );
-			if (session.Protocol == "MQTT") OnClientDisConnected?.Invoke( session );
+			if (removeTrue) LogNet?.WriteDebug( ToString( ), $"{session} Offline {reason}" );
+			if (session.Protocol == "MQTT")
+			{
+				OnClientDisConnected?.Invoke( session );
+				if (!string.IsNullOrEmpty( reason ) && !string.IsNullOrEmpty( session.WillTopic )) // 如果不是正常下线，发布遗嘱消息
+				{
+					PublishTopicPayload( session.WillTopic, session.WillMessage );
+				}
+			}
 		}
 
 #endregion
@@ -1494,6 +1606,16 @@ namespace HslCommunication.MQTT
 
 		/// <inheritdoc cref="HttpServer.LogStatistics"/>
 		public LogStatisticsDict LogStatistics => this.statisticsDict;
+
+		/// <summary>
+		/// 获取或设置是否启用订阅主题通配符的功能，默认为 False<br />
+		/// Gets or sets whether to enable the function of subscribing to the topic wildcard, the default is False
+		/// </summary>
+		/// <remarks>
+		/// 启动之后，通配符示例：finance/stock/ibm/#; finance/+; '#' 是匹配所有主题，'+' 是匹配一级主题树。<br />
+		/// 通配符的规则参考如下的网址：http://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html#appendix-a
+		/// </remarks>
+		public bool TopicWildcard { get => this.topicWildcard; set => this.topicWildcard = value; }
 
 		/// <summary>
 		/// 获取当前的在线的客户端数量<br />
@@ -1581,9 +1703,23 @@ namespace HslCommunication.MQTT
 			return keys;
 		}
 
-		#endregion
+		/// <summary>
+		/// 获取订阅了某个主题的所有的会话列表信息<br />
+		/// Get all the conversation list information subscribed to a topic
+		/// </summary>
+		/// <param name="topic">主题信息</param>
+		/// <returns>会话列表</returns>
+		public MqttSession[] GetMqttSessionsByTopic( string topic )
+		{
+			MqttSession[] snapshoot = null;
+			lock (sessionsLock)
+				snapshoot = mqttSessions.Where( m => m.Protocol == "MQTT" && m.IsClientSubscribe( topic, topicWildcard ) ).ToArray( );
+			return snapshoot;
+		}
 
-		#region IDispose
+#endregion
+
+#region IDispose
 
 		/// <summary>
 		/// 释放当前的对象
@@ -1595,7 +1731,7 @@ namespace HslCommunication.MQTT
 			{
 				if (disposing)
 				{
-					// TODO: 释放托管状态(托管对象)
+					// 释放托管状态(托管对象)
 					this.timerHeart?.Dispose( );
 					this.group_marks_lock?.Dispose( );
 					this.ClientVerification = null;
@@ -1606,18 +1742,9 @@ namespace HslCommunication.MQTT
 					this.OnFileChangedEvent = null;
 				}
 
-				// TODO: 释放未托管的资源(未托管的对象)并重写终结器
-				// TODO: 将大型字段设置为 null
 				disposedValue = true;
 			}
 		}
-
-		// // TODO: 仅当“Dispose(bool disposing)”拥有用于释放未托管资源的代码时才替代终结器
-		// ~MqttServer()
-		// {
-		//     // 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-		//     Dispose(disposing: false);
-		// }
 
 		/// <inheritdoc cref="IDisposable.Dispose"/>
 		public void Dispose( )
@@ -1627,9 +1754,9 @@ namespace HslCommunication.MQTT
 			GC.SuppressFinalize( this );
 		}
 
-		#endregion
+#endregion
 
-		#region Private Member
+#region Private Member
 
 		private readonly Dictionary<string, MqttClientApplicationMessage> retainKeys;
 		private readonly object keysLock;                                                                            // 驻留的消息的词典锁
@@ -1639,14 +1766,16 @@ namespace HslCommunication.MQTT
 		private System.Threading.Timer timerHeart;
 		private LogStatisticsDict statisticsDict;                                                                    // 所有的API请求的数量统计
 		private bool disposedValue;
+		private RSACryptoServiceProvider providerMqttServer = null;                                                  // 服务器的私钥
+		private AesCryptography aesCryptography = null;                                                              // 数据交互时候的AES
+		private bool topicWildcard = false;                                                                          // 是否用订阅通配符
+#endregion
 
-		#endregion
-
-		#region Object Override
+#region Object Override
 
 		/// <inheritdoc/>
 		public override string ToString( ) => $"MqttServer[{Port}]";
 
-		#endregion
+#endregion
 	}
 }

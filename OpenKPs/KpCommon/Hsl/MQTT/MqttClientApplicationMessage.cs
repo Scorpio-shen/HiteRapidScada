@@ -43,5 +43,10 @@ namespace HslCommunication.MQTT
 		/// The generation time of the current message
 		/// </summary>
 		public DateTime CreateTime { get; set; }
+
+		/// <summary>
+		/// 当前消息的ID信息，在Qos大于0的时候，才是有值的
+		/// </summary>
+		public int MsgID { get; set; }
 	}
 }

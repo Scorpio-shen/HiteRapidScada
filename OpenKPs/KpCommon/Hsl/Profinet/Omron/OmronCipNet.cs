@@ -6,6 +6,9 @@ using HslCommunication.BasicFramework;
 using HslCommunication.Profinet.AllenBradley;
 using HslCommunication.Reflection;
 using HslCommunication.Core;
+using System.Reflection;
+using HslCommunication.Core.Net;
+using System.Text.RegularExpressions;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -137,12 +140,17 @@ namespace HslCommunication.Profinet.Omron
 		}
 
 		/// <inheritdoc/>
-		[HslMqttApi( "WriteString", "" )]
-		public override OperateResult Write( string address, string value )
+		protected override int GetWriteValueLength( string address, int length ) => Regex.IsMatch( address, @"\[[0-9]+\]$" ) ? length : 1;
+
+		/// <inheritdoc/>
+		public override OperateResult<T> ReadStruct<T>( string address, ushort length ) => ReadWriteNetHelper.ReadStruct<T>( this, address, length, this.ByteTransform, 2 );
+
+		/// <inheritdoc/>
+		public override OperateResult Write( string address, string value, Encoding encoding )
 		{
 			if (string.IsNullOrEmpty( value )) value = string.Empty;
 
-			byte[] data = SoftBasic.SpliceArray<byte>( new byte[2], SoftBasic.ArrayExpandToLengthEven( Encoding.ASCII.GetBytes( value ) ) );
+			byte[] data = SoftBasic.SpliceArray( new byte[2], SoftBasic.ArrayExpandToLengthEven( encoding.GetBytes( value ) ) );
 			data[0] = BitConverter.GetBytes( data.Length - 2 )[0];
 			data[1] = BitConverter.GetBytes( data.Length - 2 )[1];
 			return base.WriteTag( address, AllenBradleyHelper.CIP_Type_String, data, 1 );
@@ -150,16 +158,7 @@ namespace HslCommunication.Profinet.Omron
 
 		/// <inheritdoc/>
 		[HslMqttApi( "WriteByte", "" )]
-		public override OperateResult Write( string address, byte value )
-		{
-			return WriteTag( address, 0xD1, new byte[] { value, 0x00 } );
-		}
-
-		/// <inheritdoc/>
-		public override OperateResult WriteTag( string address, ushort typeCode, byte[] value, int length = 1 )
-		{
-			return base.WriteTag( address, typeCode, value, 1 );
-		}
+		public override OperateResult Write( string address, byte value ) => WriteTag( address, 0xD1, new byte[] { value, 0x00 } );
 
 		#endregion
 
@@ -256,11 +255,11 @@ namespace HslCommunication.Profinet.Omron
 		}
 
 		/// <inheritdoc/>
-		public override async Task<OperateResult> WriteAsync( string address, string value )
+		public override async Task<OperateResult> WriteAsync( string address, string value, Encoding encoding )
 		{
 			if (string.IsNullOrEmpty( value )) value = string.Empty;
 
-			byte[] data = SoftBasic.SpliceArray<byte>( new byte[2], SoftBasic.ArrayExpandToLengthEven( Encoding.ASCII.GetBytes( value ) ) );
+			byte[] data = SoftBasic.SpliceArray( new byte[2], SoftBasic.ArrayExpandToLengthEven( Encoding.ASCII.GetBytes( value ) ) );
 			data[0] = BitConverter.GetBytes( data.Length - 2 )[0];
 			data[1] = BitConverter.GetBytes( data.Length - 2 )[1];
 			return await WriteTagAsync( address, AllenBradleyHelper.CIP_Type_String, data, 1 );
@@ -272,11 +271,7 @@ namespace HslCommunication.Profinet.Omron
 			return await WriteTagAsync( address, 0xD1, new byte[] { value, 0x00 } );
 		}
 
-		/// <inheritdoc/>
-		public override async Task<OperateResult> WriteTagAsync( string address, ushort typeCode, byte[] value, int length = 1 )
-		{
-			return await base.WriteTagAsync( address, typeCode, value, 1 );
-		}
+
 #endif
 		#endregion
 

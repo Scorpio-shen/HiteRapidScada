@@ -12,6 +12,7 @@ using HslCommunication.Reflection;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using HslCommunication.Profinet.Panasonic;
+using HslCommunication.Secs.Types;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -46,11 +47,11 @@ namespace HslCommunication.Enthernet.Redis
 		/// <param name="password">密码，如果服务器没有设置，密码设置为null</param>
 		public RedisClient( string ipAddress, int port, string password )
 		{
-			ByteTransform  = new RegularByteTransform( );
-			IpAddress      = ipAddress;
-			Port           = port;
-			ReceiveTimeOut = 30000;
-			this.password  = password;
+			ByteTransform      = new RegularByteTransform( );
+			IpAddress          = ipAddress;
+			Port               = port;
+			ReceiveTimeOut     = 30000;
+			this.password      = password;
 #if !NET20 && !NET35
 			redisSubscribe = new Lazy<RedisSubscribe>( ( ) => RedisSubscribeInitialize( ) );
 #endif
@@ -62,9 +63,9 @@ namespace HslCommunication.Enthernet.Redis
 		/// <param name="password">密码，如果服务器没有设置，密码设置为null</param>
 		public RedisClient( string password )
 		{
-			ByteTransform  = new RegularByteTransform( );
-			ReceiveTimeOut = 30000;
-			this.password  = password;
+			ByteTransform      = new RegularByteTransform( );
+			ReceiveTimeOut     = 30000;
+			this.password      = password;
 #if !NET20 && !NET35
 			redisSubscribe = new Lazy<RedisSubscribe>( ( ) => RedisSubscribeInitialize( ) );
 #endif
@@ -107,6 +108,8 @@ namespace HslCommunication.Enthernet.Redis
 		/// <inheritdoc/>
 		public override OperateResult<byte[]> ReadFromCoreServer( Socket socket, byte[] send, bool hasResponseData = true, bool usePackHeader = true )
 		{
+			LogNet?.WriteDebug( ToString( ), StringResources.Language.Send + " : " + (LogMsgFormatBinary ? send.ToHexString( ' ' ) : Encoding.UTF8.GetString( send )) );
+
 			OperateResult sendResult = Send( socket, send );
 			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
 
@@ -114,8 +117,21 @@ namespace HslCommunication.Enthernet.Redis
 			if (ReceiveTimeOut < 0) return OperateResult.CreateSuccessResult( new byte[0] );
 
 			// 接收数据信息
-			return ReceiveRedisCommand( socket );
+			OperateResult<byte[]> read = ReceiveRedisCommand( socket );
+			if (read.IsSuccess)
+			{
+				LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + (LogMsgFormatBinary ? read.Content.ToHexString( ' ' ) : Encoding.UTF8.GetString( read.Content )) );
+			}
+			return read;
 		}
+
+		/// <inheritdoc/>
+		protected override OperateResult ExtraOnDisconnect( Socket socket )
+		{
+			closeClusters( );
+			return base.ExtraOnDisconnect( socket );
+		}
+
 #if !NET35 && !NET20
 		/// <inheritdoc/>
 		protected async override Task<OperateResult> InitializationOnConnectAsync( Socket socket )
@@ -149,6 +165,8 @@ namespace HslCommunication.Enthernet.Redis
 		/// <inheritdoc/>
 		public async override Task<OperateResult<byte[]>> ReadFromCoreServerAsync( Socket socket, byte[] send, bool hasResponseData = true, bool usePackHeader = true )
 		{
+			LogNet?.WriteDebug( ToString( ), StringResources.Language.Send + " : " + (LogMsgFormatBinary ? send.ToHexString( ' ' ) : SoftBasic.GetAsciiStringRender( send )) );
+
 			OperateResult sendResult = await SendAsync( socket, send );
 			if (!sendResult.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( sendResult );
 
@@ -156,7 +174,19 @@ namespace HslCommunication.Enthernet.Redis
 			if (ReceiveTimeOut < 0) return OperateResult.CreateSuccessResult( new byte[0] );
 
 			// 接收数据信息
-			return await ReceiveRedisCommandAsync( socket );
+			OperateResult<byte[]> read = await ReceiveRedisCommandAsync( socket );
+			if (read.IsSuccess)
+			{
+				LogNet?.WriteDebug( ToString( ), StringResources.Language.Receive + " : " + (LogMsgFormatBinary ? read.Content.ToHexString( ' ' ) : Encoding.UTF8.GetString( read.Content )) );
+			}
+			return read;
+		}
+
+		/// <inheritdoc/>
+		protected async override Task<OperateResult> ExtraOnDisconnectAsync( Socket socket )
+		{
+			closeClusters( );
+			return await base.ExtraOnDisconnectAsync( socket );
 		}
 #endif
 		#endregion
@@ -191,155 +221,160 @@ namespace HslCommunication.Enthernet.Redis
 #endif
 		#endregion
 
+		#region Cluster Managment
+
+		// 集群部分的代码实现
+		private Dictionary<string, RedisClient> clusterClient = new Dictionary<string, RedisClient>( );
+		private object lockCluster = new object( );
+
+		// 获取集群连接的客户端
+		private RedisClient getCluster( string ip_port )
+		{
+			lock (lockCluster)
+			{
+				if (clusterClient.ContainsKey( ip_port ))
+				{
+					return clusterClient[ip_port];
+				}
+				else
+				{
+					string[] array = ip_port.Split( new char[] { ':' }, StringSplitOptions.RemoveEmptyEntries );
+					if (array.Length < 2) return null;
+
+					if (!int.TryParse( array[1], out int port )) return null;
+
+					RedisClient client = new RedisClient( array[0], port, this.password );
+					client.SetPersistentConnection( );
+					clusterClient.Add( ip_port, client );
+					return client;
+				}
+			}
+		}
+
+		// 关闭所有的集群连接
+		private void closeClusters( )
+		{
+			lock (lockCluster)
+			{
+				foreach (RedisClient client in clusterClient.Values)
+				{
+					client.ConnectClose( );
+				}
+				clusterClient.Clear( );
+			}
+		}
+		#endregion
+
 		#region Base Operate
+
+		private OperateResult<string[]> OperateArrayFromServer( string[] commands )
+		{
+			byte[] command = RedisHelper.PackStringCommand( commands );
+
+			OperateResult<byte[]> read = ReadFromCoreServer( command );
+			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string[]>( read );
+
+			if (read.Content == null || read.Content.Length < 1) return new OperateResult<string[]>( "Receive empty data: " + read.Content == null ? "" : Encoding.UTF8.GetString( read.Content ) );
+			else if (read.Content[0] == '$') return RedisHelper.GetStringFromCommandLine(  read.Content );
+			else if (read.Content[0] == '*') return RedisHelper.GetStringsFromCommandLine( read.Content );
+			else
+			{
+				string msg = Encoding.UTF8.GetString( read.Content );
+				if (msg.StartsWith( ":" )) return OperateResult.CreateSuccessResult( new string[] { msg.TrimEnd( '\r', '\n' ).Substring( 1 ) } );
+				if (msg.StartsWith( "+" )) return OperateResult.CreateSuccessResult( new string[] { msg.Substring( 1 ).TrimEnd( '\r', '\n' ) } );
+				if (msg.StartsWith( "-MOVED" ))
+				{
+					// 发生了转向，提取新的ip及端口
+					RedisClient client = getCluster( msg.TrimEnd( '\r', '\n' ).Split( new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries )[2] );
+					if (client == null) return new OperateResult<string[]>( msg );
+					return client.OperateArrayFromServer( commands );
+				}
+				else
+				{
+					return new OperateResult<string[]>( msg );
+				}
+			}
+		}
 
 		/// <summary>
 		/// 向服务器请求指定，并返回数字的结果对象
 		/// </summary>
 		/// <param name="commands">命令数组</param>
 		/// <returns>数字的结果对象</returns>
-		public OperateResult<int> OperateNumberFromServer(string[] commands)
-		{
-			byte[] command = RedisHelper.PackStringCommand( commands );
-
-			OperateResult<byte[]> read = ReadFromCoreServer( command );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int>( read );
-
-			string msg = Encoding.UTF8.GetString( read.Content );
-			if (!msg.StartsWith( ":" )) return new OperateResult<int>( msg );
-
-			return RedisHelper.GetNumberFromCommandLine( read.Content );
-		}
+		public OperateResult<int> OperateNumberFromServer( string[] commands ) => OperateArrayFromServer( commands ).Then( m => OperateResult.CreateSuccessResult( Convert.ToInt32( m[0] ) ) );
 
 		/// <summary>
 		/// 向服务器请求指令，并返回long数字的结果对象
 		/// </summary>
 		/// <param name="commands">命令数组</param>
 		/// <returns>long数字的结果对象</returns>
-		public OperateResult<long> OperateLongNumberFromServer(string[] commands)
-		{
-			byte[] command = RedisHelper.PackStringCommand( commands );
-
-			OperateResult<byte[]> read = ReadFromCoreServer( command );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<long>( read );
-
-			string msg = Encoding.UTF8.GetString( read.Content );
-			if (!msg.StartsWith( ":" )) return new OperateResult<long>( msg );
-
-			return RedisHelper.GetLongNumberFromCommandLine( read.Content );
-		}
+		public OperateResult<long> OperateLongNumberFromServer(string[] commands) => OperateArrayFromServer( commands ).Then( m => OperateResult.CreateSuccessResult( Convert.ToInt64( m[0] ) ) );
 
 		/// <summary>
 		/// 向服务器请求指令，并返回字符串的结果对象
 		/// </summary>
 		/// <param name="commands">命令数组</param>
 		/// <returns>字符串的结果对象</returns>
-		public OperateResult<string> OperateStringFromServer(string[] commands)
-		{
-			byte[] command = RedisHelper.PackStringCommand( commands );
-
-			OperateResult<byte[]> read = ReadFromCoreServer( command );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-			return RedisHelper.GetStringFromCommandLine( read.Content );
-		}
+		public OperateResult<string> OperateStringFromServer(string[] commands) => OperateArrayFromServer( commands ).Then( m => OperateResult.CreateSuccessResult( m[0] ) );
 
 		/// <summary>
 		/// 向服务器请求指令，并返回字符串数组的结果对象
 		/// </summary>
 		/// <param name="commands">命令数组</param>
 		/// <returns>字符串数组的结果对象</returns>
-		public OperateResult<string[]> OperateStringsFromServer(string[] commands)
-		{
-			byte[] command = RedisHelper.PackStringCommand( commands );
-
-			OperateResult<byte[]> read = ReadFromCoreServer( command );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string[]>( read );
-
-			return RedisHelper.GetStringsFromCommandLine( read.Content );
-		}
+		public OperateResult<string[]> OperateStringsFromServer(string[] commands) => OperateArrayFromServer( commands );
 
 		/// <summary>
 		/// 向服务器请求指令，并返回状态的结果对象，通常用于写入的判断，或是请求类型的判断
 		/// </summary>
 		/// <param name="commands">命令数组</param>
 		/// <returns>是否成功的结果对象</returns>
-		public OperateResult<string> OperateStatusFromServer(string[] commands)
-		{
-			byte[] command = RedisHelper.PackStringCommand( commands );
+		public OperateResult<string> OperateStatusFromServer(string[] commands) => OperateArrayFromServer( commands ).Then( m => OperateResult.CreateSuccessResult( m[0] ) );
 
-			OperateResult<byte[]> read = ReadFromCoreServer( command );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-			string msg = Encoding.UTF8.GetString( read.Content );
-			if (!msg.StartsWith( "+" )) return new OperateResult<string>( msg );
-
-			return OperateResult.CreateSuccessResult( msg.Substring( 1 ).TrimEnd( '\r', '\n' ) );
-		}
 #if !NET35 && !NET20
-		/// <inheritdoc cref="OperateNumberFromServer(string[])"/>
-		public async Task<OperateResult<int>> OperateNumberFromServerAsync( string[] commands )
-		{
-			byte[] command = RedisHelper.PackStringCommand( commands );
 
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<int>( read );
-
-			string msg = Encoding.UTF8.GetString( read.Content );
-			if (!msg.StartsWith( ":" )) return new OperateResult<int>( msg );
-
-			return RedisHelper.GetNumberFromCommandLine( read.Content );
-		}
-
-		/// <inheritdoc cref="OperateLongNumberFromServer(string[])"/>
-		public async Task<OperateResult<long>> OperateLongNumberFromServerAsync( string[] commands )
-		{
-			byte[] command = RedisHelper.PackStringCommand( commands );
-
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<long>( read );
-
-			string msg = Encoding.UTF8.GetString( read.Content );
-			if (!msg.StartsWith( ":" )) return new OperateResult<long>( msg );
-
-			return RedisHelper.GetLongNumberFromCommandLine( read.Content );
-		}
-
-		/// <inheritdoc cref="OperateStringFromServer(string[])"/>
-		public async Task<OperateResult<string>> OperateStringFromServerAsync( string[] commands )
-		{
-			byte[] command = RedisHelper.PackStringCommand( commands );
-
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-			return RedisHelper.GetStringFromCommandLine( read.Content );
-		}
-
-		/// <inheritdoc cref="OperateStringsFromServer(string[])"/>
-		public async Task<OperateResult<string[]>> OperateStringsFromServerAsync( string[] commands )
+		private async Task<OperateResult<string[]>> OperateArrayFromServerAsync( string[] commands )
 		{
 			byte[] command = RedisHelper.PackStringCommand( commands );
 
 			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command );
 			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string[]>( read );
 
-			return RedisHelper.GetStringsFromCommandLine( read.Content );
+			if (read.Content == null || read.Content.Length < 1) return new OperateResult<string[]>( "Receive empty data: " + read.Content == null ? "" : Encoding.UTF8.GetString( read.Content ) );
+			else if (read.Content[0] == '$') return RedisHelper.GetStringFromCommandLine( read.Content );
+			else if (read.Content[0] == '*') return RedisHelper.GetStringsFromCommandLine( read.Content );
+			else
+			{
+				string msg = Encoding.UTF8.GetString( read.Content );
+				if (msg.StartsWith( ":" )) return OperateResult.CreateSuccessResult( new string[] { msg.TrimEnd( '\r', '\n' ).Substring( 1 ) } );
+				if (msg.StartsWith( "+" )) return OperateResult.CreateSuccessResult( new string[] { msg.Substring( 1 ).TrimEnd( '\r', '\n' ) } );
+				if (msg.StartsWith( "-MOVED" ))
+				{
+					// 发生了转向，提取新的ip及端口
+					RedisClient client = getCluster( msg.TrimEnd( '\r', '\n' ).Split( new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries )[2] );
+					if (client == null) return new OperateResult<string[]>( msg );
+					return await client.OperateArrayFromServerAsync( commands );
+				}
+				else
+				{
+					return new OperateResult<string[]>( msg );
+				}
+			}
 		}
+		/// <inheritdoc cref="OperateNumberFromServer(string[])"/>
+		public async Task<OperateResult<int>> OperateNumberFromServerAsync( string[] commands ) => (await OperateArrayFromServerAsync( commands )).Then( m => OperateResult.CreateSuccessResult( Convert.ToInt32( m[0] ) ) );
+
+		/// <inheritdoc cref="OperateLongNumberFromServer(string[])"/>
+		public async Task<OperateResult<long>> OperateLongNumberFromServerAsync( string[] commands ) => (await OperateArrayFromServerAsync( commands )).Then( m => OperateResult.CreateSuccessResult( Convert.ToInt64( m[0] ) ) );
+
+		/// <inheritdoc cref="OperateStringFromServer(string[])"/>
+		public async Task<OperateResult<string>> OperateStringFromServerAsync( string[] commands ) => ( await OperateArrayFromServerAsync( commands )).Then( m => OperateResult.CreateSuccessResult( m[0] ) );
+
+		/// <inheritdoc cref="OperateStringsFromServer(string[])"/>
+		public async Task<OperateResult<string[]>> OperateStringsFromServerAsync( string[] commands ) => await OperateArrayFromServerAsync( commands );
 
 		/// <inheritdoc cref="OperateStatusFromServer(string[])"/>
-		public async Task<OperateResult<string>> OperateStatusFromServerAsync( string[] commands )
-		{
-			byte[] command = RedisHelper.PackStringCommand( commands );
-
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<string>( read );
-
-			string msg = Encoding.UTF8.GetString( read.Content );
-			if (!msg.StartsWith( "+" )) return new OperateResult<string>( msg );
-
-			return OperateResult.CreateSuccessResult( msg.Substring( 1 ).TrimEnd( '\r', '\n' ) );
-		}
+		public async Task<OperateResult<string>> OperateStatusFromServerAsync( string[] commands ) => (await OperateArrayFromServerAsync( commands )).Then( m => OperateResult.CreateSuccessResult( m[0] ) );
 #endif
 		#endregion
 
@@ -623,7 +658,7 @@ namespace HslCommunication.Enthernet.Redis
 		/// <summary>
 		/// 将字符串值 value 关联到 key 。
 		/// 如果 key 已经持有其他值， SET 就覆写旧值，无视类型。
-		/// 对于某个原本带有生存时间（TTL）的键来说， 当 SET 命令成功在这个键上执行时， 这个键原有的 TTL 将被清除。
+		/// 对于某个原本带有生存时间（TTL）的键来说， 当 SET 命令成功在这个键上执行时，这个键原有的 TTL 将被清除。
 		/// </summary>
 		/// <param name="key">关键字</param>
 		/// <param name="value">数据值</param>

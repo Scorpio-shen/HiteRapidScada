@@ -167,10 +167,16 @@ namespace HslCommunication.Core.Net
 		protected string ReturnAbsoluteFilePath( string factory, string group, string id )
 		{
 			string result = m_FilesDirectoryPath;
+#if NET35 || NET461 || NET20
 				if (!string.IsNullOrEmpty( factory )) result += "\\" + factory;
 				if (!string.IsNullOrEmpty( group )) result += "\\" + group;
 				if (!string.IsNullOrEmpty( id )) result += "\\" + id;
-			return result;
+#else
+            if (!string.IsNullOrEmpty(factory)) result += "\\" + factory;
+            if (!string.IsNullOrEmpty(group)) result += "\\" + group;
+            if (!string.IsNullOrEmpty(id)) result += "\\" + id;
+#endif
+            return result;
 		}
 
 		/// <summary>
@@ -183,8 +189,12 @@ namespace HslCommunication.Core.Net
 		/// <returns>是否成功的结果对象</returns>
 		protected string ReturnAbsoluteFileName( string factory, string group, string id, string fileName )
 		{
+#if NET35 || NET451 || NET20
 			return ReturnAbsoluteFilePath( factory, group, id ) + "\\" + fileName;
-		}
+#else
+            return ReturnAbsoluteFilePath(factory, group, id) + "\\" + fileName;
+#endif
+        }
 
 
 		/// <summary>
@@ -198,10 +208,16 @@ namespace HslCommunication.Core.Net
 		protected string GetRelativeFileName( string factory, string group, string id, string fileName )
 		{
 			string result = "";
+#if NET35 || NET451 || NET20
 			if (!string.IsNullOrEmpty( factory )) result += factory + "\\";
 			if (!string.IsNullOrEmpty( group )) result += group + "\\";
 			if (!string.IsNullOrEmpty( id )) result += id + "\\";
-			return result + fileName;
+#else
+            if (!string.IsNullOrEmpty(factory)) result += factory + "\\";
+            if (!string.IsNullOrEmpty(group)) result += group + "\\";
+            if (!string.IsNullOrEmpty(id)) result += id + "\\";
+#endif
+            return result + fileName;
 		}
 
 
@@ -331,7 +347,7 @@ namespace HslCommunication.Core.Net
 		public string FilesDirectoryPath
 		{
 			get { return m_FilesDirectoryPath; }
-			set { m_FilesDirectoryPath = PreprocessFolderName( value ); }
+			set { m_FilesDirectoryPath = value; }
 		}
 
 		/// <summary>

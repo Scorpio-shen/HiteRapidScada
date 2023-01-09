@@ -27,26 +27,30 @@ namespace HslCommunication.Reflection
 		public string Description { get; set; }
 
 		/// <summary>
-		/// 当前的属性是否需要展开API信息，默认不展开
+		/// 当前的属性是否需要展开API信息，默认不展开<br />
+		/// Whether the current attribute needs to expand the API information, it is not expanded by default
 		/// </summary>
 		public bool PropertyUnfold { get; set; } = false;
 
 		/// <summary>
-		/// 如果当前的API接口是支持Http的请求方式，当前属性有效，例如GET,POST
+		/// 如果当前的API接口是支持Http的请求方式，当前属性有效，例如GET,POST<br />
+		/// If the current API interface is a request method that supports Http, the current attributes are valid, such as GET, POST
 		/// </summary>
 		public string HttpMethod { get; set; } = "POST";
 
 		/// <summary>
-		/// 指定描述内容来实例化一个的对象
+		/// 指定描述内容来实例化一个的对象<br />
+		/// Specify the description content to instantiate an object
 		/// </summary>
 		/// <param name="description">当前接口的描述信息</param>
-		public HslMqttApiAttribute(string description )
+		public HslMqttApiAttribute( string description )
 		{
 			this.Description = description;
 		}
 
 		/// <summary>
-		/// 指定描述内容来实例化一个的对象
+		/// 指定接口的路由信息及描述内容来实例化一个的对象<br />
+		/// Specify the routing information and description content of the interface to instantiate an object
 		/// </summary>
 		/// <param name="apiTopic">指重新定当前接口的路由信息</param>
 		/// <param name="description">当前接口的描述信息</param>
@@ -57,7 +61,8 @@ namespace HslCommunication.Reflection
 		}
 
 		/// <summary>
-		/// 实例化一个默认的对象
+		/// 实例化一个默认的对象<br />
+		/// Instantiate a default object
 		/// </summary>
 		public HslMqttApiAttribute( ) { }
 

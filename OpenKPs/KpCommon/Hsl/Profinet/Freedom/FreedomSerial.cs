@@ -5,6 +5,7 @@ using System.Text;
 using HslCommunication.Serial;
 using HslCommunication.Core;
 using HslCommunication.Reflection;
+using HslCommunication.Core.IMessage;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -32,27 +33,37 @@ namespace HslCommunication.Profinet.Freedom
 
 		#endregion
 
+		#region Function
+
+		/// <inheritdoc cref="FreedomTcpNet.CheckResponseStatus"/>
+		public Func<byte[], byte[], OperateResult> CheckResponseStatus { get; set; }
+
+		#endregion
+
 		#region Read Write
 
-		/// <inheritdoc/>
+		/// <inheritdoc cref="FreedomTcpNet.Read(string, ushort)"/>
 		[HslMqttApi( "ReadByteArray", "特殊的地址格式，需要采用解析包起始地址的报文，例如 modbus 协议为 stx=9;00 00 00 00 00 06 01 03 00 64 00 01" )]
 		public override OperateResult<byte[]> Read( string address, ushort length )
 		{
-			OperateResult<byte[], int> analysis = FreedomTcpNet.AnalysisAddress( address );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( analysis );
+			int startIndex = HslHelper.ExtractParameter( ref address, "stx", 0x00 );
+			byte[] send = address.ToHexBytes( );
 
-			OperateResult<byte[]> read = ReadFromCoreServer( analysis.Content1 );
+			OperateResult<byte[]> read = ReadFromCoreServer( send );
 			if (!read.IsSuccess) return read;
 
-			if (analysis.Content2 >= read.Content.Length) return new OperateResult<byte[]>( StringResources.Language.ReceiveDataLengthTooShort );
-			return OperateResult.CreateSuccessResult( read.Content.RemoveBegin( analysis.Content2 ) );
+			if (CheckResponseStatus != null)
+			{
+				OperateResult check = CheckResponseStatus.Invoke( send, read.Content );
+				if (!check.IsSuccess) return OperateResult.CreateFailedResult<byte[]>( check );
+			}
+
+			if (startIndex >= read.Content.Length) return new OperateResult<byte[]>( StringResources.Language.ReceiveDataLengthTooShort );
+			return OperateResult.CreateSuccessResult( read.Content.RemoveBegin( startIndex ) );
 		}
 
 		/// <inheritdoc/>
-		public override OperateResult Write( string address, byte[] value )
-		{
-			return Read( address, 0 );
-		}
+		public override OperateResult Write( string address, byte[] value ) => Read( address, 0 );
 
 		#endregion
 

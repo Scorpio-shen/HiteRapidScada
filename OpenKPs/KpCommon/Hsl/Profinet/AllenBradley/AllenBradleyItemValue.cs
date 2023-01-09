@@ -24,5 +24,10 @@ namespace HslCommunication.Profinet.AllenBradley
 		/// 单个单位的数据长度信息
 		/// </summary>
 		public int TypeLength { get; set; } = 1;
+
+		/// <summary>
+		/// 数据类型信息
+		/// </summary>
+		public ushort TypeCode { get; set; } = AllenBradleyHelper.CIP_Type_Bool;
 	}
 }

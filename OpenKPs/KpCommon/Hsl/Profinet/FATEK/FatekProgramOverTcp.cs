@@ -7,6 +7,8 @@ using HslCommunication.Core;
 using HslCommunication.Core.Net;
 using HslCommunication.Reflection;
 using HslCommunication.Core.Address;
+using HslCommunication.Core.IMessage;
+using HslCommunication.Profinet.FATEK.Helper;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -135,9 +137,9 @@ namespace HslCommunication.Profinet.FATEK
 		/// </summary>
 		public FatekProgramOverTcp( )
 		{
-			this.WordLength    = 1;
-			this.ByteTransform = new RegularByteTransform( );
-			this.SleepTime     = 20;
+			this.WordLength         = 1;
+			this.ByteTransform      = new RegularByteTransform( );
+			this.LogMsgFormatBinary = false;
 		}
 
 		/// <summary>
@@ -151,6 +153,9 @@ namespace HslCommunication.Profinet.FATEK
 			this.IpAddress     = ipAddress;
 			this.Port          = port;
 		}
+
+		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => new SpecifiedCharacterMessage( AsciiControl.ETX );
 
 		#endregion
 
@@ -205,6 +210,50 @@ namespace HslCommunication.Profinet.FATEK
 
 		/// <inheritdoc cref="Write(string, bool[])"/>
 		public override async Task<OperateResult> WriteAsync( string address, bool[] value ) => await FatekProgramHelper.WriteAsync( this, this.station, address, value );
+#endif
+		#endregion
+
+		#region Public Method
+
+		/// <inheritdoc cref="FatekProgramHelper.Run(IReadWriteDevice, byte)"/>
+		public OperateResult Run( byte station ) => FatekProgramHelper.Run( this, station );
+
+		/// <inheritdoc cref="Run(byte)"/>
+		[HslMqttApi( "Run", "使PLC处于RUN状态" )]
+		public OperateResult Run( ) => Run( this.Station );
+
+		/// <inheritdoc cref="FatekProgramHelper.Stop(IReadWriteDevice, byte)"/>
+		public OperateResult Stop( byte station ) => FatekProgramHelper.Stop( this, station );
+
+		/// <inheritdoc cref="Stop(byte)"/>
+		[HslMqttApi( "Stop", "使PLC处于STOP状态" )]
+		public OperateResult Stop( ) => Stop( this.Station );
+
+		/// <inheritdoc cref="FatekProgramHelper.ReadStatus(IReadWriteDevice, byte)"/>
+		public OperateResult<bool[]> ReadStatus( byte station ) => FatekProgramHelper.ReadStatus( this, station );
+
+		/// <inheritdoc cref="ReadStatus(byte)"/>
+		[HslMqttApi( "ReadStatus", "读取PLC基本的状态信息" )]
+		public OperateResult<bool[]> ReadStatus( ) => ReadStatus( this.Station );
+
+#if !NET35 && !NET20
+		/// <inheritdoc cref="FatekProgramHelper.Run(IReadWriteDevice, byte)"/>
+		public async Task<OperateResult> RunAsync( byte station ) => await FatekProgramHelper.RunAsync( this, station );
+
+		/// <inheritdoc cref="RunAsync(byte)"/>
+		public async Task<OperateResult> RunAsync( ) => await RunAsync( this.Station );
+
+		/// <inheritdoc cref="FatekProgramHelper.Stop(IReadWriteDevice, byte)"/>
+		public async Task<OperateResult> StopAsync( byte station ) => await FatekProgramHelper.StopAsync( this, station );
+
+		/// <inheritdoc cref="StopAsync(byte)"/>
+		public async Task<OperateResult> StopAsync( ) => await StopAsync( this.Station );
+
+		/// <inheritdoc cref="FatekProgramHelper.ReadStatus(IReadWriteDevice, byte)"/>
+		public async Task<OperateResult<bool[]>> ReadStatusAsync( byte station ) => await FatekProgramHelper.ReadStatusAsync( this, station );
+
+		/// <inheritdoc cref="ReadStatus(byte)"/>
+		public async Task<OperateResult<bool[]>> ReadStatusAsync( ) => await ReadStatusAsync( this.Station );
 #endif
 		#endregion
 

@@ -65,11 +65,10 @@ namespace HslCommunication.Enthernet
 		/// <exception cref="ArgumentNullException"></exception>
 		private void RefreshReceive( )
 		{
-			AppSession session = new AppSession( );
-			session.WorkSocket = CoreSocket;
+			AppSession session = new AppSession( CoreSocket );
 			session.UdpEndPoint = new IPEndPoint( IPAddress.Any, 0 );
-			session.BytesContent = new byte[ReceiveCacheLength];
-			CoreSocket.BeginReceiveFrom( session.BytesContent, 0, ReceiveCacheLength, SocketFlags.None, ref session.UdpEndPoint, new AsyncCallback( AsyncCallback ), session );
+			session.BytesBuffer = new byte[ReceiveCacheLength];
+			CoreSocket.BeginReceiveFrom( session.BytesBuffer, 0, ReceiveCacheLength, SocketFlags.None, ref session.UdpEndPoint, new AsyncCallback( AsyncCallback ), session );
 		}
 
 		#endregion
@@ -89,19 +88,19 @@ namespace HslCommunication.Enthernet
 					if (received >= HslProtocol.HeadByteLength)
 					{
 						// 检测令牌
-						if (CheckRemoteToken( session.BytesContent ))
+						if (CheckRemoteToken( session.BytesBuffer ))
 						{
-							session.IpEndPoint = (IPEndPoint)session.UdpEndPoint;
-							int contentLength = BitConverter.ToInt32( session.BytesContent, HslProtocol.HeadByteLength - 4 );
+							//session.IpEndPoint = (IPEndPoint)session.UdpEndPoint;
+							int contentLength = BitConverter.ToInt32( session.BytesBuffer, HslProtocol.HeadByteLength - 4 );
 							if (contentLength == received - HslProtocol.HeadByteLength)
 							{
 								byte[] head = new byte[HslProtocol.HeadByteLength];
 								byte[] content = new byte[contentLength];
 
-								Array.Copy( session.BytesContent, 0, head, 0, HslProtocol.HeadByteLength );
+								Array.Copy( session.BytesBuffer, 0, head, 0, HslProtocol.HeadByteLength );
 								if (contentLength > 0)
 								{
-									Array.Copy( session.BytesContent, 32, content, 0, contentLength );
+									Array.Copy( session.BytesBuffer, 32, content, 0, contentLength );
 								}
 
 								// 解析内容
@@ -115,7 +114,7 @@ namespace HslCommunication.Enthernet
 							else
 							{
 								// 否则记录到日志
-								LogNet?.WriteWarn( ToString(), $"Should Rece：{(BitConverter.ToInt32( session.BytesContent, 4 ) + 8)} Actual：{received}" );
+								LogNet?.WriteWarn( ToString(), $"Should Rece：{(BitConverter.ToInt32( session.BytesBuffer, 4 ) + 8)} Actual：{received}" );
 							}
 						}
 						else

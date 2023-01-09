@@ -17,6 +17,12 @@ namespace HslCommunication.Core
 	public class HslHelper
 	{
 		/// <summary>
+		/// 本通讯项目的随机数信息<br />
+		/// Random number information for this newsletter
+		/// </summary>
+		public static Random HslRandom { get; private set; } = new Random( );
+
+		/// <summary>
 		/// 解析地址的附加参数方法，比如你的地址是s=100;D100，可以提取出"s"的值的同时，修改地址本身，如果"s"不存在的话，返回给定的默认值<br />
 		/// The method of parsing additional parameters of the address, for example, if your address is s=100;D100, you can extract the value of "s" and modify the address itself. If "s" does not exist, return the given default value
 		/// </summary>
@@ -27,6 +33,20 @@ namespace HslCommunication.Core
 		public static int ExtractParameter( ref string address, string paraName, int defaultValue )
 		{
 			OperateResult<int> extra = ExtractParameter( ref address, paraName );
+			return extra.IsSuccess ? extra.Content : defaultValue;
+		}
+
+		/// <summary>
+		/// 解析地址的附加Bool类型参数方法，比如你的地址是s=true;D100，可以提取出"s"的值的同时，修改地址本身，如果"s"不存在的话，返回给定的默认值<br />
+		/// The method of parsing additional parameters of the address, for example, if your address is s=true;D100, you can extract the value of "s" and modify the address itself. If "s" does not exist, return the given default value
+		/// </summary>
+		/// <param name="address">复杂的地址格式，比如：s=true;D100</param>
+		/// <param name="paraName">等待提取的参数名称</param>
+		/// <param name="defaultValue">如果提取的参数信息不存在，返回的默认值信息</param>
+		/// <returns>解析后的新的数据值或是默认的给定的数据值</returns>
+		public static bool ExtractBooleanParameter( ref string address, string paraName, bool defaultValue )
+		{
+			OperateResult<bool> extra = ExtractBooleanParameter( ref address, paraName );
 			return extra.IsSuccess ? extra.Content : defaultValue;
 		}
 
@@ -42,11 +62,11 @@ namespace HslCommunication.Core
 		{
 			try
 			{
-				Match match = Regex.Match( address, paraName + "=[0-9A-Fa-fx]+;" );
+				Match match = Regex.Match( address, paraName + "=[0-9A-Fa-fxX]+;" );
 				if (!match.Success) return new OperateResult<int>( $"Address [{address}] can't find [{paraName}] Parameters. for example : {paraName}=1;100" );
 
 				string number = match.Value.Substring( paraName.Length + 1, match.Value.Length - paraName.Length - 2 );
-				int value = number.StartsWith( "0x" ) ? Convert.ToInt32( number.Substring( 2 ), 16 ) : number.StartsWith( "0" ) ? Convert.ToInt32( number, 8 ) : Convert.ToInt32( number );
+				int value = (number.StartsWith( "0x" ) || number.StartsWith( "0X" )) ? Convert.ToInt32( number.Substring( 2 ), 16 ) : number.StartsWith( "0" ) ? Convert.ToInt32( number, 8 ) : Convert.ToInt32( number );
 
 				address = address.Replace( match.Value, "" );
 				return OperateResult.CreateSuccessResult( value );
@@ -54,6 +74,41 @@ namespace HslCommunication.Core
 			catch (Exception ex)
 			{
 				return new OperateResult<int>( $"Address [{address}] Get [{paraName}] Parameters failed: " + ex.Message );
+			}
+		}
+
+		/// <summary>
+		/// 解析地址的附加bool参数方法，比如你的地址是s=true;D100，可以提取出"s"的值的同时，修改地址本身，如果"s"不存在的话，返回错误的消息内容<br />
+		/// The method of parsing additional parameters of the address, for example, if your address is s=true;D100, you can extract the value of "s" and modify the address itself. 
+		/// If "s" does not exist, return the wrong message content
+		/// </summary>
+		/// <param name="address">复杂的地址格式，比如：s=true;D100</param>
+		/// <param name="paraName">等待提取的参数名称</param>
+		/// <returns>解析后的参数结果内容</returns>
+		public static OperateResult<bool> ExtractBooleanParameter( ref string address, string paraName )
+		{
+			try
+			{
+				Match match = Regex.Match( address, paraName + "=[0-1A-Za-z]+;" );
+				if (!match.Success) return new OperateResult<bool>( $"Address [{address}] can't find [{paraName}] Parameters. for example : {paraName}=True;100" );
+
+				string number = match.Value.Substring( paraName.Length + 1, match.Value.Length - paraName.Length - 2 );
+				bool value = false;
+				if (Regex.IsMatch( number, "^[0-1]+$" ))
+				{
+					value = Convert.ToInt32( number ) != 0;
+				}
+				else
+				{
+					value = Convert.ToBoolean( number );
+				}
+
+				address = address.Replace( match.Value, "" );
+				return OperateResult.CreateSuccessResult( value );
+			}
+			catch (Exception ex)
+			{
+				return new OperateResult<bool>( $"Address [{address}] Get [{paraName}] Parameters failed: " + ex.Message );
 			}
 		}
 
@@ -404,6 +459,27 @@ namespace HslCommunication.Core
 			return twoArray;
 		}
 
+		/// <summary>
+		/// 判断当前的字符串表示的地址，是否以索引为结束
+		/// </summary>
+		/// <param name="address">PLC的字符串地址信息</param>
+		/// <returns>是否以索引结束</returns>
+		public static bool IsAddressEndWithIndex( string address )
+		{
+			return Regex.IsMatch( address, @"\[[0-9]+\]$" );
+		}
 
+		/// <summary>
+		/// 根据位偏移的地址，长度信息，计算出实际的地址占用长度
+		/// </summary>
+		/// <param name="address">偏移地址</param>
+		/// <param name="length">长度信息</param>
+		/// <param name="hex">地址的进制信息，一般为8 或是 16</param>
+		/// <returns>占用的地址长度信息</returns>
+		public static int CalculateOccupyLength( int address, int length, int hex = 8 )
+		{
+			// 假如地址 100, 10个M    13 - 12 + 1
+			return (address + length - 1) / hex - (address / hex) + 1;
+		}
 	}
 }

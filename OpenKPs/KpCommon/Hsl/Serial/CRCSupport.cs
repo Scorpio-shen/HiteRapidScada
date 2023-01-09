@@ -122,5 +122,59 @@ namespace HslCommunication.Serial
 			// 返回最终带有CRC校验码结尾的信息
 			return buf;
 		}
+
+
+		/// <summary>
+		/// 通过指定多项式码来获取对应的数据的CRC校验码<br />
+		/// The CRC check code of the corresponding data is obtained by specifying the polynomial code
+		/// </summary>
+		/// <param name="value">需要校验的数据，不包含CRC字节</param>
+		/// <param name="index">计算的起始字节索引</param>
+		/// <param name="length">计算的字节长度</param>
+		/// <param name="CL">多项式码地位</param>
+		/// <param name="CH">多项式码高位</param>
+		/// <param name="preH">预置的高位值</param>
+		/// <param name="preL">预置的低位值</param>
+		/// <returns>返回带CRC校验码的字节数组，可用于串口发送</returns>
+		public static byte[] CRC16Only( byte[] value, int index, int length, byte CH, byte CL, byte preH = 0xff, byte preL = 0xff )
+		{
+			byte CRC16Lo;
+			byte CRC16Hi;           // CRC寄存器                   
+			byte SaveHi;
+			byte SaveLo;
+			int Flag;
+
+			// 预置寄存器
+			CRC16Lo = preL;
+			CRC16Hi = preH;
+
+			for (int i = index; i < index + length; i++)
+			{
+				CRC16Lo = (byte)(CRC16Lo ^ value[i]); // 每一个数据与CRC寄存器低位进行异或，结果返回CRC寄存器                 
+				for (Flag = 0; Flag <= 7; Flag++)
+				{
+					SaveHi = CRC16Hi;
+					SaveLo = CRC16Lo;
+					CRC16Hi = (byte)(CRC16Hi >> 1);      // 高位右移一位                     
+					CRC16Lo = (byte)(CRC16Lo >> 1);      // 低位右移一位                     
+					if ((SaveHi & 0x01) == 0x01) // 如果高位字节最后一位为1    
+					{
+						// 则低位字节右移后前面补1                     
+						CRC16Lo = (byte)(CRC16Lo | 0x80);
+					}
+					// 否则自动补0                     
+
+
+					// 如果最低位为1，则将CRC寄存器与预设的固定值进行异或运算
+					if ((SaveLo & 0x01) == 0x01)
+					{
+						CRC16Hi = (byte)(CRC16Hi ^ CH);
+						CRC16Lo = (byte)(CRC16Lo ^ CL);
+					}
+				}
+			}
+
+			return new byte[] { CRC16Lo, CRC16Hi };
+		}
 	}
 }

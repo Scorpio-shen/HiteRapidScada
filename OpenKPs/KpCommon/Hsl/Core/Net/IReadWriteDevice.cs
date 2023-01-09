@@ -27,9 +27,22 @@ namespace HslCommunication.Core
 		/// 本方法用于实现本组件还未实现的一些报文功能，例如有些modbus服务器会有一些特殊的功能码支持，需要收发特殊的报文，详细请看示例
 		/// </remarks>
 		OperateResult<byte[]> ReadFromCoreServer( byte[] send );
+
+		/// <summary>
+		/// 将多个数据报文按顺序发到设备，并从设备接收返回的数据内容，然后拼接成一个Byte[]信息，需要重写<see cref="HslCommunication.Core.Net.NetworkDoubleBase.UnpackResponseContent(byte[], byte[])"/>方法才能返回正确的结果。<br />
+		/// Send multiple data packets to the device in sequence, and receive the returned data content from the device, and then splicing them into a Byte[] message, 
+		/// you need to rewrite <see cref="HslCommunication.Core.Net.NetworkDoubleBase.UnpackResponseContent(byte[], byte[])"/> method to return the correct result.
+		/// </summary>
+		/// <param name="send">发送的报文列表信息</param>
+		/// <returns>是否接收成功</returns>
+		OperateResult<byte[]> ReadFromCoreServer( IEnumerable<byte[]> send );
+
 #if !NET20 && !NET35
 		/// <inheritdoc cref="ReadFromCoreServer(byte[])"/>
 		Task<OperateResult<byte[]>> ReadFromCoreServerAsync( byte[] send );
+
+		/// <inheritdoc cref="ReadFromCoreServer(IEnumerable{byte[]})"/>
+		Task<OperateResult<byte[]>> ReadFromCoreServerAsync( IEnumerable<byte[]> send );
 #endif
 		#endregion
 

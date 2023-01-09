@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using HslCommunication.Reflection;
+using HslCommunication.Core.IMessage;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -176,7 +177,8 @@ namespace HslCommunication.Profinet.Panasonic
 			this.ByteTransform            = new RegularByteTransform( );
 			this.Station                  = station;
 			this.ByteTransform.DataFormat = DataFormat.DCBA;
-			this.SleepTime                = 20;
+			this.WordLength               = 1;
+			this.LogMsgFormatBinary       = false;
 		}
 
 		/// <summary>
@@ -186,11 +188,14 @@ namespace HslCommunication.Profinet.Panasonic
 		/// <param name="ipAddress">Ip地址数据</param>
 		/// <param name="port">端口号</param>
 		/// <param name="station">站号信息，默认为0xEE</param>
-		public PanasonicMewtocolOverTcp( string ipAddress, int port, byte station = 238 ) : this( )
+		public PanasonicMewtocolOverTcp( string ipAddress, int port, byte station = 238 ) : this( station )
 		{
 			this.IpAddress                = ipAddress;
 			this.Port                     = port;
 		}
+
+		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => new SpecifiedCharacterMessage( AsciiControl.CR );
 
 		#endregion
 
@@ -206,300 +211,71 @@ namespace HslCommunication.Profinet.Panasonic
 
 		#region Read Write Override
 
-		/// <summary>
-		/// 读取指定地址的原始数据，地址示例：D0  F0  K0  T0  C0, 地址支持携带站号的访问方式，例如：s=2;D100<br />
-		/// Read the original data of the specified address, address example: D0 F0 K0 T0 C0, the address supports carrying station number information, for example: s=2;D100
-		/// </summary>
-		/// <param name="address">起始地址</param>
-		/// <param name="length">长度</param>
-		/// <returns>原始的字节数据的信息</returns>
+		/// <inheritdoc cref="Helper.MewtocolHelper.Read(IReadWriteDevice, byte, string, ushort)"/>
 		[HslMqttApi( "ReadByteArray", "" )]
-		public override OperateResult<byte[]> Read( string address, ushort length )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
+		public override OperateResult<byte[]> Read( string address, ushort length ) => Helper.MewtocolHelper.Read( this, this.Station, address, length );
 
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildReadCommand( station, address, length );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取数据
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
-
-		/// <summary>
-		/// 将数据写入到指定的地址里去，地址示例：D0  F0  K0  T0  C0, 地址支持携带站号的访问方式，例如：s=2;D100<br />
-		/// Write data to the specified address, address example: D0 F0 K0 T0 C0, the address supports carrying station number information, for example: s=2;D100
-		/// </summary>
-		/// <param name="address">起始地址</param>
-		/// <param name="value">真实数据</param>
-		/// <returns>是否写入成功</returns>
+		/// <inheritdoc cref="Helper.MewtocolHelper.Write(IReadWriteDevice, byte, string, byte[])"/>
 		[HslMqttApi( "WriteByteArray", "" )]
-		public override OperateResult Write( string address, byte[] value )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildWriteCommand( station, address, value );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取结果
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
+		public override OperateResult Write( string address, byte[] value ) => Helper.MewtocolHelper.Write( this, this.Station, address, value );
 
 		#endregion
 
 		#region Async Read Write Override
 #if !NET35 && !NET20
 		/// <inheritdoc cref="Read(string, ushort)"/>
-		public async override Task<OperateResult<byte[]>> ReadAsync( string address, ushort length )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildReadCommand( station, address, length );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取数据
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
+		public async override Task<OperateResult<byte[]>> ReadAsync( string address, ushort length ) => await Helper.MewtocolHelper.ReadAsync( this, this.Station, address, length );
 
 		/// <inheritdoc cref="Write(string, byte[])"/>
-		public async override Task<OperateResult> WriteAsync( string address, byte[] value )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildWriteCommand( station, address, value );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取结果
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
+		public async override Task<OperateResult> WriteAsync( string address, byte[] value ) => await Helper.MewtocolHelper.WriteAsync( this, this.Station, address, value );
 #endif
 		#endregion
 
 		#region Read Write Bool
 
-		/// <summary>
-		/// 批量读取松下PLC的位数据，按照字为单位，地址为 X0,X10,Y10，读取的长度为16的倍数<br />
-		/// Read the bit data of Panasonic PLC in batches, the unit is word, the address is X0, X10, Y10, and the read length is a multiple of 16
-		/// </summary>
-		/// <param name="address">起始地址</param>
-		/// <param name="length">数据长度</param>
-		/// <returns>读取结果对象</returns>
+		/// <inheritdoc cref="Helper.MewtocolHelper.ReadBool(IReadWriteDevice, byte, string, ushort)"/>
 		[HslMqttApi( "ReadBoolArray", "" )]
-		public override OperateResult<bool[]> ReadBool( string address, ushort length )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
+		public override OperateResult<bool[]> ReadBool( string address, ushort length ) => Helper.MewtocolHelper.ReadBool( this, this.Station, address, length );
 
-			OperateResult<string, int> analysis = PanasonicHelper.AnalysisAddress( address );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildReadCommand( station, address, length );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
-
-			// 提取数据
-			OperateResult<byte[]> extra = PanasonicHelper.ExtraActualData( read.Content );
-			if (!extra.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( extra );
-
-			// 提取bool
-			return OperateResult.CreateSuccessResult( BasicFramework.SoftBasic.ByteToBoolArray(
-				extra.Content ).SelectMiddle( analysis.Content2 % 16, length ) );
-		}
-
-		/// <summary>
-		/// 读取单个的地址信息的bool值，地址举例：SR0.0  X0.0  Y0.0  R0.0  L0.0<br />
-		/// Read the bool value of a single address, for example: SR0.0 X0.0 Y0.0 R0.0 L0.0
-		/// </summary>
-		/// <param name="address">起始地址</param>
-		/// <returns>读取结果对象</returns>
+		/// <inheritdoc cref="Helper.MewtocolHelper.ReadBool(IReadWriteDevice, byte, string)"/>
 		[HslMqttApi( "ReadBool", "" )]
-		public override OperateResult<bool> ReadBool( string address )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
+		public override OperateResult<bool> ReadBool( string address ) => Helper.MewtocolHelper.ReadBool( this, this.Station, address );
 
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildReadOneCoil( station, address );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool>( command );
+		/// <inheritdoc cref="Helper.MewtocolHelper.ReadBool(IReadWriteDevice, byte, string[])"/>
+		public OperateResult<bool[]> ReadBool( string[] address ) => Helper.MewtocolHelper.ReadBool( this, this.Station, address );
 
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool>( read );
-
-			// 提取数据
-			return PanasonicHelper.ExtraActualBool( read.Content );
-		}
-
-		/// <summary>
-		/// 往指定的地址写入 <see cref="bool"/> 数组，地址举例：SR0.0  X0.0  Y0.0  R0.0  L0.0，
-		/// 起始的位地址必须为16的倍数，写入的 <see cref="bool"/> 数组长度也为16的倍数。<br />
-		/// Write the <see cref="bool"/> array to the specified address, address example: SR0.0 X0.0 Y0.0 R0.0 L0.0, 
-		/// the starting bit address must be a multiple of 16. <see cref="bool"/> The length of the array is also a multiple of 16. <br />
-		/// </summary>
-		/// <param name="address">起始地址</param>
-		/// <param name="values">数据值信息</param>
-		/// <returns>返回是否成功的结果对象</returns>
+		/// <inheritdoc cref="Helper.MewtocolHelper.Write(IReadWriteDevice, byte, string, bool[])"/>
 		[HslMqttApi( "WriteBoolArray", "" )]
-		public override OperateResult Write( string address, bool[] values )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
+		public override OperateResult Write( string address, bool[] values ) => Helper.MewtocolHelper.Write( this, this.Station, address, values );
 
-			// 强制地址从字单位开始，强制写入长度为16个长度
-			OperateResult<string, int> analysis = PanasonicHelper.AnalysisAddress( address );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
-
-			if (analysis.Content2 % 16 != 0) return new OperateResult( StringResources.Language.PanasonicAddressBitStartMulti16 );
-			if (values.Length % 16 != 0) return new OperateResult( StringResources.Language.PanasonicBoolLengthMulti16 );
-
-			// 计算字节数据
-			byte[] buffer = BasicFramework.SoftBasic.BoolArrayToByte( values );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildWriteCommand( station, address, buffer );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取结果
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
-
-		/// <summary>
-		/// 往指定的地址写入bool数据，地址举例：SR0.0  X0.0  Y0.0  R0.0  L0.0<br />
-		/// Write bool data to the specified address. Example address: SR0.0 X0.0 Y0.0 R0.0 L0.0
-		/// </summary>
-		/// <param name="address">起始地址</param>
-		/// <param name="value">数据值信息</param>
-		/// <returns>返回是否成功的结果对象</returns>
+		/// <inheritdoc cref="Helper.MewtocolHelper.Write(IReadWriteDevice, byte, string, bool)"/>
 		[HslMqttApi( "WriteBool", "" )]
-		public override OperateResult Write( string address, bool value )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
+		public override OperateResult Write( string address, bool value ) => Helper.MewtocolHelper.Write( this, this.Station, address, value );
 
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildWriteOneCoil( station, address, value );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = ReadFromCoreServer( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取结果
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
+		/// <inheritdoc cref="Helper.MewtocolHelper.Write(IReadWriteDevice, byte, string[], bool[])"/>
+		public OperateResult Write( string[] address, bool[] value ) => Helper.MewtocolHelper.Write( this, this.Station, address, value );
 
 		#endregion
 
 		#region Async Read Write Bool
 #if !NET35 && !NET20
 		/// <inheritdoc cref="ReadBool(string)"/>
-		public async override Task<OperateResult<bool[]>> ReadBoolAsync( string address, ushort length )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
-
-			OperateResult<string, int> analysis = PanasonicHelper.AnalysisAddress( address );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildReadCommand( station, address, length );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( command );
-
-			// 数据交互
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( read );
-
-			// 提取数据
-			OperateResult<byte[]> extra = PanasonicHelper.ExtraActualData( read.Content );
-			if (!extra.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( extra );
-
-			// 提取bool
-			return OperateResult.CreateSuccessResult( BasicFramework.SoftBasic.ByteToBoolArray(
-				extra.Content ).SelectMiddle( analysis.Content2 % 16, length ) );
-		}
+		public async override Task<OperateResult<bool[]>> ReadBoolAsync( string address, ushort length ) => await Helper.MewtocolHelper.ReadBoolAsync( this, this.Station, address, length );
 
 		/// <inheritdoc cref="ReadBool(string)"/>
-		public async override Task<OperateResult<bool>> ReadBoolAsync( string address )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildReadOneCoil( station, address );
-			if (!command.IsSuccess) return OperateResult.CreateFailedResult<bool>( command );
-
-			// 数据交互
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return OperateResult.CreateFailedResult<bool>( read );
-
-			// 提取数据
-			return PanasonicHelper.ExtraActualBool( read.Content );
-		}
+		public async override Task<OperateResult<bool>> ReadBoolAsync( string address ) => await Helper.MewtocolHelper.ReadBoolAsync( this, this.Station, address );
 
 		/// <inheritdoc cref="Write(string, bool[])"/>
-		public async override Task<OperateResult> WriteAsync( string address, bool[] values )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
-
-			// 强制地址从字单位开始，强制写入长度为16个长度
-			OperateResult<string, int> analysis = PanasonicHelper.AnalysisAddress( address );
-			if (!analysis.IsSuccess) return OperateResult.CreateFailedResult<bool[]>( analysis );
-
-			if (analysis.Content2 % 16 != 0) return new OperateResult( StringResources.Language.PanasonicAddressBitStartMulti16 );
-			if (values.Length % 16 != 0) return new OperateResult( StringResources.Language.PanasonicBoolLengthMulti16 );
-
-			// 计算字节数据
-			byte[] buffer = BasicFramework.SoftBasic.BoolArrayToByte( values );
-
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildWriteCommand( station, address, buffer );
-			if (!command.IsSuccess) return command;
-
-			// 数据交互
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取结果
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
+		public async override Task<OperateResult> WriteAsync( string address, bool[] values ) => await Helper.MewtocolHelper.WriteAsync( this, this.Station, address, values );
 
 		/// <inheritdoc cref="Write(string, bool)"/>
-		public async override Task<OperateResult> WriteAsync( string address, bool value )
-		{
-			byte station = (byte)HslHelper.ExtractParameter( ref address, "s", this.Station );
+		public async override Task<OperateResult> WriteAsync( string address, bool value ) => await Helper.MewtocolHelper.WriteAsync( this, this.Station, address, value );
 
-			// 创建指令
-			OperateResult<byte[]> command = PanasonicHelper.BuildWriteOneCoil( station, address, value );
-			if (!command.IsSuccess) return command;
+		/// <inheritdoc cref="ReadBool(string[])"/>
+		public async Task<OperateResult<bool[]>> ReadBoolAsync( string[] address ) => await Helper.MewtocolHelper.ReadBoolAsync( this, this.Station, address );
 
-			// 数据交互
-			OperateResult<byte[]> read = await ReadFromCoreServerAsync( command.Content );
-			if (!read.IsSuccess) return read;
-
-			// 提取结果
-			return PanasonicHelper.ExtraActualData( read.Content );
-		}
+		/// <inheritdoc cref="Write(string[], bool[])"/>
+		public async Task<OperateResult> WriteAsync( string[] address, bool[] value ) => await Helper.MewtocolHelper.WriteAsync( this, this.Station, address, value );
 #endif
 		#endregion
 

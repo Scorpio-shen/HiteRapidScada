@@ -8,12 +8,23 @@ using System.Net.Sockets;
 using System.Text;
 using System.IO;
 using System.IO.Ports;
+using HslCommunication.Core.IMessage;
 #if !NET20 && !NET35
 using System.Threading.Tasks;
 #endif
 
 namespace HslCommunication.Profinet.Melsec
 {
+	/// <summary>
+	/// <b>[商业授权]</b> 基于MC协议的A3C格式虚拟服务器，可以模拟A3C格式的PLC，支持格式1，2，3，4，具体可以使用<see cref="Format"/>来设置，
+	/// 支持设置是否校验，同时支持网口或是串口的访问<br />
+	/// <b>[Authorization]</b> A3C format virtual server based on MC protocol can simulate A3C format PLC, support format 1, 2, 3, 4, 
+	/// specifically you can use <see cref="Format"/> to set, support whether to verify the setting, 
+	/// and also support network Port or serial port access
+	/// </summary>
+	/// <remarks>
+	/// 可访问的地址支持M,X,Y,B,D,W,R,ZR地址，其中 M,X,Y,B 支持位访问
+	/// </remarks>
 	public class MelsecA3CServer : MelsecMcServer
 	{
 		#region Constructor
@@ -23,7 +34,7 @@ namespace HslCommunication.Profinet.Melsec
 		/// </summary>
 		public MelsecA3CServer( ) : base( false )
 		{
-			serialPort = new SerialPort( );
+			this.LogMsgFormatBinary = false;
 		}
 
 		#endregion
@@ -45,79 +56,18 @@ namespace HslCommunication.Profinet.Melsec
 		#region NetServer Override
 
 		/// <inheritdoc/>
-		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
+		protected override INetMessage GetNewNetMessage( ) => null;
+
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			// 开始接收数据信息
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-			try
-			{
-				socket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), appSession );
-				AddClient( appSession );
-			}
-			catch
-			{
-				socket.Close( );
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-			}
-		}
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
-		{
-			if (ar.AsyncState is AppSession session)
-			{
-				try
-				{
-					int receiveCount = session.WorkSocket.EndReceive( ar );
-					byte[] back = null;
-					OperateResult<byte[]> read1;
+			if (receive.Length < 3) return new OperateResult<byte[]>( $"Uknown Data：{receive.ToHexString( ' ' )}" );
 
-					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-#if NET20 || NET35
-					read1 = ReceiveByMessage( session.WorkSocket, 5000, null );
-#else
-					read1 = await ReceiveByMessageAsync( session.WorkSocket, 5000, null );
-#endif
-					if (!read1.IsSuccess) { RemoveClient( session ); return; };
-
-
-					OperateResult<byte[]> extra = ExtraMcCore( read1.Content );
-					if (!extra.IsSuccess)
-					{
-						LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {extra.Message} : {SoftBasic.GetAsciiStringRender( read1.Content )}" );
-					}
-					else
-					{
-						back = ReadFromMcAsciiCore( extra.Content );
-
-						LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{SoftBasic.GetAsciiStringRender( read1.Content )}" );
-
-						if (back != null)
-						{
-							session.WorkSocket.Send( back );
-							LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{ SoftBasic.GetAsciiStringRender( back )}" );
-						}
-						else
-						{
-							RemoveClient( session );
-							return;
-						}
-
-					}
-					session.HeartTime = DateTime.Now;
-					RaiseDataReceived( session, read1.Content );
-					session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), session );
-				}
-				catch (Exception ex)
-				{
-					RemoveClient( session, $"SocketAsyncCallBack -> {ex.Message}" );
-				}
-			}
+			OperateResult<byte[]> extra = ExtraMcCore( receive );
+			if (!extra.IsSuccess)
+				return new OperateResult<byte[]>( extra.Message );
+			else
+				return OperateResult.CreateSuccessResult( ReadFromMcAsciiCore( extra.Content ) );
 		}
 
 		#endregion
@@ -272,7 +222,7 @@ namespace HslCommunication.Profinet.Melsec
 				{
 					if (status == 0)
 					{
-						byte[] buffer = Encoding.ASCII.GetBytes( "\u0002F90000FF00" );
+						byte[] buffer = Encoding.ASCII.GetBytes( "\u0006F90000FF00" );
 						SoftBasic.BuildAsciiBytesFrom( Station ).CopyTo( buffer, 3 );
 						return buffer;
 					}
@@ -378,114 +328,11 @@ namespace HslCommunication.Profinet.Melsec
 			}
 		}
 
+		#region Object Override
 
-		#region Serial Support
-
-		private SerialPort serialPort;            // 核心的串口对象
-
-		/// <summary>
-		/// 启动modbus-rtu的从机服务，使用默认的参数进行初始化串口，9600波特率，8位数据位，无奇偶校验，1位停止位<br />
-		/// Start the slave service of modbus-rtu, initialize the serial port with default parameters, 9600 baud rate, 8 data bits, no parity, 1 stop bit
-		/// </summary>
-		/// <param name="com">串口信息</param>
-		public void StartSerial( string com ) => StartSerial( com, 9600 );
-
-		/// <summary>
-		/// 启动modbus-rtu的从机服务，使用默认的参数进行初始化串口，8位数据位，无奇偶校验，1位停止位<br />
-		/// Start the slave service of modbus-rtu, initialize the serial port with default parameters, 8 data bits, no parity, 1 stop bit
-		/// </summary>
-		/// <param name="com">串口信息</param>
-		/// <param name="baudRate">波特率</param>
-		public void StartSerial( string com, int baudRate )
-		{
-			StartSerial( sp =>
-			{
-				sp.PortName = com;
-				sp.BaudRate = baudRate;
-				sp.DataBits = 8;
-				sp.Parity = Parity.None;
-				sp.StopBits = StopBits.One;
-			} );
-		}
-
-		/// <summary>
-		/// 启动modbus-rtu的从机服务，使用自定义的初始化方法初始化串口的参数<br />
-		/// Start the slave service of modbus-rtu and initialize the parameters of the serial port using a custom initialization method
-		/// </summary>
-		/// <param name="inni">初始化信息的委托</param>
-		public void StartSerial( Action<SerialPort> inni )
-		{
-			if (!serialPort.IsOpen)
-			{
-				inni?.Invoke( serialPort );
-
-				serialPort.ReadBufferSize = 1024;
-				serialPort.ReceivedBytesThreshold = 1;
-				serialPort.Open( );
-				serialPort.DataReceived += SerialPort_DataReceived;
-			}
-		}
-
-		/// <summary>
-		/// 关闭modbus-rtu的串口对象<br />
-		/// Close the serial port object of modbus-rtu
-		/// </summary>
-		public void CloseSerial( )
-		{
-			if (serialPort.IsOpen)
-			{
-				serialPort.Close( );
-			}
-		}
-
-		/// <summary>
-		/// 接收到串口数据的时候触发
-		/// </summary>
-		/// <param name="sender">串口对象</param>
-		/// <param name="e">消息</param>
-		private void SerialPort_DataReceived( object sender, SerialDataReceivedEventArgs e )
-		{
-			int rCount = 0;
-			byte[] buffer = new byte[1024];
-			while (true)
-			{
-				System.Threading.Thread.Sleep( 20 );            // 此处做个微小的延时，等待数据接收完成
-				int count = serialPort.Read( buffer, rCount, serialPort.BytesToRead );
-				rCount += count;
-				if (count == 0) break;
-			}
-
-			if (rCount == 0) return;
-			byte[] receive = buffer.SelectBegin( rCount );
-			if (receive.Length < 3)
-			{
-				LogNet?.WriteError( ToString( ), $"[{serialPort.PortName}] Uknown Data：{receive.ToHexString( ' ' )}" );
-				return;
-			}
-
-
-			OperateResult<byte[]> extra = ExtraMcCore( receive );
-			if (!extra.IsSuccess)
-			{
-				LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] {extra.Message} : {SoftBasic.GetAsciiStringRender( receive )}" );
-			}
-			else
-			{
-				byte[] back = ReadFromMcAsciiCore( extra.Content );
-
-				LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] {StringResources.Language.Receive}：{SoftBasic.GetAsciiStringRender( receive )}" );
-
-				if (back != null)
-				{
-					serialPort.Write( back, 0, back.Length );
-					LogNet?.WriteDebug( ToString( ), $"[{serialPort.PortName}] {StringResources.Language.Send}：{ SoftBasic.GetAsciiStringRender( back )}" );
-				}
-
-			}
-			if (IsStarted) RaiseDataReceived( sender, receive );
-		}
+		/// <inheritdoc/>
+		public override string ToString( ) => $"MelsecA3CServer[{Port}]";
 
 		#endregion
-
 	}
 }

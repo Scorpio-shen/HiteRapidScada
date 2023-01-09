@@ -25,7 +25,11 @@ namespace HslCommunication.Profinet.Keyence
 		/// 实例化基恩士的SR2000的扫码设备通讯对象<br />
 		/// Instantiate keyence's SR2000 scan code device communication object
 		/// </summary>
-		public KeyenceSR2000SeriesTcp( ) : base( ) { receiveTimeOut = 10_000; SleepTime = 20; }
+		public KeyenceSR2000SeriesTcp( ) : base( ) 
+		{ 
+			this.ReceiveTimeOut = 10_000; 
+			this.SleepTime      = 20; 
+		}
 
 		/// <summary>
 		/// 指定ip地址及端口号来实例化一个基恩士的SR2000的扫码设备通讯对象<br />
@@ -33,12 +37,10 @@ namespace HslCommunication.Profinet.Keyence
 		/// </summary>
 		/// <param name="ipAddress">PLC的Ip地址</param>
 		/// <param name="port">PLC的端口</param>
-		public KeyenceSR2000SeriesTcp( string ipAddress, int port )
+		public KeyenceSR2000SeriesTcp( string ipAddress, int port ) : this( )
 		{
-			IpAddress = ipAddress;
-			Port = port;
-			receiveTimeOut = 10_000;
-			SleepTime = 20;
+			this.IpAddress      = ipAddress;
+			this.Port           = port;
 		}
 
 		#endregion

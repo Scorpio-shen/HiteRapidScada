@@ -1,6 +1,5 @@
 ﻿using HslCommunication;
 using HslCommunication.ModBus;
-using KpCommon.Hsl.ModBus;
 using KpCommon.Model;
 using KpHiteModbus.Modbus;
 using KpHiteModbus.Modbus.Extend;

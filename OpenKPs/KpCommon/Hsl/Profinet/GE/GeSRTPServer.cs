@@ -109,6 +109,9 @@ namespace HslCommunication.Profinet.GE
 		#region NetServer Override
 
 		/// <inheritdoc/>
+		protected override INetMessage GetNewNetMessage( ) => new GeSRTPMessage( );
+
+		/// <inheritdoc/>
 #if NET20 || NET35
 		protected override void ThreadPoolLoginAfterClientCheck( Socket socket, System.Net.IPEndPoint endPoint )
 #else
@@ -129,69 +132,20 @@ namespace HslCommunication.Profinet.GE
 			OperateResult send = Send( socket, back );
 			if(!send.IsSuccess) { socket?.Close( ); return; };
 
-			AppSession appSession = new AppSession( );
-			appSession.IpEndPoint = endPoint;
-			appSession.WorkSocket = socket;
-			try
-			{
-				socket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), appSession );
-				AddClient( appSession );
-			}
-			catch
-			{
-				socket.Close( );
-				LogNet?.WriteDebug( ToString( ), string.Format( StringResources.Language.ClientOfflineInfo, endPoint ) );
-			}
+			base.ThreadPoolLoginAfterClientCheck( socket, endPoint );
 		}
 
-#if NET20 || NET35
-		private void SocketAsyncCallBack( IAsyncResult ar )
-#else
-		private async void SocketAsyncCallBack( IAsyncResult ar )
-#endif
+		/// <inheritdoc/>
+		protected override OperateResult<byte[]> ReadFromCoreServer( AppSession session, byte[] receive )
 		{
-			if (ar.AsyncState is AppSession session)
-			{
-				try
-				{
-					int receiveCount = session.WorkSocket.EndReceive( ar );
-#if NET20 || NET35
-					OperateResult<byte[]> read1 = ReceiveByMessage( session.WorkSocket, 5000, new GeSRTPMessage( ) );
-#else
-					OperateResult<byte[]> read1 = await ReceiveByMessageAsync( session.WorkSocket, 5000, new GeSRTPMessage( ) );
-#endif
-					if (!read1.IsSuccess) { RemoveClient( session ); return; };
+			byte[] back = null;
+			if      (receive[42] == 0x04) back = ReadByCommand( receive );
+			else if (receive[42] == 0x01) back = ReadProgramNameByCommand( receive );
+			else if (receive[42] == 0x25) back = ReadDateTimeByCommand( receive );
+			else if (receive[50] == 0x07) back = WriteByCommand( receive );
+			else back = null;
 
-					if (!Authorization.asdniasnfaksndiqwhawfskhfaiw( )) { RemoveClient( session ); return; };
-
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Receive}：{read1.Content.ToHexString( ' ' )}" );
-
-					byte[] receive = read1.Content;
-					byte[] back = null;
-					if      (receive[42] == 0x04) back = ReadByCommand(             receive );
-					else if (receive[42] == 0x01) back = ReadProgramNameByCommand(  receive );
-					else if (receive[42] == 0x25) back = ReadDateTimeByCommand(     receive );
-					else if (receive[50] == 0x07) back = WriteByCommand(            receive );
-					else back = null;
-
-					if(back == null)
-					{
-						RemoveClient( session );
-						return;
-					}
-
-					session.WorkSocket.Send( back );
-					LogNet?.WriteDebug( ToString( ), $"[{session.IpEndPoint}] Tcp {StringResources.Language.Send}：{back.ToHexString( ' ' )}" );
-
-					session.HeartTime = DateTime.Now;
-					RaiseDataReceived( session, receive );
-					session.WorkSocket.BeginReceive( new byte[0], 0, 0, SocketFlags.None, new AsyncCallback( SocketAsyncCallBack ), session );
-				}
-				catch
-				{
-					RemoveClient( session );
-				}
-			}
+			return OperateResult.CreateSuccessResult( back );
 		}
 
 		private SoftBuffer GetSoftBufferFromDataCode( byte code, out bool isBit )

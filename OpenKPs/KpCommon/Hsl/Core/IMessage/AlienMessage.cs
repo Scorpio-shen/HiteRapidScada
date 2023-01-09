@@ -8,19 +8,13 @@ namespace HslCommunication.Core.IMessage
 	/// <summary>
 	/// 异形消息对象，用于异形客户端的注册包接收以及验证使用
 	/// </summary>
-	public class AlienMessage : INetMessage
+	public class AlienMessage : NetMessageBase, INetMessage
 	{
 		/// <inheritdoc cref="INetMessage.ProtocolHeadBytesLength"/>
 		public int ProtocolHeadBytesLength => 5;
 
-		/// <inheritdoc cref="INetMessage.HeadBytes"/>
-		public byte[] HeadBytes { get; set; }
-
-		/// <inheritdoc cref="INetMessage.ContentBytes"/>
-		public byte[] ContentBytes { get; set; }
-
 		/// <inheritdoc cref="INetMessage.CheckHeadBytesLegal(byte[])"/>
-		public bool CheckHeadBytesLegal( byte[] token )
+		public override bool CheckHeadBytesLegal( byte[] token )
 		{
 			if (HeadBytes == null) return false;
 
@@ -37,13 +31,7 @@ namespace HslCommunication.Core.IMessage
 		}
 
 		/// <inheritdoc cref="INetMessage.GetContentLengthByHeadBytes"/>
-		public int GetContentLengthByHeadBytes( ) => HeadBytes[4];
-
-		/// <inheritdoc cref="INetMessage.GetHeadBytesIdentity"/>
-		public int GetHeadBytesIdentity( ) => 0;
-
-		/// <inheritdoc cref="INetMessage.SendBytes"/>
-		public byte[] SendBytes { get; set; }
+		public int GetContentLengthByHeadBytes( ) => HeadBytes[3] * 256 + HeadBytes[4];
 
 	}
 }
