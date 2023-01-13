@@ -101,7 +101,7 @@ namespace KpAllenBrandly.Model
             var option = new ConnectionOptions()
             {
                 IPAddress = "127.0.0.1",
-                Port = 6000,
+                Port = 44818,
             };
             ConnectionOptions = option;
             return option;

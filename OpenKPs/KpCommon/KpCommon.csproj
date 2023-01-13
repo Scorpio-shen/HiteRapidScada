@@ -459,6 +459,7 @@
     <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyPcccServer.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleyServer.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\AllenBradleySLCNet.cs" />
+    <Compile Include="Hsl\Profinet\AllenBradley\InterFace\IAbReadWriteCip.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\IReadWriteCip.cs" />
     <Compile Include="Hsl\Profinet\AllenBradley\MessageRouter.cs" />
     <Compile Include="Hsl\Profinet\Beckhoff\AdsDeviceInfo.cs" />

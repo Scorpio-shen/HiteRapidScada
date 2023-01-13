@@ -2,28 +2,36 @@
 using HslCommunication.Core;
 using HslCommunication.Profinet.AllenBradley;
 using HslCommunication.Profinet.Melsec;
+using KpAllenBrandly.Extend;
 using KpAllenBrandly.Model;
 using KpAllenBrandly.Model.EnumType;
+using KpCommon.Hsl.Profinet.AllenBradley.InterFace;
 using KpCommon.Model;
 using Newtonsoft.Json;
 using Scada.Data.Configuration;
 using Scada.Data.Models;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Reflection;
 using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace Scada.Comm.Devices
 {
     public class KpAllenBrandlyLogic : KPLogic
     {
+        readonly int MaxCharCount = 256;            //AB PLC这种通讯方式最多一次256个字符长度的Tag
+        readonly int MaxByteCount = 476;            //AB PLC一次支持最大读取字节数组
         protected DeviceTemplate deviceTemplate;
         private HashSet<int> floatSignals;
         private List<KpAllenBrandly.Model.TagGroup> tagGroupsActive;
-        AllenBradleyNet readWriteDevice;
+        IAbReadWriteCip readWriteDevice;
         string templateName;
         bool IsConnected = false;
 
@@ -190,6 +198,14 @@ namespace Scada.Comm.Devices
                             readWriteDevice = abNet;
                         }
                         break;
+                    case ProtocolTypeEnum.ConnectedCIP:
+                        {
+                            var abNet = new AllenBradleyConnectedCipNet(ipaddress, port);
+                            abNet.ReceiveTimeOut = timeOut;
+                            initResult = abNet.ConnectServer();
+                            readWriteDevice = abNet;
+                        }
+                        break;
                     //case ProtocolTypeEnum.SLCNet:
                     //    {
                     //        var abNet = new AllenBradleySLCNet(ipaddress,port);
@@ -349,7 +365,7 @@ namespace Scada.Comm.Devices
                     foreach (Tag tag in group.Tags)
                     {
                         tagGroup.AddNewTag(tag.TagID, tag.Name);
-                        if (tag.DataType == DataTypeEnum.Real || tag.DataType == DataTypeEnum.LReal)
+                        if (tag.DataType == DataTypeEnum.Float || tag.DataType == DataTypeEnum.Double)
                             floatSignals.Add(tag.TagID);
                     }
                 }
@@ -372,10 +388,11 @@ namespace Scada.Comm.Devices
                 WriteToLog($"Name:{Name},Number:{Number},读取数据失败,未连接到设备,连接参数,{JsonConvert.SerializeObject(deviceTemplate.ConnectionOptions)}");
                 return false;
             }
-
+            
             try
             {
-                var result = readWriteDevice.Read(model.Addresses, model.Lengths);
+                OperateResult<byte[]> result = null;
+                result = RequestUnit(readWriteDevice, model);
                 WriteToLog($"Name:{Name},Number:{Number},数据请求结束,IsSuccess:{result.IsSuccess},Message:{result.Message},Data:{result.Content.ToJsonString()}");
                 if (result.IsSuccess && result.Content?.Length > 0)
                 {
@@ -391,14 +408,186 @@ namespace Scada.Comm.Devices
             }
         }
 
+        private OperateResult<byte[]> RequestUnit(IAbReadWriteCip abNet,ABRequestModel model)
+        {
+            //判断字符串长度是否超过256
+            OperateResult <byte[]> result = new OperateResult<byte[]>() { IsSuccess = false};
+            int index = 0;
+            List<string> addresses = new List<string>();
+            List<int> lengths = new List<int>();
+            List<int> byteCounts = new List<int>(); 
+            List<byte> buffer = new List<byte>();
+            do
+            {
+                addresses.Add(model.Addresses[index]);
+                lengths.Add(model.Lengths[index]);
+                byteCounts.Add(model.BytesCount[index]);
+                var charCount = addresses.SelectMany(a => a).Count();
+                var byteCount = byteCounts.Sum();
+
+                if (charCount > MaxCharCount || byteCount > MaxByteCount)
+                {
+                    //判断是否是单个数组类型超出限制范围
+                    if(byteCount > MaxByteCount && addresses.Count == 1)
+                    {
+                        
+                    }
+
+                    addresses.RemoveAt(addresses.Count - 1);
+                    lengths.RemoveAt(lengths.Count - 1);
+                    byteCounts.RemoveAt(byteCounts.Count - 1);
+                    index--;
+                    //进行一次数据请求
+                    result = abNet.Read(addresses.ToArray(), lengths.ToArray());
+                    if (!result.IsSuccess)
+                    {
+                        WriteToLog($"Name:{Name},Number:{Number},读取数据失败,Message:{result.Message}");
+                        //读取失败,添加空字节数组
+                        var temp = new byte[byteCount];
+                        buffer.AddRange(temp);
+                    }
+                    else
+                        //读取成功
+                        buffer.AddRange(result.Content);
+                    addresses.Clear();
+                    lengths.Clear();
+                    byteCounts.Clear();
+                }
+                else
+                {
+                    //判断是否到最后的数组
+                    if (index + 1 >= model.Addresses.Count)
+                    {
+                        //直接请求
+                        result = abNet.Read(addresses.ToArray(), lengths.ToArray());
+                        if (!result.IsSuccess)
+                        {
+                            WriteToLog($"Name:{Name},Number:{Number},读取数据失败,Message:{result.Message}");
+                            var temp = new byte[byteCount];
+                            buffer.AddRange(temp);
+                        }
+                        else
+                            //读取成功
+                            buffer.AddRange(result.Content);
+                        addresses.Clear();
+                        lengths.Clear();
+                        byteCounts.Clear();
+                    }
+                }
+                index++;
+            }
+            while (index < model.Addresses.Count);
+
+            result.IsSuccess= true;
+            result.Content = buffer.ToArray();
+            return result;
+        }
+
+        /// <summary>
+        /// 对于单个数组类型,请求长度超出最大限度时，进行分批次请求
+        /// </summary>
+        /// <param name="totalByteCount">整个数组请求字节长度</param>
+        /// <param name="arrayLength">数组长度</param>
+        /// <param name="address">数组TagName</param>
+        /// <param name="isConnectedCip">是否是ConnectedCip协议</param>
+        /// <returns></returns>
+        private byte[] RequestArray(int totalByteCount,int arrayLength,string address,bool isConnectedCip = false)
+        {
+            if(isConnectedCip)
+            {
+                var operateResult = readWriteDevice.Read(address, (ushort)totalByteCount);
+                if (operateResult.IsSuccess)
+                {
+                    return operateResult.Content;
+                }
+            }
+            byte[] result = new byte[totalByteCount];
+            //计算数组每个元素字节长度
+            var eachByteCount = totalByteCount / arrayLength;
+            //一次最多请求多少长度
+            int arrayLen = MaxByteCount / eachByteCount;
+            //索引
+            int index = 0;
+            //已请求的数组长度
+            int requestLen = 0;
+            do
+            {
+                int startIndex = arrayLen * index;
+                var operateResult = readWriteDevice.ReadSegment(address, startIndex, arrayLen);
+                if(operateResult.IsSuccess)
+                    Array.Copy(operateResult.Content,0,result,eachByteCount * requestLen,operateResult.Content.Length);
+                index++;
+                requestLen = arrayLen* index;
+            }
+            while (arrayLen * (index + 1) < arrayLength);
+            //判断是否有剩余
+            if(arrayLength > requestLen)
+            {
+                //请求剩余
+                var operateResult = readWriteDevice.ReadSegment(address, requestLen, arrayLength - requestLen);
+                if(operateResult.IsSuccess)
+                    Array.Copy(operateResult.Content, 0, result, eachByteCount * arrayLen, operateResult.Content.Length);
+            }
+            return result;
+        }
+
         private void SetTagsData(KpAllenBrandly.Model.TagGroup tagGroup)
         {
-            for(int i = 0; i < tagGroup.Tags.Count; i++)
+            List<Tag> assignedTags = new List<Tag>(); //已经赋值过的Tag
+            int byteIndex = default;
+            var data = tagGroup.Data;
+            for (int i = 0; i < tagGroup.Tags.Count; i++)
             {
-                var tag = tagGroup.Tags[i]; 
-                var data = tagGroup.GetTagVal(i);
-                if (data != null)
-                    SetCurData(tag.TagID > 0 ? tag.TagID - 1 : tag.TagID, (double)data, BaseValues.CnlStatuses.Defined);
+                var tag = tagGroup.Tags[i];
+                if (assignedTags.Any(a => a.TagID == tag.TagID))
+                    continue;
+                if (tag.IsArray)
+                {
+                    //数组类型处理
+                    //获取到Tag父Tag,获取数组所有Tag
+                    var parentTag = tag.ParentTag;
+                    if (parentTag == null)
+                        continue;
+
+                    var childTags = tagGroup.Tags.Where(t => t.ParentTag == parentTag).ToList();
+                    //获取Tag数组对应的字节数组
+                    var byteCount = default(int);
+                    if (parentTag.DataType == DataTypeEnum.Bool)
+                    {
+                        var iPart = childTags.Count / 8;
+                        byteCount = iPart;
+                        if (childTags.Count % 8 > 0)
+                            byteCount += 1;
+                    }
+                    else
+                        byteCount = parentTag.DataType.GetByteCount() * parentTag.Length;
+
+                    //赋值父Tag
+                    parentTag.ReadData = data.Skip(byteIndex).Take(byteCount).ToArray();
+                    byteIndex += byteCount;
+                    //添加已经赋值了的Tag
+                    assignedTags.AddRange(childTags);
+                }
+                else
+                {
+                    //非数组类型处理
+                    var byteCount = tag.DataType.GetByteCount();
+                    if(tag.DataType == DataTypeEnum.String)
+                    {
+                        byteCount = 2 + 4 + tag.Length;
+                    }
+                    tag.ReadData = data.Skip(byteIndex).Take(byteCount).ToArray();
+                    byteIndex += byteCount;
+                    assignedTags.Add(tag);
+                }
+            }
+
+            //赋值通道
+            foreach(var tag in tagGroup.Tags)
+            {
+                var tagData = tag.GetTagVal();
+                if (tagData != null)
+                    SetCurData(tag.TagID > 0 ? tag.TagID - 1 : tag.TagID, (double)tagData, BaseValues.CnlStatuses.Defined);
             }
         }
 
@@ -417,32 +606,35 @@ namespace Scada.Comm.Devices
                     case DataTypeEnum.Bool:
                         operateResult = readWriteDevice.Write(address,(bool)tag.Data);
                         break;
-                    case DataTypeEnum.Int:
+                    case DataTypeEnum.Byte:
+                        operateResult = readWriteDevice.Write(address, (byte)tag.Data);
+                        break;
+                    case DataTypeEnum.SByte:
+                        operateResult = readWriteDevice.Write(address, (sbyte)tag.Data);
+                        break;
+                    case DataTypeEnum.Short:
                         operateResult = readWriteDevice.Write(address, (short)tag.Data);
                         break;
-                    case DataTypeEnum.DInt:
-                        operateResult = readWriteDevice.Write(address,(int)tag.Data);
+                    case DataTypeEnum.Int:
+                        operateResult = readWriteDevice.Write(address, (int)tag.Data);
                         break;
-                    case DataTypeEnum.LInt:
-                        operateResult = readWriteDevice.Write(address, (long)tag.Data);
+                    case DataTypeEnum.Long:
+                        operateResult = readWriteDevice.Write(address,(long)tag.Data);
+                        break;
+                    case DataTypeEnum.UShort:
+                        operateResult = readWriteDevice.Write(address, (ushort)tag.Data);
                         break;
                     case DataTypeEnum.UInt:
-                    case DataTypeEnum.Word:
-                        operateResult = readWriteDevice.Write(address,(ushort)tag.Data);
+                        operateResult = readWriteDevice.Write(address, (uint)tag.Data);
                         break;
-                    case DataTypeEnum.UDInt:
-                    case DataTypeEnum.DWord:
-                        operateResult = readWriteDevice.Write(address,(uint)tag.Data);
+                    case DataTypeEnum.ULong:
+                        operateResult = readWriteDevice.Write(address, (ulong)tag.Data);
                         break;
-                    case DataTypeEnum.ULInt:
-                    case DataTypeEnum.LWord:
-                        operateResult = readWriteDevice.Write(address,(ulong)tag.Data);
+                    case DataTypeEnum.Float:
+                        operateResult = readWriteDevice.Write(address, (float)tag.Data);
                         break;
-                    case DataTypeEnum.Real:
-                        operateResult = readWriteDevice.Write(address,(float)tag.Data);
-                        break;
-                    case DataTypeEnum.LReal:
-                        operateResult = readWriteDevice.Write(address,(double)tag.Data);
+                    case DataTypeEnum.Double:
+                        operateResult = readWriteDevice.Write(address, (double)tag.Data);
                         break;
                     case DataTypeEnum.String:
                         operateResult = readWriteDevice.Write(address,(string)tag.Data);

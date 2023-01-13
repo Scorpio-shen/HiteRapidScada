@@ -13,66 +13,61 @@ namespace KpAllenBrandly.Model.EnumType
         [DataTypeByteCount(1)]
         Bool,
         /// <summary>
+        /// byte 0～255
+        /// </summary>
+        [DataTypeByteCount(1)]
+        Byte,
+        /// <summary>
+        /// -128 ～ 127
+        /// </summary>
+        [DataTypeByteCount(1)]
+        SByte,
+        /// <summary>
         /// 整数（-32768~32767）
         /// </summary>
         [DataTypeByteCount(2)]
-        Int,
+        Short,
         /// <summary>
         /// 双整数(-2147483648~2147483647)
         /// </summary>
         [DataTypeByteCount(4)]
-        DInt,
+        Int,
         /// <summary>
         /// 长整数（有符号）
         /// </summary>
         [DataTypeByteCount(8)]
-        LInt,
+        Long,
 
         /// <summary>
         /// 无符号整数
         /// </summary>
         [DataTypeByteCount(2)]
-        UInt,
+        UShort,
         /// <summary>
         /// 无符号双整数
         /// </summary>
         [DataTypeByteCount(4)]
-        UDInt,
+        UInt,
         /// <summary>
         /// 无符号长整数
         /// </summary>
         [DataTypeByteCount(8)]
-        ULInt,
+        ULong,
         ///// <summary>
         ///// 4个字节
         ///// </summary>
         [DataTypeByteCount(4)]
-        Real,
+        Float,
         ///// <summary>
         ///// 8个字节
         ///// </summary>
         [DataTypeByteCount(8)]
-        LReal,
+        Double,
         /// <summary>
         /// String类型
         /// </summary>
         [DataTypeByteCount(0)]
         String,
-        /// <summary>
-        /// 无符号
-        /// </summary>
-        [DataTypeByteCount(2)]
-        Word,
-        /// <summary>
-        /// 无符号
-        /// </summary>
-        [DataTypeByteCount(4)]
-        DWord,
-        /// <summary>
-        /// 无符号
-        /// </summary>
-        [DataTypeByteCount(8)]
-        LWord,
         
     }
 

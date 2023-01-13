@@ -58,8 +58,10 @@
     <Compile Include="Model\EnumType\ProtocolTypeEnum.cs" />
     <Compile Include="Model\EnumType\TagGroupDefaultValues.cs" />
     <Compile Include="Model\EnumType\TempleteKeyString.cs" />
+    <Compile Include="Model\MyAbTagItem.cs" />
     <Compile Include="Model\Tag.cs" />
     <Compile Include="Model\TagGroup.cs" />
+    <Compile Include="Model\TreeModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resource1.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -67,6 +69,7 @@
       <DependentUpon>Resource1.resx</DependentUpon>
     </Compile>
     <Compile Include="ViewModel\FrmDevAddRangeViewModel.cs" />
+    <Compile Include="ViewModel\FrmPLCImportViewModel.cs" />
     <Compile Include="View\CtrlPLCConfig.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -108,6 +111,12 @@
     </Compile>
     <Compile Include="View\FrmParaSet.Designer.cs">
       <DependentUpon>FrmParaSet.cs</DependentUpon>
+    </Compile>
+    <Compile Include="View\FrmPLCImport.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="View\FrmPLCImport.Designer.cs">
+      <DependentUpon>FrmPLCImport.cs</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -154,246 +163,38 @@
     <EmbeddedResource Include="View\FrmParaSet.resx">
       <DependentUpon>FrmParaSet.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="View\FrmPLCImport.resx">
+      <DependentUpon>FrmPLCImport.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\abstr1.bmp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\abstr1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\abstr11.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\abstr111.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\abstr12.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Activity_16xLG.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Activity_16xLG1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\AddressViewer.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\AddressViewer1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\alipay.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\alipay1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\asset_progressBar_24x24_on.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\asset_progressBar_24x24_on1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\AudioRecording.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\AudioRecording1.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Resources\brackets_Square_16xMD.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\brackets_Square_16xMD1.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Class_489.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Class_4891.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\ClassIcon.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\ClassIcon1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Cloud_16xLG.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Cloud_16xLG1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Copy_6524.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Copy_65241.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Delegate_8339.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Delegate_83391.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\docview_xaml_on_16x16.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\docview_xaml_on_16x161.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Resources\Enum_582.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Enum_5821.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Event_594.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Event_594_exp.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Event_594_exp1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Event_5941.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\glasses_16xLG.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\glasses_16xLG1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\grid_Data_16xLG.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\grid_Data_16xLG1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\lightningBolt_16xLG.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\lightningBolt_16xLG1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\ListView_687.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\ListView_6871.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Method_636.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Method_6361.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\mm_facetoface_collect_qrcode_1525331158525.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\mm_facetoface_collect_qrcode_15253311585251.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Resources\Module_648.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Module_6481.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\PropertyIcon.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\PropertyIcon1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\qrcode_for_gh_319218678954_258.jpg" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\qrcode_for_gh_319218678954_2581.jpg" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Soundfile_461.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Soundfile_4611.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Structure_507.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Structure_5071.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\TabControl_707.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\TabControl_7071.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Table_748.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Table_7481.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Tag_7213.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Tag_72131.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Textfile_818_16x.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Textfile_818_16x1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\TreeView_713.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\TreeView_7131.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\usbcontroller.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\usbcontroller1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\UseCaseDiagramFile_usecasediagram_13447_16x.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\UseCaseDiagramFile_usecasediagram_13447_16x1.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Resources\VirtualMachine.png" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\VirtualMachine1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\WebForm%28ASPX%29_815_16x.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\WebForm%28ASPX%29_815_16x1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\WebFormTemplate_11274_16x_color.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\WebFormTemplate_11274_16x_color1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\WindowsForm_817_16x.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\WindowsForm_817_16x1.png" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>if exist "C:\SCADA\ScadaComm\KP"  (
+copy "$(TargetFileName)" "C:\SCADA\ScadaComm\KP\"
+)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

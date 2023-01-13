@@ -11,10 +11,15 @@ namespace KpAllenBrandly.Model
         /// <summary>
         /// 请求地址Tag数组
         /// </summary>
-        public string[] Addresses { get; set; }
+        public List<string> Addresses { get; set; }
         /// <summary>
         /// 请求字节长度
         /// </summary>
-        public int[] Lengths { get; set; }
+        public List<int> Lengths { get; set; }
+
+        /// <summary>
+        /// 每个Tag占据字节数
+        /// </summary>
+        public List<int> BytesCount { get; set; }
     }
 }

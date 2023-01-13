@@ -42,7 +42,7 @@ namespace Scada.Admin
         /// </summary>
         [STAThread]
         static void Main()
-    {
+        {
             appData = new AppData();
             appData.Init(Path.GetDirectoryName(Application.ExecutablePath));
 

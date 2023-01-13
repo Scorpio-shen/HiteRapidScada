@@ -13,7 +13,7 @@ namespace KpAllenBrandly.View
 {
     public partial class FrmDevTemplate : Form
     {
-        const string NewFileName = "KpHiteMelsec_NewTemplate.xml";
+        const string NewFileName = "KpHiteAB_NewTemplate.xml";
         string _fileName;                                   //载入已定义模板时文件名称或者新建的模板文件名称
         AppDirs _appDirs;
         DeviceTemplate deviceTemplate;                      //模板文件
@@ -67,7 +67,7 @@ namespace KpAllenBrandly.View
                 //新建
                 saveFileDialog.FileName = NewFileName;
                 deviceTemplate = new DeviceTemplate();
-                //ctrlConfig.ConnectionOptions = deviceTemplate.CreateOptions();
+                ctrlRead.ConnectionOptions = ctrlPLCConfig.ConnectionOptions = deviceTemplate.CreateOptions();
                 FillTree();
             }
 
@@ -126,7 +126,7 @@ namespace KpAllenBrandly.View
             TreeNode treeNode = NewTagGroupNode(tagGroup);
             tagGroupRootNode.Nodes.Insert(index, treeNode);
             treeView.SelectedNode = treeNode;
-            //ctrlRead.SetFocus();
+            ctrlRead.SetFocus();
 
             Modified = true;
         }
@@ -203,7 +203,7 @@ namespace KpAllenBrandly.View
             btnDelete.Enabled = nodeIsSelect;
             btnImport.Enabled = nodeIsSelect;
             btnExport.Enabled = nodeIsSelect;
-            //ctrlConfig.Enabled = !nodeIsSelect;
+            ctrlPLCConfig.Enabled = !nodeIsSelect;
         }
 
         /// <summary>
@@ -222,7 +222,7 @@ namespace KpAllenBrandly.View
             var filePath = openFile.FileName;
             if (tagGroup != null)
             {
-                //ctrlRead.ImportExcel(filePath);
+                ctrlRead.ImportExcel(filePath);
             }
 
         }
@@ -242,7 +242,7 @@ namespace KpAllenBrandly.View
             var extensionName = Path.GetExtension(filePath);
             if (tagGroup != null)
             {
-                //ctrlRead.ExportExcel(filePath, extensionName);
+                ctrlRead.ExportExcel(filePath, extensionName);
             }
         }
         #endregion
@@ -341,20 +341,21 @@ namespace KpAllenBrandly.View
                 ScadaUiUtils.ShowError(errMsg);
 
             //将载入的连接参数赋值
-            //ctrlConfig.ConnectionOptions = deviceTemplate.ConnectionOptions;
+            ctrlPLCConfig.ConnectionOptions = deviceTemplate.ConnectionOptions;
+            ctrlRead.ConnectionOptions= deviceTemplate.ConnectionOptions;
             FillTree();
         }
 
         private void ShowTagGroupProps(TagGroup tagGroup)
         {
-            //ctrlRead.Visible = true;
-            //ctrlRead.TagGroup = tagGroup;
+            ctrlRead.Visible = true;
+            ctrlRead.TagGroup = tagGroup;
         }
 
 
         private void HideGroupProps()
         {
-            //ctrlRead.Visible = false;
+            ctrlRead.Visible = false;
         }
         #endregion
 
@@ -396,8 +397,9 @@ namespace KpAllenBrandly.View
         private void RefreshTagGroupIndex()
         {
             deviceTemplate.RefreshTagGroupIndex();
-            //ctrlRead.RefreshDataGridView();
+            ctrlRead.RefreshDataGridView();
         }
+
         #endregion
     }
 }

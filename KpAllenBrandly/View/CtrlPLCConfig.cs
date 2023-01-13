@@ -53,6 +53,7 @@ namespace KpAllenBrandly.View
                 return;
             //txtIPAddress.AddDataBindings( options, nameof(options.IPAddress));
             //txtPort.AddDataBindings(options, nameof(options.Port));
+            txtParams.AddDataBindings(options, nameof(options.ConsoleParamsStr));
             cbxProtocolType.AddDataBindings( options, nameof(options.ProtocolType));
         }
 

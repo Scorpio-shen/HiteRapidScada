@@ -848,7 +848,7 @@ namespace Scada.Comm.Engine
                 // установка признака завершения работы для опрашиваемого КП 为被轮询的 CP 设置完成工作的标志
                 kpLogic.Terminated = workState == WorkStates.Terminating;
 
-                System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                
                 // выполнение сеанса опроса КП 执行 CP 轮询会话
                 if (sessionNeeded)
                 {
@@ -861,6 +861,7 @@ namespace Scada.Comm.Engine
 
                     CommCnlBeforeSession(kpLogic);
 
+                    System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
                     if (kpLogic.ConnRequired && (kpLogic.Connection == null || !kpLogic.Connection.Connected))
                     {
                         KPInvalidateCurData(kpLogic);
@@ -873,7 +874,8 @@ namespace Scada.Comm.Engine
                     {
                         commCnt++;
                     }
-
+                    stopwatch.Stop();
+                    log.WriteInfo($"{kpLogic.Caption}结束Session，结束时间:{DateTime.Now}，Session耗时(ms):{stopwatch.ElapsedMilliseconds}");
                     WriteKPInfo(kpLogic);
                     CommCnlAfterSession(kpLogic);
                 }
@@ -885,8 +887,8 @@ namespace Scada.Comm.Engine
                 // определение необходимости завершить цикл работы
                 terminateCycle = workState == WorkStates.Terminating && kpLogic.Terminated;
 
-                stopwatch.Stop();
-                log.WriteInfo($"{kpLogic.Caption}结束Session，结束时间:{DateTime.Now}，Session耗时(ms):{stopwatch.ElapsedMilliseconds}");
+                
+                
             }
             catch (ThreadAbortException)
             {

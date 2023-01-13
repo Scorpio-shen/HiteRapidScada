@@ -38,10 +38,15 @@ namespace KpAllenBrandly.View
                     gbxTcp.Enabled = true;
                     break;
                 case Model.EnumType.ProtocolTypeEnum.EtherNetIP:
+                    txtSlot.Visible = true;
                     gbxSerial.Enabled = false;
                     gbxTcp.Enabled = true;
                     break;
-              
+                case Model.EnumType.ProtocolTypeEnum.ConnectedCIP:
+                    txtSlot.Visible = false;
+                    gbxSerial.Enabled = false;
+                    gbxTcp.Enabled = true;
+                    break;
             }  
             
             #region 下拉框绑定数据源

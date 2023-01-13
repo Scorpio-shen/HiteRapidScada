@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml;
 
 namespace KpAllenBrandly.Model
 {
@@ -19,6 +20,7 @@ namespace KpAllenBrandly.Model
         public TagGroup()
         {
             Tags = new List<Tag>();
+            ParentTags= new List<Tag>();
             Active = true;
             StartKpTagIndex = -1;
         }
@@ -81,9 +83,150 @@ namespace KpAllenBrandly.Model
         //    get => requestlength;
         //    set=> requestlength = value;
         //}
+
+        /// <summary>
+        /// 存储数组类型Tag的父Tag
+        /// </summary>
+        public List<Tag> ParentTags { get; set; }
         #endregion
 
         #region 载入存储Xml
+        public override void SaveToXml(XmlElement tagGroupElement)
+        {
+            base.SaveToXml(tagGroupElement);
+            //存储ParentTag
+            foreach(var tag in ParentTags)
+            {
+                XmlElement tagElem = tagGroupElement.AppendElem("ParentTags");
+                foreach (var tagProperty in tag.GetType().GetProperties())
+                {
+                    if (!tagProperty.CanWrite)
+                        continue;
+                    tagElem.SetAttribute(tagProperty.Name, tagProperty.GetValue(tag));
+                }
+            }
+        }
+
+        public override void SaveTagsToXml(XmlElement tagGroupElement, List<Tag> tags)
+        {
+            foreach (var tag in tags)
+            {
+                XmlElement tagElem = tagGroupElement.AppendElem("Tag");
+                foreach (var tagProperty in tag.GetType().GetProperties())
+                {
+                    if (!tagProperty.CanWrite)
+                        continue;
+                    tagElem.SetAttribute(tagProperty.Name, tagProperty.GetValue(tag));
+                }
+                //添加ParentTagId属性
+                tagElem.SetAttribute("ParentTagID", tag.ParentTag?.TagID ?? -1);
+            }
+        }
+
+        public override void LoadFromXml(XmlElement tagGroupElem)
+        {
+            XmlNodeList tagNodes = tagGroupElem.SelectNodes("ParentTags");
+            foreach (XmlElement tagElem in tagNodes)
+            {
+                Tag t = Activator.CreateInstance(typeof(Tag)) as Tag;
+                foreach (var p in typeof(Tag).GetProperties())
+                {
+                    if (!p.CanWrite)
+                        continue;
+                    if (t == null)
+                        return;
+
+                    if (p.PropertyType == typeof(bool))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsBool(p.Name), null);
+                    }
+                    else if (p.PropertyType == typeof(byte))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsByte(p.Name), null);
+                    }
+                    else if (p.PropertyType == typeof(string))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsString(p.Name), null);
+                    }
+                    else if (p.PropertyType == typeof(int))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsInt(p.Name), null);
+                    }
+                    else if (p.PropertyType.IsEnum)
+                    {
+                        try
+                        {
+                            var enumValue = Enum.Parse(p.PropertyType, tagElem.GetAttrAsString(p.Name), true);
+                            p.SetValue(t, enumValue, null);
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+
+                ParentTags.Add(t);
+            }
+            base.LoadFromXml(tagGroupElem);
+            
+        }
+
+        public override void LoadTagsFromXml(XmlElement tagGroupElem)
+        {
+            XmlNodeList tagNodes = tagGroupElem.SelectNodes("Tag");
+            foreach (XmlElement tagElem in tagNodes)
+            {
+                Tag t = Activator.CreateInstance(typeof(Tag)) as Tag;
+                foreach (var p in typeof(Tag).GetProperties())
+                {
+                    if (!p.CanWrite)
+                        continue;
+                    if (t == null)
+                        return;
+
+                    if (p.PropertyType == typeof(bool))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsBool(p.Name), null);
+                    }
+                    else if (p.PropertyType == typeof(byte))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsByte(p.Name), null);
+                    }
+                    else if (p.PropertyType == typeof(string))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsString(p.Name), null);
+                    }
+                    else if (p.PropertyType == typeof(int))
+                    {
+                        p.SetValue(t, tagElem.GetAttrAsInt(p.Name), null);
+                    }
+                    else if (p.PropertyType.IsEnum)
+                    {
+                        try
+                        {
+                            var enumValue = Enum.Parse(p.PropertyType, tagElem.GetAttrAsString(p.Name), true);
+                            p.SetValue(t, enumValue, null);
+                        }
+                        catch
+                        {
+
+                        }
+                    }
+
+                }
+
+                //获取父Tag
+                var parentId = tagElem.GetAttrAsInt("ParentTagID");
+                var parentTag = ParentTags.FirstOrDefault(p=>p.TagID == parentId);
+                if (parentTag != null)
+                {
+                    t.ParentTag = parentTag;
+                }
+                Tags.Add(t);
+            }
+        }
         #endregion
 
         #region 批量添加点集合
@@ -97,8 +240,21 @@ namespace KpAllenBrandly.Model
 
             if (needClear)
                 Tags.Clear();
+            //判断是否有重复的点名
+            foreach(var add in addTags)
+            {
+                if (Tags.Any(t => t.Name.Equals(add.Name)))
+                {
+                    Tags.Clear();
+                    Tags.AddRange(tagsOld);
+                    errorMsg = $"名称:{add.Name}重复!";
+                    result = false;
+                    RefreshTagIndex();
+                    return result;
+                }
+            }
             Tags.AddRange(addTags);
-            SortTags();
+            //SortTags();
             //验证是否超出最大点数限制
             if ((TagCount + StartKpTagIndex > DefineReadOnlyValues.MaxTagCount))
             {
@@ -106,6 +262,8 @@ namespace KpAllenBrandly.Model
                 Tags.AddRange(tagsOld);
                 errorMsg = "超出点数限制!";
                 result = false;
+                RefreshTagIndex();
+                return result;
             }
             var model = GetRequestModel();
             int byteCount = default;
@@ -116,59 +274,91 @@ namespace KpAllenBrandly.Model
                 Tags.AddRange(tagsOld);
                 errorMsg = "数据超出范围!";
                 result = false;
+                RefreshTagIndex(); 
+                return result;
             }
             RefreshTagIndex();
             OnPropertyChanged(nameof(TagCount));
             return result;
         }
 
-        public ABRequestModel GetRequestModel()
+        public void RefreshParentTagId()
         {
-            throw new Exception("暂未实现!");
-            //var model = new ABRequestModel();
-            //List<string> addresses = new List<string>();
-            //List<int> lengths = new List<int>();
-
-
-            //foreach(var tag in Tags)
-            //{
-            //    addresses.Add(tag.Name);
-            //    var length = tag.DataType.GetByteCount();
-            //    if(tag.Length > 0)
-
-            //}
-
-
-            //model.Addresses = addresses.ToArray();    
-            //model.Lengths = lengths.ToArray();
-
-
-
-            //if (TagCount == 0)
-            //    model.Length = 0;
-            //else
-            //{
-            //    var tag = Tags.Last();
-            //    if (double.TryParse(tag.Address, out double address))
-            //    {
-            //        var length = address + tag.DataType.GetByteCount() - StartAddress;
-            //        double dPart = length % 1; //小数部分
-            //        int iPart = (int)length;   //整数部分
-
-            //        model.Length += (ushort)iPart;
-
-            //        if (dPart > 0)
-            //            model.Length += 1;
-            //        if (tag.Length > 0)
-            //            model.Length += (ushort)tag.Length;
-            //    }
-            //    else
-            //        model.Length = 0;
-            //}
-
-            //return model;
+            int tagId = 1;
+            foreach(var tag in ParentTags)
+            {
+                tag.TagID = tagId;
+                tagId++;
+            }
         }
 
+        public ABRequestModel GetRequestModel()
+        {
+            var model = new ABRequestModel();
+            List<string> addresses = new List<string>();
+            List<int> lengths = new List<int>();
+            List<int> byteCounts = new List<int>();
+
+
+            model.Addresses = addresses;
+            model.Lengths = lengths;
+            model.BytesCount= byteCounts;
+
+            foreach(var tag in Tags)
+            {
+                if(tag.IsArray)
+                {
+                    var parentTag = tag.ParentTag;
+                    //获取tag的Parent
+                    if(parentTag != null && !addresses.Any(a=>a.Equals(parentTag.Name)))
+                    {
+                        addresses.Add(parentTag.Name);
+                        lengths.Add(parentTag.Length);
+                        //获取对应字节数
+                        int byteCount = default;
+                        switch(parentTag.DataType)
+                        {
+                            case DataTypeEnum.Bool:
+                                {
+                                    byteCount += parentTag.Length / 8;
+                                    if ((parentTag.Length % 8) > 0)
+                                        byteCount++;
+                                }
+                                break;
+                            default:
+                                byteCount = parentTag.DataType.GetByteCount() * parentTag.Length;
+                                break;
+                        }
+
+                        byteCounts.Add(byteCount);
+                    }
+                }
+                else
+                {
+                    if (!addresses.Any(a => a.Equals(tag.Name)))
+                    {
+                        addresses.Add(tag.Name);
+                        lengths.Add(1);
+                        int byteCount = default;    
+                        switch(tag.DataType)
+                        {
+                            case DataTypeEnum.String:
+                                {
+                                    byteCount = 2+ 4 + tag.Length;
+                                }
+                                break;
+                            default:
+                                byteCount = tag.DataType.GetByteCount();
+                                break;
+                        }
+
+                        byteCounts.Add(byteCount);
+                    }
+                }
+            }
+
+            return model;   
+        }
 
         #endregion
 
@@ -179,82 +369,49 @@ namespace KpAllenBrandly.Model
         }
         #endregion
 
-        public double? GetTagVal(int index)
-        {
-            double? result = null;
-            try
-            {
-                if (TagCount == 0 || index >= Tags.Count)
-                    return result;
-                var tag = Tags[index];
-                if (tag == null)
-                    return result;
-                if (Data == null || Data.Length == 0)
-                    return result;
 
-                double address = tag.Address.ToDouble() - StartAddress;
-                double dPart = address % 1; //小数部分
-                int iPart = (int)address;   //整数部分
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="index">tag索引</param>
+        /// <param name="byteIndex">字节索引</param>
+        /// <returns></returns>
+        //public double? GetTagVal(int index,ref int byteIndex)
+        //{
+        //    double? result = null;
+        //    try
+        //    {
+        //        if (TagCount == 0 || index >= TagCount)
+        //            return result;
+        //        var tag = Tags[index];
+        //        if(tag == null) 
+        //            return result;
 
-                if (tag.DataType == DataTypeEnum.Bool)
-                {
-                    if (Data.Length >= iPart + 1)
-                    {
-                        var bitArray = new BitArray(Data.Skip(iPart).Take(1).ToArray());
-                        if (iPart < 8)
-                        {
-                            int bitIndex = (int)(dPart * 10);
-                            result = bitArray.Get(bitIndex) ? 1.0 : 0.0;
-                        }
-                    }
-                    return result;
-                }
-                var byteCount = tag.DataType.GetByteCount();
-                if (Data.Length < iPart + byteCount)    //超出数据长度
-                    return result;
-                byte[] buf = Data.Skip(iPart).Take(byteCount).Reverse().ToArray();
-                switch (tag.DataType)
-                {
-                    case DataTypeEnum.Int:
-                        return BitConverter.ToInt16(buf, 0);
-                    case DataTypeEnum.DInt:
-                        return BitConverter.ToInt32(buf, 0);
-                    case DataTypeEnum.LInt:
-                        return BitConverter.ToInt64(buf, 0);
+        //        if(Data == null || Data.Length == 0) 
+        //            return result;
 
-                    case DataTypeEnum.Word:
-                    case DataTypeEnum.UInt:
-                        return BitConverter.ToUInt16(buf, 0);
-                    case DataTypeEnum.DWord:
-                    case DataTypeEnum.UDInt:
-                        return BitConverter.ToUInt32(buf, 0);
-                    case DataTypeEnum.LWord:
-                    case DataTypeEnum.ULInt:
-                        return BitConverter.ToUInt64(buf, 0);
-                    case DataTypeEnum.Real:
-                        return BitConverter.ToSingle(buf, 0);
-                    case DataTypeEnum.LReal:
-                        return BitConverter.ToDouble(buf, 0);
-                    case DataTypeEnum.String:
-                        //取实际内容部分
-                        try
-                        {
-                            buf = Data.Skip(iPart + byteCount).Take(tag.Length).ToArray();
-                            var str = Encoding.ASCII.GetString(buf).TrimEnd('\0');
-                            return ScadaUtils.EncodeAscii(str);
-                        }
-                        catch
-                        {
-                            return null;
-                        }
-                }
+        //        if (byteIndex >= Data.Length)
+        //            return result;
 
-                return result;
-            }
-            catch
-            {
-                return null;
-            }
-        }
+        //        if (tag.IsArray)
+        //        {
+                    
+        //        }
+        //        else
+        //        {
+        //            var byteCount = tag.DataType.GetByteCount();
+        //            if(Data.Length < byteIndex + byteCount)
+        //                return result;
+
+        //            byte[] buf = Data.Skip(byteIndex).Take(byteCount).ToArray();
+        //            switch(tag.DataType)
+        //            {
+        //                case DataTypeEnum.Bool:
+
+        //                    break;
+        //            }
+        //        }
+        //    }
+        //}
     }
 }

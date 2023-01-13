@@ -53,6 +53,8 @@ namespace KpAllenBrandly.View
             this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.saveFileDialog = new System.Windows.Forms.SaveFileDialog();
             this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
+            this.ctrlRead = new KpAllenBrandly.View.CtrlRead();
+            this.ctrlPLCConfig = new KpAllenBrandly.View.CtrlPLCConfig();
             this.toolStrip.SuspendLayout();
             this.gbDevTemplate.SuspendLayout();
             this.SuspendLayout();
@@ -261,11 +263,34 @@ namespace KpAllenBrandly.View
             // 
             this.openFileDialog.FileName = "openFileDialog";
             // 
+            // ctrlRead
+            // 
+            this.ctrlRead.ConnectionOptions = null;
+            this.ctrlRead.IsShowTagGroup = false;
+            this.ctrlRead.Location = new System.Drawing.Point(293, 215);
+            this.ctrlRead.Name = "ctrlRead";
+            this.ctrlRead.Size = new System.Drawing.Size(665, 433);
+            this.ctrlRead.TabIndex = 4;
+            this.ctrlRead.TagGroup = null;
+            this.ctrlRead.TagGroupChanged += new KpCommon.Model.ConfigChangedEventHandler<KpAllenBrandly.Model.Tag>(this.ctrlRead_TagGroupChanged);
+            // 
+            // ctrlPLCConfig
+            // 
+            this.ctrlPLCConfig.ConnectionOptions = null;
+            this.ctrlPLCConfig.IsShowProps = false;
+            this.ctrlPLCConfig.Location = new System.Drawing.Point(293, 28);
+            this.ctrlPLCConfig.Name = "ctrlPLCConfig";
+            this.ctrlPLCConfig.Size = new System.Drawing.Size(665, 181);
+            this.ctrlPLCConfig.TabIndex = 3;
+            this.ctrlPLCConfig.ConfigChanged += new KpCommon.Model.ConfigChangedEventHandler<KpAllenBrandly.Model.Tag>(this.ctrlRead_TagGroupChanged);
+            // 
             // FrmDevTemplate
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(970, 664);
+            this.Controls.Add(this.ctrlRead);
+            this.Controls.Add(this.ctrlPLCConfig);
             this.Controls.Add(this.gbDevTemplate);
             this.Controls.Add(this.toolStrip);
             this.MaximizeBox = false;
@@ -307,5 +332,7 @@ namespace KpAllenBrandly.View
         private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.ToolStripButton btnImport;
         private System.Windows.Forms.ToolStripButton btnExport;
+        private CtrlPLCConfig ctrlPLCConfig;
+        private CtrlRead ctrlRead;
     }
 }

@@ -8,6 +8,7 @@ using Scada.Data.Configuration;
 using Scada.Data.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;

@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using HslCommunication.Reflection;
+using KpCommon.Hsl.Profinet.AllenBradley.InterFace;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -52,8 +53,8 @@ namespace HslCommunication.Profinet.AllenBradley
 	/// 地址可以携带站号信息，只要在前面加上slot=2;即可，这就是访问站号2的数据了，例如 slot=2;AAA，如果使用了自定义的消息路由，例如：[IP or Hostname],1,[Optional Routing Path],CPU Slot 172.20.1.109,1,[15,2,18,1],12<br />
 	/// 在实例化之后，连接PLC之前，需要调用如下代码 plc.MessageRouter = new MessageRouter( "1.15.2.18.1.12" )
 	/// </remarks>
-	public class AllenBradleyNet : NetworkDeviceBase, IReadWriteCip
-	{
+	public class AllenBradleyNet : NetworkDeviceBase, IReadWriteCip, IAbReadWriteCip
+    {
 		#region Constructor
 
 		/// <summary>

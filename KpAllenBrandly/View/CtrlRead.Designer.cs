@@ -30,6 +30,7 @@
         {
             this.components = new System.ComponentModel.Container();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.btnPLCImport = new System.Windows.Forms.Button();
             this.lblTagCount = new System.Windows.Forms.Label();
             this.chkAllCanWrite = new System.Windows.Forms.CheckBox();
             this.txtMaxAddressLength = new System.Windows.Forms.TextBox();
@@ -40,17 +41,15 @@
             this.txtGroupName = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.dgvTags = new System.Windows.Forms.DataGridView();
-            this.cmsTags = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.deleteTStripItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.cbxRegisterType = new System.Windows.Forms.ComboBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.bdsTags = new System.Windows.Forms.BindingSource(this.components);
             this.dgvTagID = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dgvTagName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dgvTagDataType = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dgvTagStringLength = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dgvTagAddress = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.dgvTagCanWrite = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.cmsTags = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.deleteTStripItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.bdsTags = new System.Windows.Forms.BindingSource(this.components);
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvTags)).BeginInit();
             this.cmsTags.SuspendLayout();
@@ -59,6 +58,7 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.btnPLCImport);
             this.groupBox1.Controls.Add(this.lblTagCount);
             this.groupBox1.Controls.Add(this.chkAllCanWrite);
             this.groupBox1.Controls.Add(this.txtMaxAddressLength);
@@ -69,8 +69,6 @@
             this.groupBox1.Controls.Add(this.txtGroupName);
             this.groupBox1.Controls.Add(this.label3);
             this.groupBox1.Controls.Add(this.dgvTags);
-            this.groupBox1.Controls.Add(this.cbxRegisterType);
-            this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.groupBox1.Location = new System.Drawing.Point(0, 0);
             this.groupBox1.Name = "groupBox1";
@@ -78,6 +76,16 @@
             this.groupBox1.TabIndex = 0;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "参数配置";
+            // 
+            // btnPLCImport
+            // 
+            this.btnPLCImport.Location = new System.Drawing.Point(367, 57);
+            this.btnPLCImport.Name = "btnPLCImport";
+            this.btnPLCImport.Size = new System.Drawing.Size(87, 29);
+            this.btnPLCImport.TabIndex = 18;
+            this.btnPLCImport.Text = "PLC导入";
+            this.btnPLCImport.UseVisualStyleBackColor = true;
+            this.btnPLCImport.Click += new System.EventHandler(this.btnPLCImport_Click);
             // 
             // lblTagCount
             // 
@@ -103,7 +111,7 @@
             // 
             // txtMaxAddressLength
             // 
-            this.txtMaxAddressLength.Location = new System.Drawing.Point(321, 64);
+            this.txtMaxAddressLength.Location = new System.Drawing.Point(89, 62);
             this.txtMaxAddressLength.Name = "txtMaxAddressLength";
             this.txtMaxAddressLength.Size = new System.Drawing.Size(65, 21);
             this.txtMaxAddressLength.TabIndex = 15;
@@ -111,7 +119,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(262, 61);
+            this.label2.Location = new System.Drawing.Point(30, 59);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(53, 24);
             this.label2.TabIndex = 14;
@@ -119,7 +127,7 @@
             // 
             // btnAddRange
             // 
-            this.btnAddRange.Location = new System.Drawing.Point(414, 59);
+            this.btnAddRange.Location = new System.Drawing.Point(265, 57);
             this.btnAddRange.Name = "btnAddRange";
             this.btnAddRange.Size = new System.Drawing.Size(87, 29);
             this.btnAddRange.TabIndex = 12;
@@ -190,41 +198,6 @@
             this.dgvTags.CellValidating += new System.Windows.Forms.DataGridViewCellValidatingEventHandler(this.dgvTags_CellValidating);
             this.dgvTags.CurrentCellChanged += new System.EventHandler(this.dgvTags_CurrentCellChanged);
             // 
-            // cmsTags
-            // 
-            this.cmsTags.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.deleteTStripItem});
-            this.cmsTags.Name = "cmsTags";
-            this.cmsTags.Size = new System.Drawing.Size(101, 26);
-            // 
-            // deleteTStripItem
-            // 
-            this.deleteTStripItem.Name = "deleteTStripItem";
-            this.deleteTStripItem.Size = new System.Drawing.Size(100, 22);
-            this.deleteTStripItem.Text = "删除";
-            this.deleteTStripItem.Click += new System.EventHandler(this.deleteTStripItem_Click);
-            // 
-            // cbxRegisterType
-            // 
-            this.cbxRegisterType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbxRegisterType.FormattingEnabled = true;
-            this.cbxRegisterType.Location = new System.Drawing.Point(89, 63);
-            this.cbxRegisterType.Name = "cbxRegisterType";
-            this.cbxRegisterType.Size = new System.Drawing.Size(126, 20);
-            this.cbxRegisterType.TabIndex = 1;
-            this.cbxRegisterType.Visible = false;
-            this.cbxRegisterType.SelectedIndexChanged += new System.EventHandler(this.cbxRegisterType_SelectedIndexChanged);
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(18, 67);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(65, 12);
-            this.label1.TabIndex = 0;
-            this.label1.Text = "寄存器类型";
-            this.label1.Visible = false;
-            // 
             // dgvTagID
             // 
             this.dgvTagID.DataPropertyName = "TagID";
@@ -268,6 +241,20 @@
             this.dgvTagCanWrite.Name = "dgvTagCanWrite";
             this.dgvTagCanWrite.Resizable = System.Windows.Forms.DataGridViewTriState.True;
             // 
+            // cmsTags
+            // 
+            this.cmsTags.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.deleteTStripItem});
+            this.cmsTags.Name = "cmsTags";
+            this.cmsTags.Size = new System.Drawing.Size(101, 26);
+            // 
+            // deleteTStripItem
+            // 
+            this.deleteTStripItem.Name = "deleteTStripItem";
+            this.deleteTStripItem.Size = new System.Drawing.Size(100, 22);
+            this.deleteTStripItem.Text = "删除";
+            this.deleteTStripItem.Click += new System.EventHandler(this.deleteTStripItem_Click);
+            // 
             // CtrlRead
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -292,8 +279,6 @@
         private System.Windows.Forms.TextBox txtGroupName;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.DataGridView dgvTags;
-        private System.Windows.Forms.ComboBox cbxRegisterType;
-        private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ContextMenuStrip cmsTags;
         private System.Windows.Forms.ToolStripMenuItem deleteTStripItem;
         private System.Windows.Forms.Button btnAddRange;
@@ -308,5 +293,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn dgvTagStringLength;
         private System.Windows.Forms.DataGridViewTextBoxColumn dgvTagAddress;
         private System.Windows.Forms.DataGridViewCheckBoxColumn dgvTagCanWrite;
+        private System.Windows.Forms.Button btnPLCImport;
     }
 }

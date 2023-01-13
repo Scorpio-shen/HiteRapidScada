@@ -186,12 +186,16 @@ namespace KpSiemens.Siemens.View
         /// </summary>
         public void RefreshDataGridView(bool needResetBindTags = true)
         {
-            if (needResetBindTags)
-                bdsTags.ResetBindings(false);
-            var index = dgvTags.FirstDisplayedScrollingRowIndex;
-            dgvTags.Invalidate();
-            if (index >= 0)
-                dgvTags.FirstDisplayedScrollingRowIndex = index;
+            try
+            {
+                var index = dgvTags.FirstDisplayedScrollingRowIndex;
+                if (needResetBindTags)
+                    bdsTags.ResetBindings(false);
+                dgvTags.Invalidate();
+                if (index >= 0)
+                    dgvTags.FirstDisplayedScrollingRowIndex = index;
+            }
+            catch { }
         }
 
         #region 控件事件

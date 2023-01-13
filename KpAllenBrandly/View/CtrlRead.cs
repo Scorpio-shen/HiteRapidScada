@@ -14,6 +14,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using KpAllenBrandly.ViewModel;
 
 namespace KpAllenBrandly.View
 {
@@ -42,6 +43,11 @@ namespace KpAllenBrandly.View
         /// 是否是展示TagGroup内容,只是展示内容不触发控件事件
         /// </summary>
         public bool IsShowTagGroup { get; set; } = false;
+
+        /// <summary>
+        /// 配置的PLC连接参数
+        /// </summary>
+        public ConnectionOptions ConnectionOptions { get; set; }
         public CtrlRead()
         {
             InitializeComponent();
@@ -57,21 +63,20 @@ namespace KpAllenBrandly.View
         private void InitDataSourceBind()
         {
             //绑定存储器类
-            Dictionary<string, MemoryTypeEnum> keyValueMemoryEnums = new Dictionary<string, MemoryTypeEnum>();
-            foreach (MemoryTypeEnum type in Enum.GetValues(typeof(MemoryTypeEnum)))
-                keyValueMemoryEnums.Add(type.ToString(), type);
+            //Dictionary<string, MemoryTypeEnum> keyValueMemoryEnums = new Dictionary<string, MemoryTypeEnum>();
+            //foreach (MemoryTypeEnum type in Enum.GetValues(typeof(MemoryTypeEnum)))
+            //    keyValueMemoryEnums.Add(type.ToString(), type);
 
-            BindingSource bindingSource = new BindingSource();
-            bindingSource.DataSource = keyValueMemoryEnums;
-            cbxRegisterType.DataSource = bindingSource;
-            cbxRegisterType.DisplayMember = "Key";
-            cbxRegisterType.ValueMember = "Value";
+            //BindingSource bindingSource = new BindingSource();
+            //bindingSource.DataSource = keyValueMemoryEnums;
+            //cbxRegisterType.DataSource = bindingSource;
+            //cbxRegisterType.DisplayMember = "Key";
+            //cbxRegisterType.ValueMember = "Value";
 
             //绑定 datagridView 数据源
             dgvTags.DataSource = bdsTags;
         }
         
-
         private void InitControl()
         {
 
@@ -191,12 +196,16 @@ namespace KpAllenBrandly.View
         /// </summary>
         public void RefreshDataGridView(bool needResetBindTags = true)
         {
-            var index = dgvTags.FirstDisplayedScrollingRowIndex;
-            if (needResetBindTags)
-                bdsTags.ResetBindings(false);
-            dgvTags.Invalidate();
-            if(index >= 0)
-                dgvTags.FirstDisplayedScrollingRowIndex = index;
+            try
+            {
+                var index = dgvTags.FirstDisplayedScrollingRowIndex;
+                if (needResetBindTags)
+                    bdsTags.ResetBindings(false);
+                dgvTags.Invalidate();
+                if (index >= 0)
+                    dgvTags.FirstDisplayedScrollingRowIndex = index;
+            }
+            catch { }
         }
 
         #region 控件事件
@@ -273,20 +282,20 @@ namespace KpAllenBrandly.View
             });
         }
 
-        private void cbxRegisterType_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (TagGroup == null)
-                return;
+        //private void cbxRegisterType_SelectedIndexChanged(object sender, EventArgs e)
+        //{
+        //    if (TagGroup == null)
+        //        return;
             
-            var registerType = cbxRegisterType.SelectedValue as MemoryTypeEnum?;
-            if (registerType == null)
-                return;
+        //    var registerType = cbxRegisterType.SelectedValue as MemoryTypeEnum?;
+        //    if (registerType == null)
+        //        return;
 
-            RefreshDataGridView();
-            if (IsShowTagGroup)
-                return;
-            OnTagGroupChanged(sender, ModifyType.MemoryType);
-        }
+        //    RefreshDataGridView();
+        //    if (IsShowTagGroup)
+        //        return;
+        //    OnTagGroupChanged(sender, ModifyType.MemoryType);
+        //}
 
         private void btnAddRange_Click(object sender, EventArgs e)
         {
@@ -425,13 +434,45 @@ namespace KpAllenBrandly.View
                 //刷新部分控件显示
                 
                 //对listTags排序，按地址从小到大
-                var listTagsDouble = listTags.Where(t => double.TryParse(t.Address, out double val)).ToList();
+                //var listTagsDouble = listTags.Where(t => double.TryParse(t.Address, out double val)).ToList();
                 //数据添加到对象
 
-                if (!TagGroup.CheckAndAddTags(listTagsDouble, out string errorMsg,true))
+                if (!TagGroup.CheckAndAddTags(listTags, out string errorMsg,true))
                 {
                     ScadaUiUtils.ShowError(errorMsg);
                     return;
+                }
+
+                List<Tag> RemoveParentTags = new List<Tag>();
+                //绑定父Tag
+                foreach(var parentTag in TagGroup.ParentTags)
+                {
+                    bool existChildTag = false;
+                    for(int i = 0;i < parentTag.Length;i++)
+                    {
+                        var name = parentTag.Name + $"[{i}]";
+                        var childTag = TagGroup.Tags.FirstOrDefault(t=>t.Name.Equals(name));    
+                        if(childTag != null)
+                        {
+                            existChildTag = true;
+                            childTag.ParentTag= parentTag;
+                            childTag.IsArray= true;
+                            childTag.Index= i;
+                        }
+                    }
+
+                    if (!existChildTag)
+                    {
+                        //不存在移除该父节点
+                        RemoveParentTags.Add(parentTag);
+                    }
+                }
+
+                if(RemoveParentTags.Count > 0)
+                {
+                    TagGroup.ParentTags.RemoveAll(t => RemoveParentTags.Any(r => r.TagID == t.TagID));
+                    //刷新父Tag索引
+                    TagGroup.RefreshParentTagId();
                 }
                 //界面显示刷新
                 RefreshDataGridView();
@@ -481,8 +522,43 @@ namespace KpAllenBrandly.View
 
 
 
+
         #endregion
 
-        
+        #region 由PLC导入
+        private void btnPLCImport_Click(object sender, EventArgs e)
+        {
+            var viewModel = new FrmPLCImportViewModel
+            {
+                IpAddress = ConnectionOptions.IPAddress,
+                Port = ConnectionOptions.Port,
+                ProtocolType = ConnectionOptions.ProtocolType,
+                Tags = new List<Tag>(),
+                ParentTags = new List<Tag>(),
+            };
+            FrmPLCImport frm = new FrmPLCImport(viewModel);
+            if(frm.ShowDialog()== DialogResult.OK)
+            {
+                //导入现有集合中
+                
+                if (!TagGroup.CheckAndAddTags(viewModel.Tags, out string errorMsg, false))
+                {
+                    ScadaUiUtils.ShowError(errorMsg);
+                    return;
+                }
+                foreach (var tag in viewModel.ParentTags)
+                {
+                    if (!TagGroup.ParentTags.Any(t => t.Name.Equals(tag.Name)))
+                        TagGroup.ParentTags.Add(tag);
+                }
+
+                tagGroup.RefreshParentTagId();
+                //界面显示刷新
+                RefreshDataGridView();
+            }
+        }
+        #endregion
+
+
     }
 }

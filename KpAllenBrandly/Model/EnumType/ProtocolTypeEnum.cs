@@ -11,7 +11,9 @@ namespace KpAllenBrandly.Model.EnumType
     {
         [Description("EtherNet/IP")]
         EtherNetIP,
-        [Description("CIP")]
+        [Description("ConnectedCIP")]
+        ConnectedCIP,
+        [Description("MicroCIP")]
         MicroCip,
         //[Description("SLC")]
         //SLCNet,

@@ -1,4 +1,5 @@
 ﻿using HslCommunication.BasicFramework;
+using KpCommon.Hsl.Profinet.AllenBradley.InterFace;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -184,8 +185,8 @@ namespace HslCommunication.Profinet.AllenBradley
 	/// 定义好后，我们再来读取就很简单了。
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\AllenBradleyConnectedCipNetSample.cs" region="Usage9" title="读写示例" />
 	/// </example>
-	public class AllenBradleyConnectedCipNet : Omron.OmronConnectedCipNet
-	{
+	public class AllenBradleyConnectedCipNet : Omron.OmronConnectedCipNet, IAbReadWriteCip
+    {
 		#region Contructor
 
 		/// <summary>
@@ -283,6 +284,19 @@ namespace HslCommunication.Profinet.AllenBradley
 		/// <inheritdoc/>
 		public override string ToString( ) => $"AllenBradleyConnectedCipNet[{IpAddress}:{Port}]";
 
-		#endregion
-	}
+
+        #endregion
+
+        #region WS20230113添加 IAbReadWriteCip接口,这里添加实现方法
+        public OperateResult<byte[]> Read(string[] address, int[] length)
+        {
+            return Read( address, length.Select(l=>(ushort)l).ToArray() );
+        }
+
+        public OperateResult<byte[]> ReadSegment(string address, int startIndex, int length)
+        {
+            return Read(address, (ushort)length); 
+        }
+        #endregion
+    }
 }
