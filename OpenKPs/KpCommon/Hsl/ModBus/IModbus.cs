@@ -32,6 +32,15 @@ namespace HslCommunication.ModBus
 
 		/// <inheritdoc cref="NetworkDoubleBase.ByteTransform"/>
 		IByteTransform ByteTransform { get; set; }
+		/// <summary>
+		/// 当前是否处于连接状态
+		/// </summary>
+		bool IsConnected { get; }
+
+		/// <summary>
+		/// 断开连接
+		/// </summary>
+		void DisConnect();
 
 		/// <summary>
 		/// 将当前的地址信息转换成Modbus格式的地址，如果转换失败，返回失败的消息。默认不进行任何的转换。<br />

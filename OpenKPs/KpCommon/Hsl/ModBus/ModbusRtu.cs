@@ -103,6 +103,19 @@ namespace HslCommunication.ModBus
 			return OperateResult.CreateSuccessResult( address );
 		}
 
+		public bool IsConnected
+		{
+			get => IsOpen();
+		}
+
+		#endregion
+
+		#region 断开设备连接
+		public void DisConnect()
+		{
+			Close();
+			Dispose();
+		}
 		#endregion
 
 		#region Core Interative

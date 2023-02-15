@@ -89,6 +89,19 @@ namespace HslCommunication.ModBus
 			set { ByteTransform.IsStringReverseByteWord = value; }
 		}
 
+		public bool IsConnected
+		{
+			get
+			{
+				try
+				{
+                    var ping = IpAddressPing();
+					return ping == System.Net.NetworkInformation.IPStatus.Success;
+                }
+				catch { return false; }
+			}
+		}
+
 		/// <inheritdoc cref="ModbusTcpNet.MessageId"/>
 		public SoftIncrementCount MessageId => softIncrementCount;
 
@@ -98,12 +111,19 @@ namespace HslCommunication.ModBus
 			return OperateResult.CreateSuccessResult( address );
 		}
 
-		#endregion
+        #endregion
 
-		#region Core Override
+        #region 断开连接
+        public void DisConnect()
+        {
+            
+        }
+        #endregion
 
-		/// <inheritdoc/>
-		public override byte[] PackCommandWithHeader( byte[] command )
+        #region Core Override
+
+        /// <inheritdoc/>
+        public override byte[] PackCommandWithHeader( byte[] command )
 		{
 			return ModbusInfo.PackCommandToTcp( command, (ushort)softIncrementCount.GetCurrentValue( ) );
 		}

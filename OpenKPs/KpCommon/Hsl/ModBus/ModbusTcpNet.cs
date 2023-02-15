@@ -435,6 +435,22 @@ namespace HslCommunication.ModBus
 		/// <inheritdoc cref="ModbusTcpMessage.IsCheckMessageId"/>
 		public bool IsCheckMessageId { get; set; } = true;
 
+		public bool IsConnected
+		{
+			get
+			{
+				try
+				{
+                    var ping = IpAddressPing();
+                    return ping == System.Net.NetworkInformation.IPStatus.Success;
+                }
+				catch
+				{
+					return false;
+				}
+			}
+		}
+
 		/// <summary>
 		/// 获取modbus协议自增的消息号，你可以自定义modbus的消息号的规则，详细参见<see cref="ModbusTcpNet"/>说明，也可以查找<see cref="SoftIncrementCount"/>说明。<br />
 		/// Get the message number incremented by the modbus protocol. You can customize the rules of the message number of the modbus. For details, please refer to the description of <see cref = "ModbusTcpNet" />, or you can find the description of <see cref = "SoftIncrementCount" />
@@ -447,12 +463,21 @@ namespace HslCommunication.ModBus
 			return OperateResult.CreateSuccessResult( address );
 		}
 
-		#endregion
 
-		#region Core Override
+        #endregion
 
-		/// <inheritdoc/>
-		public override byte[] PackCommandWithHeader( byte[] command )
+        #region 断开连接
+        public void DisConnect()
+        {
+            ConnectClose();
+            Dispose();
+        }
+        #endregion
+
+        #region Core Override
+
+        /// <inheritdoc/>
+        public override byte[] PackCommandWithHeader( byte[] command )
 		{
 			return ModbusInfo.PackCommandToTcp( command, (ushort)softIncrementCount.GetCurrentValue( ) );
 		}

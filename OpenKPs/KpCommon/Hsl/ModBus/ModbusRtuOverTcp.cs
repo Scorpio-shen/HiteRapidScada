@@ -83,12 +83,33 @@ namespace HslCommunication.ModBus
 		/// <inheritdoc cref="ModbusRtu.Crc16CheckEnable"/>
 		public bool Crc16CheckEnable { get; set; } = true;
 
-		#endregion
+		public bool IsConnected
+		{
+			get
+			{
+				try
+				{
+					var ping = IpAddressPing();
+					return ping == System.Net.NetworkInformation.IPStatus.Success;
+				}
+				catch { return false; }
+			}
+		}
 
-		#region Core Interative
+        #endregion
 
-		/// <inheritdoc/>
-		public override byte[] PackCommandWithHeader( byte[] command ) => ModbusInfo.PackCommandToRtu( command );
+        #region 断开连接
+        public void DisConnect()
+        {
+            ConnectClose();
+            Dispose();
+        }
+        #endregion
+
+        #region Core Interative
+
+        /// <inheritdoc/>
+        public override byte[] PackCommandWithHeader( byte[] command ) => ModbusInfo.PackCommandToRtu( command );
 
 		/// <inheritdoc/>
 		public override OperateResult<byte[]> UnpackResponseContent( byte[] send, byte[] response ) => ModbusHelper.ExtraRtuResponseContent( send, response, Crc16CheckEnable );
