@@ -3,19 +3,17 @@ using Opc.Ua;
 using Opc.Ua.Server;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace KpHiteOpcUaServer.NodeSetting
+namespace KpHiteOpcUaServer.Server
 {
-
-    public partial class KpOpcNodeSettingServer : StandardServer
+    public partial class SharpNodeSettingsServer : StandardServer
     {
-        #region 委托用于给opc节点赋值
-        public Func<int,object,bool> SetOpcNodeValue { get;protected set; }
-        #endregion
+        private DeviceTemplate _deviceTemplate;
+        public SharpNodeSettingsServer(DeviceTemplate deviceTemplate) 
+        {
+            _deviceTemplate = deviceTemplate;
+        }
         #region Overridden Methods
         /// <summary>
         /// Creates the node managers for the server.
@@ -27,13 +25,12 @@ namespace KpHiteOpcUaServer.NodeSetting
         /// </remarks>
         protected override MasterNodeManager CreateMasterNodeManager(IServerInternal server, ApplicationConfiguration configuration)
         {
-            Utils.Trace("Creating the Node Managers.");
+            NodeSetting.Utils.Trace("Creating the Node Managers.");
 
             List<INodeManager> nodeManagers = new List<INodeManager>();
 
             // create the custom node managers.
-            var emptyNodeManager = new EmptyNodeManager(server, configuration, new DeviceTemplate());
-            SetOpcNodeValue = emptyNodeManager.SetOpcNodeValue;
+            var emptyNodeManager = new EmptyNodeManager(server, configuration, _deviceTemplate);
             nodeManagers.Add(emptyNodeManager);
 
             // create master node manager.
@@ -53,9 +50,9 @@ namespace KpHiteOpcUaServer.NodeSetting
             properties.ManufacturerName = "Hite Shen";
             properties.ProductName = "HiteScadaSettingsServer";
             properties.ProductUri = "http://opcfoundation.org/Quickstart/ReferenceServer/v1.03";
-            properties.SoftwareVersion = Utils.GetAssemblySoftwareVersion();
-            properties.BuildNumber =Utils.GetAssemblyBuildNumber();
-            properties.BuildDate = Utils.GetAssemblyTimestamp();
+            properties.SoftwareVersion = "1.04.354-preview-20180809";
+            properties.BuildNumber = "1.4.354.0";
+            properties.BuildDate = new DateTime(636875625820000000);
 
             // TBD - All applications have software certificates that need to added to the properties.
 
@@ -119,7 +116,7 @@ namespace KpHiteOpcUaServer.NodeSetting
             {
                 VerifyUserTokenCertificate(x509Token.Certificate);
                 args.Identity = new UserIdentity(x509Token);
-                Utils.Trace("X509 Token Accepted: {0}", args.Identity.DisplayName);
+                NodeSetting.Utils.Trace("X509 Token Accepted: {0}", args.Identity.DisplayName);
                 return;
             }
         }
@@ -183,10 +180,10 @@ namespace KpHiteOpcUaServer.NodeSetting
                 CertificateValidator.Validate(certificate);
 
                 // determine if self-signed.
-                bool isSelfSigned = Utils.CompareDistinguishedName(certificate.Subject, certificate.Issuer);
+                bool isSelfSigned = NodeSetting.Utils.CompareDistinguishedName(certificate.Subject, certificate.Issuer);
 
                 // do not allow self signed application certs as user token
-                if (isSelfSigned && Utils.HasApplicationURN(certificate))
+                if (isSelfSigned && NodeSetting.Utils.HasApplicationURN(certificate))
                 {
                     throw new ServiceResultException(StatusCodes.BadCertificateUseNotAllowed);
                 }

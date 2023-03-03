@@ -122,7 +122,7 @@ namespace KpHiteOpcUaServer.NodeSetting
                 try
                 {
                     settingsLock.Enter();
-                    regularkeyValuePairs = Util.ParesRegular(element);
+                    regularkeyValuePairs = HiteOPCUaServerUtil.ParesRegular(element);
                     ParseNodeItem(element);
                     settingsLock.Leave();
                 }
@@ -196,7 +196,7 @@ namespace KpHiteOpcUaServer.NodeSetting
                 string description = device.Attribute("Description").Value;
 
 
-                DeviceCore deviceReal = Util.CreateFromXElement(device);
+                DeviceCore deviceReal = HiteOPCUaServerUtil.CreateFromXElement(device);
                 if (deviceReal != null)
                 {
                     // 添加所有Request的regular信息

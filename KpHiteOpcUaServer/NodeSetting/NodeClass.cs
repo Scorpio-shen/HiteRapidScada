@@ -33,13 +33,47 @@ namespace KpHiteOpcUaServer.NodeSetting
         /// 描述信息
         /// </summary>
         public string Description { get; set; }
-
-
+        /// <summary>
+        /// 对应的通道号
+        /// </summary>
+        public int ChannelNum { get;set; }
+        /// <summary>
+        /// 是否是输入通道
+        /// </summary>
+        public bool IsInputChannel { get; set; }
         /// <summary>
         /// 节点的类型，标记其派生类不同的类型对象
         /// </summary>
         public int NodeType { get; protected set; }
-
+        /// <summary>
+        /// 节点类型名称(Folder、DeviceNode、DataNode)
+        /// </summary>
+        public string NodeClassName { get; set; }
+        /// <summary>
+        /// 节点Id(唯一)
+        /// </summary>
+        public int NodeID { get; set; }
+        /// <summary>
+        /// Scada内部格式类型
+        /// </summary>
+        public int? FormatID { get; set; }  
+        /// <summary>
+        /// 
+        /// </summary>
+        public int CmdTypeID { get; set; }  
+        /// <summary>
+        /// 父节点Id
+        /// </summary>
+        public int? ParentNodeID { get;set; }
+        /// <summary>
+        /// 数据类型
+        /// </summary>
+        public int NodeDataTypeCode { get; set; }
+        /// <summary>
+        /// 数据类型为数组时的长度
+        /// </summary>
+        public int NodeDataTypeLength { get;set; }
+        
 
         #endregion
 
@@ -100,6 +134,17 @@ namespace KpHiteOpcUaServer.NodeSetting
 
 
         #endregion
+
+    }
+
+    public class NodeClassTypeName
+    {
+        public static string FolderNode = "FolderNode";
+
+        public static string DeviceNode = "DeviceNode";
+
+        public static string TagDataNode = "TagDataNode";
+
 
     }
 }

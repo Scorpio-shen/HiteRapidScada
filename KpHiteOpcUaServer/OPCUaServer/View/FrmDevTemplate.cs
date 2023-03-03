@@ -1,24 +1,26 @@
-﻿using Newtonsoft.Json;
+﻿using KpCommon.Model;
+using KpCommon.Model.EnumType;
+using KpHiteOpcUaServer.OPCUaServer.Model;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Scada;
 using Scada.Comm;
 using Scada.UI;
 using System;
 using System.IO;
-using System.Linq;
 using System.Windows.Forms;
 
 namespace KpHiteOpcUaServer.OPCUaServer.View
 {
     public partial class FrmDevTemplate : Form
     {
-        const string NewFileName = "KpHiteModbus_NewTemplate.xml";
+        const string NewFileName = "KpHiteOpcUaServer_NewTemplate.xml";
         string _fileName;                                   //载入已定义模板时文件名称或者新建的模板文件名称
         AppDirs _appDirs;
         DeviceTemplate deviceTemplate;                      //模板文件
-        ModbusTagGroup tagGroup;                            //选中测点组的数据
         TreeNode tagGroupRootNode;                          //Tag节点
         TreeNode currentNode;                               //当前选中节点
-
+        
 
         private bool modified;
         public bool Modified
@@ -32,14 +34,22 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
         }
 
         public string TemplateFileName { get => _fileName; }
-        public FrmDevTemplate(AppDirs appDirs, string fileName)
+        public FrmDevTemplate(AppDirs appDirs,string fileName)
         {
             InitializeComponent();
 
             _appDirs = appDirs;
             _fileName = fileName;
             modified = false;
-            tagGroupRootNode = treeView.Nodes["tagGroupNode"];
+
+            txtServerIP.TextChanged += TextBox_TextChanged;
+            txtInputChannelPath.TextChanged += TextBox_TextChanged;
+            txtOutputChannelPath.TextChanged += TextBox_TextChanged;
+        }
+
+        private void TextBox_TextChanged(object sender, EventArgs e)
+        {
+            Modified = true;
         }
 
         private void FrmDevTemplate_Load(object sender, EventArgs e)
@@ -65,8 +75,7 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
                 //新建
                 saveFileDialog.FileName = NewFileName;
                 deviceTemplate = new DeviceTemplate();
-                ctrlConfig.ConnectionOptions = deviceTemplate.CreateOptions();
-                FillTree();
+                //FillTree();
             }
 
 
@@ -86,7 +95,7 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
                 deviceTemplate = new DeviceTemplate();
                 _fileName = String.Empty;
 
-                FillTree();
+                //FillTree();
             }
         }
 
@@ -96,7 +105,7 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
             {
                 openFileDialog.FileName = String.Empty;
 
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                if(openFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     saveFileDialog.FileName = openFileDialog.FileName;
                     LoadTemplate(openFileDialog.FileName);
@@ -114,135 +123,6 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
             SaveChange(true);
         }
 
-        private void btnAddTagGroup_Click(object sender, EventArgs e)
-        {
-            var tagGroup = deviceTemplate.CreateTagGroup();
-            int index = currentNode != null && currentNode.Tag is ModbusTagGroup ? currentNode.Index + 1 : deviceTemplate.TagGroups.Count;
-            deviceTemplate.TagGroups.Insert(index, tagGroup);
-            RefreshTagGroupIndex();
-
-            TreeNode treeNode = NewTagGroupNode(tagGroup);
-            tagGroupRootNode.Nodes.Insert(index, treeNode);
-            treeView.SelectedNode = treeNode;
-            ctrlRead.SetFocus();
-
-            Modified = true;
-        }
-
-
-        private void btnMoveUp_Click(object sender, EventArgs e)
-        {
-            TreeNode prevNode = currentNode.PrevNode;
-            int prevIndex = prevNode.Index;
-
-            if (tagGroup != null)
-            {
-                var prevTagGroup = prevNode.Tag as ModbusTagGroup;
-                deviceTemplate.TagGroups.RemoveAt(prevIndex);
-                deviceTemplate.TagGroups.Insert(prevIndex + 1, prevTagGroup);
-
-                tagGroupRootNode.Nodes.RemoveAt(prevIndex);
-                tagGroupRootNode.Nodes.Insert(prevIndex + 1, prevNode);
-
-                RefreshTagGroupIndex();
-            }
-
-            btnMoveUp.Enabled = currentNode.PrevNode != null;
-            btnMoveDown.Enabled = currentNode.NextNode != null;
-            Modified = true;
-        }
-
-        private void btnMoveDown_Click(object sender, EventArgs e)
-        {
-            TreeNode nextNode = currentNode.NextNode;
-            int prevIndex = nextNode.Index;
-
-            //在测点区域
-            if (nextNode != null)
-            {
-                treeView.SelectedNode = nextNode;
-            }
-
-            btnMoveUp.Enabled = currentNode.PrevNode != null;
-            btnMoveDown.Enabled = currentNode.NextNode != null;
-        }
-
-        private void btnDelete_Click(object sender, EventArgs e)
-        {
-            if (tagGroup != null)
-            {
-                deviceTemplate.TagGroups.Remove(tagGroup);
-                RefreshTagGroupIndex();
-                tagGroupRootNode.Nodes.Remove(currentNode);
-            }
-            Modified = true;
-        }
-
-        private void treeView_AfterSelect(object sender, TreeViewEventArgs e)
-        {
-            currentNode = e.Node;
-            var tag = currentNode.Tag;
-            tagGroup = tag as ModbusTagGroup;
-
-            if (currentNode == tagGroupRootNode)
-                btnDelete.Enabled = false;
-            else
-                btnMoveUp.Enabled = true;
-
-            if (tagGroup != null)
-                ShowTagGroupProps(tagGroup);
-            else
-                HideGroupProps();
-
-
-            bool nodeIsSelect = tagGroup != null;
-            btnMoveUp.Enabled = nodeIsSelect && currentNode.PrevNode != null;
-            btnMoveDown.Enabled = nodeIsSelect && currentNode.NextNode != null;
-            btnDelete.Enabled = nodeIsSelect;
-            btnImport.Enabled = nodeIsSelect;
-            btnExport.Enabled = nodeIsSelect;
-            ctrlConfig.Enabled = !nodeIsSelect;
-        }
-
-        /// <summary>
-        /// 导入
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void btnImport_Click(object sender, EventArgs e)
-        {
-            var openFile = new OpenFileDialog();
-            openFile.SetFilter(TempleteKeyString.OpenExcelFilterStr);
-            var reuslt = openFile.ShowDialog();
-            if (reuslt != DialogResult.OK)
-                return;
-            Modified = true;
-            var filePath = openFile.FileName;
-            if (tagGroup != null)
-            {
-                ctrlRead.ImportExcel(filePath);
-            }
-
-        }
-        /// <summary>
-        /// 导出
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void btnExport_Click(object sender, EventArgs e)
-        {
-            SaveFileDialog saveFile = new SaveFileDialog();
-            saveFile.SetFilter(TempleteKeyString.OpenExcelFilterStr);
-            var reuslt = saveFile.ShowDialog();
-            if (reuslt != DialogResult.OK)
-                return;
-            var filePath = saveFile.FileName;
-            var extensionName = Path.GetExtension(filePath);
-            if (tagGroup != null)
-            {
-                ctrlRead.ExportExcel(filePath, extensionName);
-            }
-        }
         #endregion
 
         #region 存储配置
@@ -279,16 +159,34 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
             if (string.IsNullOrEmpty(newFileName))
                 return false;
 
+            if (string.IsNullOrEmpty(txtInputChannelPath.Text))
+            {
+                ScadaUiUtils.ShowError("输入通道路径不能为空!");
+                return false;
+            }
+
+            if(string.IsNullOrEmpty(txtOutputChannelPath.Text))
+            {
+                ScadaUiUtils.ShowError("输出通道路径不能为空!");
+                return false;
+            }
+
             string errMsg = string.Empty;
             if (saveAs)
             {
-                JObject jobect = JObject.Parse(JsonConvert.SerializeObject(deviceTemplate));
-                File.WriteAllText(newFileName, jobect.ToString());
+                JObject jobect = JObject.Parse( JsonConvert.SerializeObject(deviceTemplate));
+                File.WriteAllText(newFileName,jobect.ToString());
                 _fileName = newFileName;
                 Modified = false;
                 return true;
             }
-            if (deviceTemplate.Save(newFileName, out errMsg))
+            var inputPath = txtInputChannelPath.Text;
+            var outputPath = txtOutputChannelPath.Text;
+
+            deviceTemplate.OPCServerIP = txtServerIP.Text;
+            deviceTemplate.InputChannelPath = inputPath;
+            deviceTemplate.OutputChannelPath = outputPath;
+            if (deviceTemplate.Save(newFileName, inputPath,outputPath,out errMsg))
             {
                 _fileName = newFileName;
                 Modified = false;
@@ -312,64 +210,42 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
             if (!deviceTemplate.Load(fileName, out errMsg))
                 ScadaUiUtils.ShowError(errMsg);
 
-            //将载入的连接参数赋值
-            ctrlConfig.ConnectionOptions = deviceTemplate.ConnectionOptions;
-            FillTree();
-        }
+            //显示参数
+            txtServerIP.Text = deviceTemplate.OPCServerIP;
+            txtInputChannelPath.Text = deviceTemplate.InputChannelPath;
+            txtOutputChannelPath.Text = deviceTemplate.OutputChannelPath;
 
-        private void ShowTagGroupProps(ModbusTagGroup tagGroup)
-        {
-            ctrlRead.Visible = true;
-            ctrlRead.ModbusTagGroup = tagGroup;
-        }
-
-
-        private void HideGroupProps()
-        {
-            ctrlRead.Visible = false;
         }
         #endregion
 
-        #region 左侧TreeView显示
-        private void FillTree()
+        private void btnInputChoose_Click(object sender, EventArgs e)
         {
-            tagGroup = null;
-
-            treeView.BeginUpdate();
-            tagGroupRootNode.Nodes.Clear();
-
-            foreach (ModbusTagGroup ModbusTagGroup in deviceTemplate.TagGroups)
-                tagGroupRootNode.Nodes.Add(NewTagGroupNode(ModbusTagGroup));
-
-            tagGroupRootNode.Expand();
-            treeView.EndUpdate();
+            var openFileDialog = new OpenFileDialog();
+            if (openFileDialog.ShowDialog() != DialogResult.OK)
+                return;
+            var path = openFileDialog.FileName;
+            if (!File.Exists(path))
+            {
+                ScadaUiUtils.ShowError($"选中文件路径不存在!");
+                return;
+            }
+            
+            txtInputChannelPath.Text = path;
         }
 
-        private TreeNode NewTagGroupNode(ModbusTagGroup tagGroup)
+        private void btnOutputChoose_Click(object sender, EventArgs e)
         {
-            //tagGroup.Name = "点组";
-            TreeNode node = new TreeNode(GetTagGroupDesc(tagGroup));
-            node.ImageKey = node.SelectedImageKey = tagGroup.Active ? "group.png" : "group_inactive.png";
-            node.Tag = tagGroup;
+            var openFileDialog = new OpenFileDialog();  
+            if(openFileDialog.ShowDialog() != DialogResult.OK)
+                return;
+            var path = openFileDialog.FileName;
+            if (!File.Exists(path))
+            {
+                ScadaUiUtils.ShowError($"选中文件路径不存在!");
+                return;
+            }
 
-            return node;
+            txtOutputChannelPath.Text = path;
         }
-
-        private string GetTagGroupDesc(ModbusTagGroup tagGroup)
-        {
-            var groupName = string.IsNullOrEmpty(tagGroup.Name) ? TempleteKeyString.DefaultTagGroupName : tagGroup.Name;
-            var registerType = tagGroup.RegisterType;
-            return $"{groupName} ({registerType})";
-        }
-
-        #endregion
-
-        #region TagGroupIndex刷新
-        private void RefreshTagGroupIndex()
-        {
-            deviceTemplate.RefreshTagGroupIndex();
-            //ctrlRead.RefreshDataGridView();
-        }
-        #endregion
     }
 }

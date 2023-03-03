@@ -8,7 +8,7 @@ namespace KpHiteOpcUaServer.NodeSetting
     /// <summary>
     /// 节点配置类的工具辅助类
     /// </summary>
-    public class Util
+    public class HiteOPCUaServerUtil
     {
 
 

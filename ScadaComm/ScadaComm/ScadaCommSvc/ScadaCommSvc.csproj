@@ -103,6 +103,10 @@
     <Content Include="Script\svc_config.xml" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\KpHiteOpcUaServer\KpHiteOpcUaServer.csproj">
+      <Project>{9dd6b261-91a8-454a-917b-5e79931f9d50}</Project>
+      <Name>KpHiteOpcUaServer</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\Log\Log\Log.csproj">
       <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
       <Name>Log</Name>

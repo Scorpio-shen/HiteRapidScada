@@ -1,25 +1,38 @@
 ﻿using KpHiteOpcUaServer.NodeSetting;
 using KpHiteOpcUaServer.NodeSetting.Server;
 using KpHiteOpcUaServer.OPCUaServer;
+using KpHiteOpcUaServer.OPCUaServer.Model;
 using Opc.Ua;
 using Opc.Ua.Server;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace KpHiteOpcUaServer
 {
     public class EmptyNodeManager : CustomNodeManager2
     {
+        #region 自定义参数
+        private DeviceTemplate _deviceTemplate;
+        private List<NodeSetting.NodeClass> allNodes = new List<NodeSetting.NodeClass>();
+        private Action<OutputChannelModel> _opcClientSetValue;
+        #endregion
+
         #region Constructors
         /// <summary>
         /// Initializes the node manager.
         /// </summary>
-        public EmptyNodeManager(IServerInternal server, ApplicationConfiguration configuration)
+        public EmptyNodeManager(IServerInternal server, ApplicationConfiguration configuration, DeviceTemplate deviceTemplate )
         :
             base(server, configuration, KpHiteOpcUaServer.OPCUaServer.Namespaces.ReferenceApplications)
         {
+            _deviceTemplate = deviceTemplate;
+            _deviceTemplate.ModelValueChanged += _deviceTemplate_ModelValueChanged;
+            _opcClientSetValue = _deviceTemplate.OpcClientSetValue;
             SystemContext.NodeIdFactory = this;
 
             // get the configuration for the node manager.
@@ -155,272 +168,308 @@ namespace KpHiteOpcUaServer
                 }
 
 
-                dict_BaseDataVariableState = new Dictionary<string, BaseDataVariableState>();
+                opcChannelNodeDic = new Dictionary<int, BaseDataVariableState>();
                 try
                 {
-                    // =========================================================================================
-                    // 
-                    // 此处需要加载本地文件，并且创建对应的节点信息，
-                    // 
-                    // =========================================================================================
-                    sharpNodeServer = new SharpNodeServer();
-                    sharpNodeServer.WriteCustomerData = (Device.DeviceCore deviceCore, string name) =>
+                    //创建opc节点
+                    int nodeId = 1;
+                    var rootNode = new NodeSetting.NodeClass
                     {
-                        string opcNode = "ns=2;s=" + string.Join("/", deviceCore.DeviceNodes) + "/" + name;
-                        lock (Lock)
-                        {
-                            if (dict_BaseDataVariableState.ContainsKey(opcNode))
-                            {
-                                dict_BaseDataVariableState[opcNode].Value = deviceCore.GetDynamicValueByName(name);
-                                dict_BaseDataVariableState[opcNode].ClearChangeMasks(SystemContext, false);
-                            }
-                        }
+                        NodeID = nodeId,
+                        Name = "HiteScada",
+                        Description = "Scada通道数据",
+                        NodeClassName = NodeClassTypeName.FolderNode,
+                        ParentNodeID = null
                     };
-
-                    XElement element = XElement.Load("settings.xml");
-                    dicRegularItemNode = Util.ParesRegular(element);
-
-                    AddNodeClass(null, element, references);
-
-
-                    // 加载配置文件之前设置写入方法
-
-                    sharpNodeServer.LoadByXmlFile("settings.xml");
-                    // 最后再启动服务器信息
-                    sharpNodeServer.ServerStart(12345);
+                    allNodes.Add(rootNode);
+                    nodeId++;
+                    var inputNode = new NodeSetting.NodeClass
+                    {
+                        NodeID = nodeId,
+                        Name = "InputChannels",
+                        Description = "输入通道数据",
+                        NodeClassName = NodeClassTypeName.DeviceNode,
+                        ParentNodeID = rootNode.NodeID
+                    };
+                    //创建输入输出文件夹
+                    allNodes.Add(inputNode);
+                    nodeId++;
+                    var outputNode = new NodeSetting.NodeClass
+                    {
+                        NodeID = nodeId,
+                        Name = "OutputChannels",
+                        Description = "输出通道数据",
+                        NodeClassName = NodeClassTypeName.DeviceNode,
+                        ParentNodeID = rootNode.NodeID
+                    };
+                    allNodes.Add(outputNode);
+                    //输入通道
+                    allNodes.AddRange(_deviceTemplate.InCnls.Select(incnl =>
+                    {
+                        return new NodeSetting.NodeClass
+                        {
+                            NodeID = nodeId++,
+                            ParentNodeID = inputNode.NodeID,
+                            Name = incnl.Name,
+                            NodeDataTypeCode = RegularNodeTypeItem.Double.Code,
+                            NodeDataTypeLength = 1,
+                            NodeClassName = NodeClassTypeName.TagDataNode,
+                            ChannelNum = incnl.CnlNum,
+                            FormatID = incnl.FormatID ,
+                            IsInputChannel = true
+                        };
+                    }));
+                    //输出通道
+                    allNodes.AddRange(_deviceTemplate.CtrlCnls.Select(ctrlcnl => new NodeSetting.NodeClass
+                    {
+                        NodeID = nodeId++,
+                        Name = ctrlcnl.Name,
+                        ParentNodeID = outputNode.NodeID,
+                        NodeDataTypeCode = RegularNodeTypeItem.Double.Code,
+                        ChannelNum = ctrlcnl.CtrlCnlNum,
+                        NodeDataTypeLength = 1,
+                        NodeClassName = NodeClassTypeName.TagDataNode,
+                        CmdTypeID = ctrlcnl.CmdTypeID,
+                        IsInputChannel = false
+                    }));
+                    AddNodeClass(null, allNodes.Where(n=>n.ParentNodeID == null).ToList(), references);
                 }
                 catch (Exception e)
                 {
-                    Utils.Trace(e, "Error creating the address space.");
+                    NodeSetting.Utils.Trace(e, "Error creating the address space.");
                 }
             }
         }
 
-        private void AddNodeClass(NodeState parent, XElement nodeClass, IList<IReference> references)
+        private void AddNodeClass(NodeState parent,List<NodeSetting.NodeClass> nodeclasses, IList<IReference> references)
         {
-            foreach (var xmlNode in nodeClass.Elements())
+            foreach (var nodeClass in nodeclasses)
             {
-                if (xmlNode.Name == "NodeClass")
+                if (nodeClass.NodeClassName == NodeClassTypeName.FolderNode)
                 {
-                    NodeSetting.NodeClass nClass = new NodeSetting.NodeClass();
-                    nClass.LoadByXmlElement(xmlNode);
-
                     FolderState son;
                     if (parent == null)
                     {
-                        son = CreateFolder(null, nClass.Name);
-                        son.Description = nClass.Description;
+                        son = CreateFolder(null, nodeClass.Name);
+                        son.Description = nodeClass.Description;
                         son.AddReference(ReferenceTypes.Organizes, true, ObjectIds.ObjectsFolder);
                         references.Add(new NodeStateReference(ReferenceTypes.Organizes, false, son.NodeId));
                         son.EventNotifier = EventNotifiers.SubscribeToEvents;
                         AddRootNotifier(son);
 
-                        AddNodeClass(son, xmlNode, references);
+                        //获取所有子节点
+                        var childNodeClasses = allNodes.Where(n=>n.ParentNodeID == nodeClass.NodeID).ToList();
+                        if (childNodeClasses.Any())
+                        {
+                            AddNodeClass(son, childNodeClasses, references);
+                        }
+                        
                         AddPredefinedNode(SystemContext, son);
                     }
                     else
                     {
-                        son = CreateFolder(parent, nClass.Name, nClass.Description);
-                        AddNodeClass(son, xmlNode, references);
+                        son = CreateFolder(parent, nodeClass.Name, nodeClass.Description);
+                        //获取所有子节点
+                        var childNodeClasses = allNodes.Where(n => n.ParentNodeID == nodeClass.NodeID).ToList();
+                        if (childNodeClasses.Any())
+                        {
+                            AddNodeClass(son, childNodeClasses, references);
+                        }
+                        //AddNodeClass(son, xmlNode, references);
                     }
                 }
-                else if (xmlNode.Name == "DeviceNode")
+                else if (nodeClass.NodeClassName == NodeClassTypeName.DeviceNode)
                 {
-                    AddDeviceCore(parent, xmlNode);
+                    AddDeviceCore(parent, nodeClass);
                 }
-                else if (xmlNode.Name == "Server")
-                {
-                    AddServer(parent, xmlNode, references);
-                }
+                //else if (xmlNode.Name == "Server")
+                //{
+                //    AddServer(parent, xmlNode, references);
+                //}
             }
         }
 
-        private void AddDeviceCore(NodeState parent, XElement device)
+        private void AddDeviceCore(NodeState parent,NodeSetting.NodeClass deviceNodeClass)
         {
-            if (device.Name == "DeviceNode")
+            if (deviceNodeClass.NodeClassName == NodeClassTypeName.DeviceNode)
             {
                 // 提取名称和描述信息
-                string name = device.Attribute("Name").Value;
-                string description = device.Attribute("Description").Value;
+                string name = deviceNodeClass.Name;
+                string description = deviceNodeClass.Description;
 
                 // 创建OPC节点
-                FolderState deviceFolder = CreateFolder(parent, device.Attribute("Name").Value, device.Attribute("Description").Value);
-                // 添加Request
-                foreach (var requestXml in device.Elements("DeviceRequest"))
-                {
-                    DeviceRequest deviceRequest = new DeviceRequest();
-                    deviceRequest.LoadByXmlElement(requestXml);
-
-                    AddDeviceRequest(deviceFolder, deviceRequest);
-                }
+                FolderState deviceFolder = CreateFolder(parent, name, description);
+                // 添加数据节点
+                var tagDataNodes = allNodes.Where(n => n.NodeClassName.Equals(NodeClassTypeName.TagDataNode) && n.ParentNodeID == deviceNodeClass.NodeID).ToList();
+                AddDeviceRequest(deviceFolder, tagDataNodes);
             }
         }
 
-        private void AddServer(NodeState parent, XElement xmlNode, IList<IReference> references)
-        {
-            int serverType = int.Parse(xmlNode.Attribute("ServerType").Value);
-            if (serverType == ServerNode.ModbusServer)
-            {
-                NodeModbusServer serverNode = new NodeModbusServer();
-                serverNode.LoadByXmlElement(xmlNode);
+        //private void AddServer(NodeState parent, XElement xmlNode, IList<IReference> references)
+        //{
+        //    int serverType = int.Parse(xmlNode.Attribute("ServerType").Value);
+        //    if (serverType == ServerNode.ModbusServer)
+        //    {
+        //        NodeModbusServer serverNode = new NodeModbusServer();
+        //        serverNode.LoadByXmlElement(xmlNode);
 
-                FolderState son = CreateFolder(parent, serverNode.Name, serverNode.Description);
-                AddNodeClass(son, xmlNode, references);
-            }
-            else if (serverType == ServerNode.AlienServer)
-            {
-                AlienServerNode alienNode = new AlienServerNode();
-                alienNode.LoadByXmlElement(xmlNode);
+        //        FolderState son = CreateFolder(parent, serverNode.Name, serverNode.Description);
+        //        AddNodeClass(son, xmlNode, references);
+        //    }
+        //    else if (serverType == ServerNode.AlienServer)
+        //    {
+        //        AlienServerNode alienNode = new AlienServerNode();
+        //        alienNode.LoadByXmlElement(xmlNode);
 
-                FolderState son = CreateFolder(parent, alienNode.Name, alienNode.Description);
-                AddNodeClass(son, xmlNode, references);
-            }
-        }
-        private void AddDeviceRequest(NodeState parent, DeviceRequest deviceRequest)
+        //        FolderState son = CreateFolder(parent, alienNode.Name, alienNode.Description);
+        //        AddNodeClass(son, xmlNode, references);
+        //    }
+        //}
+        private void AddDeviceRequest(NodeState parent, List<NodeSetting.NodeClass> nodeClasses)
         {
             // 提炼真正的数据节点
-            if (!dicRegularItemNode.ContainsKey(deviceRequest.PraseRegularCode)) return;
-            List<RegularItemNode> regularNodes = dicRegularItemNode[deviceRequest.PraseRegularCode];
+            if(nodeClasses.Count == 0)
+                return;
 
-            foreach (var regularNode in regularNodes)
+            foreach (var nodeClass in nodeClasses)
             {
-                if (regularNode.RegularCode == RegularNodeTypeItem.Bool.Code)
+                if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.Bool.Code)
                 {
-                    if (regularNode.TypeLength == 1)
+                    if (nodeClass.NodeDataTypeLength == 1)
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Boolean, ValueRanks.Scalar, default(bool));
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Boolean, ValueRanks.Scalar, default(bool));
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                     else
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Boolean, ValueRanks.OneDimension, new bool[regularNode.TypeLength]);
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Boolean, ValueRanks.OneDimension, new bool[nodeClass.NodeDataTypeLength]);
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                 }
-                else if (regularNode.RegularCode == RegularNodeTypeItem.Byte.Code)
+                else if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.Byte.Code)
                 {
-                    if (regularNode.TypeLength == 1)
+                    if (nodeClass.NodeDataTypeLength == 1)
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Byte, ValueRanks.Scalar, default(byte));
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Byte, ValueRanks.Scalar, default(byte));
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                     else
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Byte, ValueRanks.OneDimension, new byte[regularNode.TypeLength]);
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Byte, ValueRanks.OneDimension, new byte[nodeClass.NodeDataTypeLength]);
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                 }
-                else if (regularNode.RegularCode == RegularNodeTypeItem.Int16.Code)
+                else if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.Int16.Code)
                 {
-                    if (regularNode.TypeLength == 1)
+                    if (nodeClass.NodeDataTypeLength == 1)
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Int16, ValueRanks.Scalar, default(short));
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Int16, ValueRanks.Scalar, default(short));
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                     else
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Int16, ValueRanks.OneDimension, new short[regularNode.TypeLength]);
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Int16, ValueRanks.OneDimension, new short[nodeClass.NodeDataTypeLength]);
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                 }
-                else if (regularNode.RegularCode == RegularNodeTypeItem.UInt16.Code)
+                else if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.UInt16.Code)
                 {
-                    if (regularNode.TypeLength == 1)
+                    if (nodeClass.NodeDataTypeLength == 1)
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.UInt16, ValueRanks.Scalar, default(ushort));
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.UInt16, ValueRanks.Scalar, default(ushort));
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                     else
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.UInt16, ValueRanks.OneDimension, new ushort[regularNode.TypeLength]);
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.UInt16, ValueRanks.OneDimension, new ushort[nodeClass.NodeDataTypeLength]);
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                 }
-                else if (regularNode.RegularCode == RegularNodeTypeItem.Int32.Code)
+                else if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.Int32.Code)
                 {
-                    if (regularNode.TypeLength == 1)
+                    if (nodeClass.NodeDataTypeLength == 1)
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Int32, ValueRanks.Scalar, default(int));
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Int32, ValueRanks.Scalar, default(int));
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                     else
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Int32, ValueRanks.OneDimension, new int[regularNode.TypeLength]);
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Int32, ValueRanks.OneDimension, new int[nodeClass.NodeDataTypeLength]);
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                 }
-                else if (regularNode.RegularCode == RegularNodeTypeItem.UInt32.Code)
+                else if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.UInt32.Code)
                 {
-                    if (regularNode.TypeLength == 1)
+                    if (nodeClass.NodeDataTypeLength == 1)
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.UInt32, ValueRanks.Scalar, default(uint));
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.UInt32, ValueRanks.Scalar, default(uint));
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                     else
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.UInt32, ValueRanks.OneDimension, new uint[regularNode.TypeLength]);
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.UInt32, ValueRanks.OneDimension, new uint[nodeClass.NodeDataTypeLength]);
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                 }
-                else if (regularNode.RegularCode == RegularNodeTypeItem.Float.Code)
+                else if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.Float.Code)
                 {
-                    if (regularNode.TypeLength == 1)
+                    if (nodeClass.NodeDataTypeLength == 1)
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Float, ValueRanks.Scalar, default(float));
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Float, ValueRanks.Scalar, default(float));
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                     else
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Float, ValueRanks.OneDimension, new float[regularNode.TypeLength]);
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Float, ValueRanks.OneDimension, new float[nodeClass.NodeDataTypeLength]);
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                 }
-                else if (regularNode.RegularCode == RegularNodeTypeItem.Int64.Code)
+                else if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.Int64.Code)
                 {
-                    if (regularNode.TypeLength == 1)
+                    if (nodeClass.NodeDataTypeLength == 1)
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Int64, ValueRanks.Scalar, default(long));
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Int64, ValueRanks.Scalar, default(long));
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                     else
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Int64, ValueRanks.OneDimension, new long[regularNode.TypeLength]);
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Int64, ValueRanks.OneDimension, new long[nodeClass.NodeDataTypeLength]);
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                 }
-                else if (regularNode.RegularCode == RegularNodeTypeItem.UInt64.Code)
+                else if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.UInt64.Code)
                 {
-                    if (regularNode.TypeLength == 1)
+                    if (nodeClass.NodeDataTypeLength == 1)
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.UInt64, ValueRanks.Scalar, default(ulong));
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.UInt64, ValueRanks.Scalar, default(ulong));
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                     else
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.UInt64, ValueRanks.OneDimension, new ulong[regularNode.TypeLength]);
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.UInt64, ValueRanks.OneDimension, new ulong[nodeClass.NodeDataTypeLength]);
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                 }
-                else if (regularNode.RegularCode == RegularNodeTypeItem.Double.Code)
+                else if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.Double.Code)
                 {
-                    if (regularNode.TypeLength == 1)
+                    if (nodeClass.NodeDataTypeLength == 1)
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Double, ValueRanks.Scalar, default(double));
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Double, ValueRanks.Scalar, default(double));
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                     else
                     {
-                        var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.Double, ValueRanks.OneDimension, new double[regularNode.TypeLength]);
-                        dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                        var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.Double, ValueRanks.OneDimension, new double[nodeClass.NodeDataTypeLength]);
+                        opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                     }
                 }
-                else if (regularNode.RegularCode == RegularNodeTypeItem.StringAscii.Code ||
-                    regularNode.RegularCode == RegularNodeTypeItem.StringUnicode.Code ||
-                    regularNode.RegularCode == RegularNodeTypeItem.StringUtf8.Code)
+                else if (nodeClass.NodeDataTypeCode == RegularNodeTypeItem.StringAscii.Code ||
+                    nodeClass.NodeDataTypeCode == RegularNodeTypeItem.StringUnicode.Code ||
+                    nodeClass.NodeDataTypeCode == RegularNodeTypeItem.StringUtf8.Code)
                 {
 
-                    var dataVariableState = CreateBaseVariable(parent, regularNode.Name, regularNode.Description, DataTypeIds.String, ValueRanks.Scalar, "");
-                    dict_BaseDataVariableState.Add(dataVariableState.NodeId.ToString(), dataVariableState);
+                    var dataVariableState = CreateBaseVariable(parent, nodeClass.Name, nodeClass.Description, DataTypeIds.String, ValueRanks.Scalar, "");
+                    opcChannelNodeDic.Add(nodeClass.NodeID, dataVariableState);
                 }
             }
 
@@ -499,6 +548,7 @@ namespace KpHiteOpcUaServer
             variable.Value = defaultValue;
             variable.StatusCode = StatusCodes.Good;
             variable.Timestamp = DateTime.Now;
+            variable.OnWriteValue = OnWriteDataValue;
             if (valueRank == ValueRanks.OneDimension)
             {
                 variable.ArrayDimensions = new ReadOnlyList<uint>(new List<uint> { 0 });
@@ -1171,7 +1221,7 @@ namespace KpHiteOpcUaServer
             }
             catch (Exception e)
             {
-                Utils.Trace(e, "Unexpected error doing simulation.");
+                NodeSetting.Utils.Trace(e, "Unexpected error doing simulation.");
             }
         }
 
@@ -1246,7 +1296,7 @@ namespace KpHiteOpcUaServer
 
         private SharpNodeServer sharpNodeServer = null;
         private Dictionary<string, List<RegularItemNode>> dicRegularItemNode = null;
-        private Dictionary<string, BaseDataVariableState> dict_BaseDataVariableState;    // 节点管理器
+        private Dictionary<int, BaseDataVariableState> opcChannelNodeDic;    // 节点管理器
 
         #endregion
 
@@ -1260,6 +1310,96 @@ namespace KpHiteOpcUaServer
         private UInt16 m_simulationInterval = 1000;
         private bool m_simulationEnabled = true;
         private List<BaseDataVariableState> m_dynamicNodes;
+        #endregion
+
+        #region 自定义刷新OPCUa节点值方法
+        /// <summary>
+        /// 输入通道数据值发生变化
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <exception cref="NotImplementedException"></exception>
+        private void _deviceTemplate_ModelValueChanged(InputChannelModel model)
+        {
+            SetOpcNodeValue(model.InCnl.CnlNum, model.Value);
+        }
+        /// <summary>
+        /// 修改OPCUa节点数据值
+        /// </summary>
+        /// <param name="inputNum">输入通道号</param>
+        /// <param name="value">数据值</param>
+        /// <returns></returns>
+        public bool SetOpcNodeValue(int inputNum,object value)
+        {
+            bool result = false;
+            var node = allNodes?.FirstOrDefault(n=>n.ChannelNum == inputNum && n.IsInputChannel);
+            if(node == null)
+            {
+                return result;
+            }
+            if (!opcChannelNodeDic.ContainsKey(node.NodeID))
+                return false;
+            var baseDataNode = opcChannelNodeDic[node.NodeID];
+            baseDataNode.Value = value;
+            baseDataNode.Timestamp = DateTime.UtcNow;
+            baseDataNode.ClearChangeMasks(SystemContext, false);
+            result = true;
+            return result;
+        }
+        /// <summary>
+        /// OPC外部赋值
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="node"></param>
+        /// <param name="indexRange"></param>
+        /// <param name="dataEncoding"></param>
+        /// <param name="value"></param>
+        /// <param name="statusCode"></param>
+        /// <param name="timestamp"></param>
+        private ServiceResult OnWriteDataValue(ISystemContext context, NodeState node, NumericRange indexRange, QualifiedName dataEncoding,
+            ref object value, ref StatusCode statusCode, ref DateTime timestamp)
+        {
+            BaseDataVariableState variable = node as BaseDataVariableState;
+            try
+            {
+                //验证数据类型
+                TypeInfo typeInfo = TypeInfo.IsInstanceOfDataType(
+                    value,
+                    variable.DataType,
+                    variable.ValueRank,
+                    context.NamespaceUris,
+                    context.TypeTable);
+
+                if (typeInfo == null || typeInfo == TypeInfo.Unknown)
+                {
+                    return StatusCodes.BadTypeMismatch;
+                }
+                if (typeInfo.BuiltInType == BuiltInType.Double)
+                {
+                    double number = Convert.ToDouble(value);
+                    value = TypeInfo.Cast(number, typeInfo.BuiltInType);
+                    Debug.WriteLine(value.ToString());
+                    var channelNodeDic = opcChannelNodeDic.Where(n => n.Value.NodeId.Equals(node.NodeId));
+                    if(channelNodeDic?.Count() > 0)
+                    {
+                        var channelNode = channelNodeDic.First();
+                        var tempNode = allNodes.FirstOrDefault(n => n.NodeID == channelNode.Key);
+                        if(tempNode != null)
+                        {
+                            _opcClientSetValue?.BeginInvoke(new OutputChannelModel
+                            {
+                                CtrlCnlNum = tempNode.ChannelNum,
+                                Value = value
+                            },null,null);
+                        }
+                    }
+                }
+                return ServiceResult.Good;
+            }
+            catch (Exception)
+            {
+                return StatusCodes.BadTypeMismatch;
+            }
+        }
         #endregion
     }
 }

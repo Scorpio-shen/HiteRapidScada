@@ -1,11 +1,12 @@
-﻿using Scada.Comm.Devices;
+﻿using KpHiteOpcUaServer.Modbus.View;
+using Scada.Comm.Devices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KpHiteOpcUaServer
+namespace Scada.Comm.Devices
 {
     public class KpHiteOpcUaServerView : KPView
     {
@@ -24,7 +25,8 @@ namespace KpHiteOpcUaServer
 
         public override void ShowProps()
         {
-            
+            var frm = new FrmDevProps(Number, AppDirs, KPProps);
+            frm.ShowDialog();
         }
     }
 }
