@@ -356,7 +356,7 @@ namespace Scada.Comm.Devices
             }
         }
 
-        private void RequestUnitMethod(RequestUnit requestUnit)
+        private bool RequestUnitMethod(RequestUnit requestUnit)
         {
             try
             {
@@ -383,10 +383,12 @@ namespace Scada.Comm.Devices
                     requestUnit.Buffer = buffer;
                 }
                 WriteToLog($"Name:{Name},Number:{Number},请求结束,结果:{JsonConvert.SerializeObject(result)}");
+                return result.IsSuccess;
             }
             catch(Exception ex )
             {
                 WriteToLog($"KpHiteModbusLogic_RequestUnitMethod,Name:{Name},Number:{Number},数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
+                return false;
             }
         }
 
@@ -394,6 +396,7 @@ namespace Scada.Comm.Devices
 
         private void SetTagsData(ModbusTagGroup tagGroup)
         {
+            
             for(int i = 0; i < tagGroup.Tags.Count; i++)
             {
                 var tag = tagGroup.Tags[i]; 
