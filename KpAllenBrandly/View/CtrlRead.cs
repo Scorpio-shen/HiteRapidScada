@@ -335,7 +335,7 @@ namespace KpAllenBrandly.View
                 if (requestLength > TagGroup.MaxRequestByteLength)
                 {
                     //超出最大地址限制
-                    ScadaUiUtils.ShowError(TempleteKeyString.RangeOutOfMaxRequestLengthErrorMsg);
+                    ScadaUiUtils.ShowError(KpCommon.Model.TempleteKeyString.RangeOutOfMaxRequestLengthErrorMsg);
                     e.Cancel = true;
                 }
             }

@@ -1,5 +1,4 @@
 ﻿using KpCommon.Model;
-using KpHiteModbus.Modbus.Model;
 using Scada.Comm;
 using Scada.UI;
 using System;
@@ -7,7 +6,7 @@ using System.IO;
 using System.Windows.Forms;
 using static Scada.Comm.Devices.KPView;
 
-namespace KpHiteModbus.Modbus.View
+namespace KpHiteMqtt.Mqtt.View
 {
     public partial class FrmDevProps : Form
     {
@@ -28,7 +27,7 @@ namespace KpHiteModbus.Modbus.View
         }
         private void FrmDevProps_Load(object sender, EventArgs e)
         {
-            Translator.TranslateForm(this, "KpSiemens.Siemens.View.FrmDevProps", toolTip);
+            Translator.TranslateForm(this, "KpHiteMqtt.Mqtt.View.FrmDevProps", toolTip);
             openFileDialog.SetFilter(TempleteKeyString.DialogFilterStr);
 
             txtDevTemplate.Text = _kpProperties.CmdLine;

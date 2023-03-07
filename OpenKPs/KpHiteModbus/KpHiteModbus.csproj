@@ -68,7 +68,6 @@
     <Compile Include="Modbus\Model\TagGroup.cs" />
     <Compile Include="Modbus\Model\TagGroupDefaultValues.cs" />
     <Compile Include="Modbus\Model\TagGroupRequestModel.cs" />
-    <Compile Include="Modbus\Model\EnumType\TempleteKeyString.cs" />
     <Compile Include="Modbus\ViewModel\FrmDevAddRangeViewModel.cs" />
     <Compile Include="Modbus\View\CtrlPLCConfig.cs">
       <SubType>UserControl</SubType>

@@ -31,8 +31,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="KpModbus">
+      <HintPath>..\OpenKPs\KpModbus\obj\Debug\KpModbus.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -41,13 +49,58 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Class1.cs" />
-    <Compile Include="Config\DeviceConfig.cs" />
-    <Compile Include="Config\Mqtt\MqttTopic.cs" />
+    <Compile Include="KpHiteMqttLogic.cs" />
     <Compile Include="KpHiteMqttView.cs" />
+    <Compile Include="Mqtt\HiteMqttClient.cs" />
+    <Compile Include="Mqtt\Model\DeviceTemplate.cs" />
+    <Compile Include="Mqtt\Model\Enum\DataTypeEnum.cs" />
+    <Compile Include="Mqtt\Model\Property.cs" />
+    <Compile Include="Mqtt\ViewModel\CtrlJsonParaSpecViewModel.cs" />
+    <Compile Include="Mqtt\ViewModel\CtrlJsonParaViewModel.cs" />
+    <Compile Include="Mqtt\ViewModel\FrmDevModelViewModel.cs" />
+    <Compile Include="Mqtt\ViewModel\FrmDevTemplateViewModel.cs" />
+    <Compile Include="Mqtt\View\CtrlJsonPara.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Mqtt\View\CtrlJsonPara.Designer.cs">
+      <DependentUpon>CtrlJsonPara.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\View\CtrlJsonParaSpec.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Mqtt\View\CtrlJsonParaSpec.Designer.cs">
+      <DependentUpon>CtrlJsonParaSpec.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\View\FrmDevModel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Mqtt\View\FrmDevModel.Designer.cs">
+      <DependentUpon>FrmDevModel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\View\FrmDevProps.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Mqtt\View\FrmDevProps.Designer.cs">
+      <DependentUpon>FrmDevProps.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\View\FrmDevTemplate.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Mqtt\View\FrmDevTemplate.Designer.cs">
+      <DependentUpon>FrmDevTemplate.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
     <ProjectReference Include="..\OpenKPs\KpCommon\KpCommon.csproj">
       <Project>{2ba0bc26-8c82-4466-a0d1-92f0889c8a94}</Project>
       <Name>KpCommon</Name>
@@ -62,8 +115,28 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Mqtt\" />
-    <Folder Include="StriderMqtt\" />
+    <EmbeddedResource Include="Mqtt\View\CtrlJsonPara.resx">
+      <DependentUpon>CtrlJsonPara.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\View\CtrlJsonParaSpec.resx">
+      <DependentUpon>CtrlJsonParaSpec.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\View\FrmDevModel.resx">
+      <DependentUpon>FrmDevModel.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\View\FrmDevProps.resx">
+      <DependentUpon>FrmDevProps.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\View\FrmDevTemplate.resx">
+      <DependentUpon>FrmDevTemplate.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

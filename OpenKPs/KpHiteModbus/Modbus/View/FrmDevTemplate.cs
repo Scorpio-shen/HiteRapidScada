@@ -1,7 +1,6 @@
 ﻿using KpCommon.Model;
 using KpCommon.Model.EnumType;
 using KpHiteModbus.Modbus.Model;
-using KpHiteModbus.Modbus.Model.EnumType;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Scada;

@@ -1,6 +1,8 @@
-﻿using KpCommon.Model;
+﻿using KpCommon.Extend;
+using KpCommon.Model;
 using KpCommon.Model.EnumType;
-using KpHiteOpcUaServer.OPCUaServer.Model;
+using KpHiteMqtt.Mqtt.Model;
+using KpHiteMqtt.Mqtt.ViewModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Scada;
@@ -10,17 +12,16 @@ using System;
 using System.IO;
 using System.Windows.Forms;
 
-namespace KpHiteOpcUaServer.OPCUaServer.View
+namespace KpHiteMqtt.Mqtt.View
 {
     public partial class FrmDevTemplate : Form
     {
-        const string NewFileName = "KpHiteOpcUaServer_NewTemplate.xml";
+        const string NewFileName = "KpHiteModbus_NewTemplate.xml";
         string _fileName;                                   //载入已定义模板时文件名称或者新建的模板文件名称
         AppDirs _appDirs;
         DeviceTemplate deviceTemplate;                      //模板文件
-        TreeNode tagGroupRootNode;                          //Tag节点
-        TreeNode currentNode;                               //当前选中节点
         
+        public FrmDevTemplateViewModel ViewModel { get; set; }
 
         private bool modified;
         public bool Modified
@@ -37,31 +38,28 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
         public FrmDevTemplate(AppDirs appDirs,string fileName)
         {
             InitializeComponent();
-
             _appDirs = appDirs;
             _fileName = fileName;
-            modified = false;
 
-            txtServerIP.TextChanged += TextBox_TextChanged;
-            txtInputChannelPath.TextChanged += TextBox_TextChanged;
-            txtOutputChannelPath.TextChanged += TextBox_TextChanged;
-        }
+            ViewModel = new FrmDevTemplateViewModel();
 
-        private void TextBox_TextChanged(object sender, EventArgs e)
-        {
-            Modified = true;
+            //绑定控件
+            txtClientId.AddDataBindings(ViewModel, nameof(ViewModel.ClientID));
+            txtServerIp.AddDataBindings(ViewModel,nameof(ViewModel.MqttServerIp));
+            txtPort.AddDataBindings(ViewModel, nameof(ViewModel.MqttServerPort));
+            txtUserName.AddDataBindings(ViewModel,nameof (ViewModel.UserName));
+            txtPassword.AddDataBindings(ViewModel, nameof(ViewModel.Password));
+            txtAliveInterval.AddDataBindings(ViewModel, nameof(ViewModel.HeartInterval));
         }
 
         private void FrmDevTemplate_Load(object sender, EventArgs e)
         {
-            openFileDialog.SetFilter(KpCommon.Model.TempleteKeyString.DialogFilterStr);
-            saveFileDialog.SetFilter(KpCommon.Model.TempleteKeyString.DialogFilterStr);
+            openFileDialog.SetFilter(TempleteKeyString.DialogFilterStr);
+            saveFileDialog.SetFilter(TempleteKeyString.DialogFilterStr);
 
             openFileDialog.InitialDirectory = _appDirs.ConfigDir;
             saveFileDialog.InitialDirectory = _appDirs.ConfigDir;
 
-            btnNew.Visible = false;
-            btnOpen.Visible = false;
             Modified = false;
 
             //判断模板文件是否载入原模板
@@ -75,7 +73,6 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
                 //新建
                 saveFileDialog.FileName = NewFileName;
                 deviceTemplate = new DeviceTemplate();
-                //FillTree();
             }
 
 
@@ -94,8 +91,6 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
                 saveFileDialog.FileName = NewFileName;
                 deviceTemplate = new DeviceTemplate();
                 _fileName = String.Empty;
-
-                //FillTree();
             }
         }
 
@@ -123,6 +118,38 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
             SaveChange(true);
         }
 
+
+        /// <summary>
+        /// 导入
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnImport_Click(object sender, EventArgs e)
+        {
+            var openFile = new OpenFileDialog();
+            openFile.SetFilter(TempleteKeyString.OpenExcelFilterStr);
+            var reuslt = openFile.ShowDialog();
+            if (reuslt != DialogResult.OK)
+                return;
+            Modified = true;
+            var filePath = openFile.FileName;
+
+        }
+        /// <summary>
+        /// 导出
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnExport_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog saveFile = new SaveFileDialog();
+            saveFile.SetFilter(TempleteKeyString.OpenExcelFilterStr);
+            var reuslt = saveFile.ShowDialog();
+            if (reuslt != DialogResult.OK)
+                return;
+            var filePath = saveFile.FileName;
+            var extensionName = Path.GetExtension(filePath);
+        }
         #endregion
 
         #region 存储配置
@@ -159,18 +186,6 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
             if (string.IsNullOrEmpty(newFileName))
                 return false;
 
-            if (string.IsNullOrEmpty(txtInputChannelPath.Text))
-            {
-                ScadaUiUtils.ShowError("输入通道路径不能为空!");
-                return false;
-            }
-
-            if(string.IsNullOrEmpty(txtOutputChannelPath.Text))
-            {
-                ScadaUiUtils.ShowError("输出通道路径不能为空!");
-                return false;
-            }
-
             string errMsg = string.Empty;
             if (saveAs)
             {
@@ -180,13 +195,7 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
                 Modified = false;
                 return true;
             }
-            var inputPath = txtInputChannelPath.Text;
-            var outputPath = txtOutputChannelPath.Text;
-
-            deviceTemplate.OPCServerIP = txtServerIP.Text;
-            deviceTemplate.InputChannelPath = inputPath;
-            deviceTemplate.OutputChannelPath = outputPath;
-            if (deviceTemplate.Save(newFileName, inputPath,outputPath,out errMsg))
+            if (deviceTemplate.Save(newFileName, out errMsg))
             {
                 _fileName = newFileName;
                 Modified = false;
@@ -210,42 +219,37 @@ namespace KpHiteOpcUaServer.OPCUaServer.View
             if (!deviceTemplate.Load(fileName, out errMsg))
                 ScadaUiUtils.ShowError(errMsg);
 
-            //显示参数
-            txtServerIP.Text = deviceTemplate.OPCServerIP;
-            txtInputChannelPath.Text = deviceTemplate.InputChannelPath;
-            txtOutputChannelPath.Text = deviceTemplate.OutputChannelPath;
-
+            //将载入的连接参数赋值
+            ViewModel.ClientID = deviceTemplate.ConnectionOptions.ClientId;
+            ViewModel.UserName = deviceTemplate.ConnectionOptions.Credentials.UserName;
+            ViewModel.Password = deviceTemplate.ConnectionOptions.Credentials.Password;
+            ViewModel.HeartInterval = deviceTemplate.ConnectionOptions.KeepAliveSendInterval.TotalSeconds;
+            ViewModel.MqttServerIp = deviceTemplate.ConnectionOptions.IpAddress;
+            ViewModel.MqttServerPort = deviceTemplate.ConnectionOptions.Port;
         }
         #endregion
 
-        private void btnInputChoose_Click(object sender, EventArgs e)
+        #region 新增、删除、编辑物模型
+        private void btnAddModel_Click(object sender, EventArgs e)
         {
-            var openFileDialog = new OpenFileDialog();
-            if (openFileDialog.ShowDialog() != DialogResult.OK)
-                return;
-            var path = openFileDialog.FileName;
-            if (!File.Exists(path))
-            {
-                ScadaUiUtils.ShowError($"选中文件路径不存在!");
-                return;
-            }
-            
-            txtInputChannelPath.Text = path;
+            FrmDevModel frm = new FrmDevModel();
+            frm.ShowDialog();
         }
 
-        private void btnOutputChoose_Click(object sender, EventArgs e)
+        private void tsmEditModel_Click(object sender, EventArgs e)
         {
-            var openFileDialog = new OpenFileDialog();  
-            if(openFileDialog.ShowDialog() != DialogResult.OK)
-                return;
-            var path = openFileDialog.FileName;
-            if (!File.Exists(path))
-            {
-                ScadaUiUtils.ShowError($"选中文件路径不存在!");
-                return;
-            }
+            FrmDevModel frm = new FrmDevModel();
+            frm.ShowDialog();
 
-            txtOutputChannelPath.Text = path;
         }
+
+        private void tsmDeleteModel_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        #endregion
+
+
     }
 }

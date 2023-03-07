@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KpHiteModbus.Modbus.Model
+namespace KpCommon.Model
 {
     public class TempleteKeyString
     {

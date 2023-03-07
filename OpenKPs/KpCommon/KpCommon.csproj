@@ -710,6 +710,7 @@
     <Compile Include="Model\GroupUnit.cs" />
     <Compile Include="Model\RequestModel.cs" />
     <Compile Include="Model\TemplateUnit.cs" />
+    <Compile Include="Model\TempleteKeyString.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

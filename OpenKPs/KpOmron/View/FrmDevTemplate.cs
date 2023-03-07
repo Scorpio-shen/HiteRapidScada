@@ -46,8 +46,8 @@ namespace KpOmron.View
 
         private void FrmDevTemplate_Load(object sender, EventArgs e)
         {
-            openFileDialog.SetFilter(TempleteKeyString.DialogFilterStr);
-            saveFileDialog.SetFilter(TempleteKeyString.DialogFilterStr);
+            openFileDialog.SetFilter(KpCommon.Model.TempleteKeyString.DialogFilterStr);
+            saveFileDialog.SetFilter(KpCommon.Model.TempleteKeyString.DialogFilterStr);
 
             openFileDialog.InitialDirectory = _appDirs.ConfigDir;
             saveFileDialog.InitialDirectory = _appDirs.ConfigDir;
@@ -214,7 +214,7 @@ namespace KpOmron.View
         private void btnImport_Click(object sender, EventArgs e)
         {
             var openFile = new OpenFileDialog();
-            openFile.SetFilter(TempleteKeyString.OpenExcelFilterStr);
+            openFile.SetFilter(KpCommon.Model.TempleteKeyString.OpenExcelFilterStr);
             var reuslt = openFile.ShowDialog();
             if (reuslt != DialogResult.OK)
                 return;
@@ -234,7 +234,7 @@ namespace KpOmron.View
         private void btnExport_Click(object sender, EventArgs e)
         {
             SaveFileDialog saveFile = new SaveFileDialog();
-            saveFile.SetFilter(TempleteKeyString.OpenExcelFilterStr);
+            saveFile.SetFilter(KpCommon.Model.TempleteKeyString.OpenExcelFilterStr);
             var reuslt = saveFile.ShowDialog();
             if (reuslt != DialogResult.OK)
                 return;
@@ -385,7 +385,7 @@ namespace KpOmron.View
 
         private string GetTagGroupDesc(TagGroup tagGroup)
         {
-            var groupName = string.IsNullOrEmpty(tagGroup.Name) ? TempleteKeyString.DefaultTagGroupName : tagGroup.Name;
+            var groupName = string.IsNullOrEmpty(tagGroup.Name) ? KpCommon.Model.TempleteKeyString.DefaultTagGroupName : tagGroup.Name;
             var registerType = tagGroup.MemoryType;
             return $"{groupName} ({registerType})";
         }
