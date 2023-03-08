@@ -29,21 +29,21 @@
         private void InitializeComponent()
         {
             this.label1 = new System.Windows.Forms.Label();
-            this.txt = new System.Windows.Forms.TextBox();
-            this.textBox2 = new System.Windows.Forms.TextBox();
+            this.txtName = new System.Windows.Forms.TextBox();
+            this.txtIdentifier = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
-            this.comboBox1 = new System.Windows.Forms.ComboBox();
-            this.radioButton1 = new System.Windows.Forms.RadioButton();
-            this.radioButton2 = new System.Windows.Forms.RadioButton();
+            this.cbxDataType = new System.Windows.Forms.ComboBox();
+            this.rdbReadOnlyRW = new System.Windows.Forms.RadioButton();
+            this.rdbReadOnlyR = new System.Windows.Forms.RadioButton();
             this.label4 = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
-            this.textBox3 = new System.Windows.Forms.TextBox();
-            this.label6 = new System.Windows.Forms.Label();
-            this.comboBox2 = new System.Windows.Forms.ComboBox();
-            this.comboBox3 = new System.Windows.Forms.ComboBox();
-            this.label7 = new System.Windows.Forms.Label();
-            this.ctrlJsonPara1 = new KpHiteMqtt.Mqtt.View.CtrlJsonPara();
+            this.txtDescription = new System.Windows.Forms.TextBox();
+            this.lblInputChannel = new System.Windows.Forms.Label();
+            this.cbxInputChannels = new System.Windows.Forms.ComboBox();
+            this.cbxOutputChannels = new System.Windows.Forms.ComboBox();
+            this.lblOutputChannel = new System.Windows.Forms.Label();
+            this.ctrlJsonPara = new KpHiteMqtt.Mqtt.View.CtrlJsonPara();
             this.SuspendLayout();
             // 
             // label1
@@ -55,19 +55,19 @@
             this.label1.TabIndex = 0;
             this.label1.Text = "名称";
             // 
-            // txt
+            // txtName
             // 
-            this.txt.Location = new System.Drawing.Point(12, 26);
-            this.txt.Name = "txt";
-            this.txt.Size = new System.Drawing.Size(341, 21);
-            this.txt.TabIndex = 1;
+            this.txtName.Location = new System.Drawing.Point(12, 26);
+            this.txtName.Name = "txtName";
+            this.txtName.Size = new System.Drawing.Size(341, 21);
+            this.txtName.TabIndex = 1;
             // 
-            // textBox2
+            // txtIdentifier
             // 
-            this.textBox2.Location = new System.Drawing.Point(12, 75);
-            this.textBox2.Name = "textBox2";
-            this.textBox2.Size = new System.Drawing.Size(341, 21);
-            this.textBox2.TabIndex = 3;
+            this.txtIdentifier.Location = new System.Drawing.Point(12, 75);
+            this.txtIdentifier.Name = "txtIdentifier";
+            this.txtIdentifier.Size = new System.Drawing.Size(341, 21);
+            this.txtIdentifier.TabIndex = 3;
             // 
             // label2
             // 
@@ -87,35 +87,35 @@
             this.label3.TabIndex = 4;
             this.label3.Text = "数据类型";
             // 
-            // comboBox1
+            // cbxDataType
             // 
-            this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(12, 125);
-            this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(341, 20);
-            this.comboBox1.TabIndex = 6;
+            this.cbxDataType.FormattingEnabled = true;
+            this.cbxDataType.Location = new System.Drawing.Point(12, 125);
+            this.cbxDataType.Name = "cbxDataType";
+            this.cbxDataType.Size = new System.Drawing.Size(341, 20);
+            this.cbxDataType.TabIndex = 6;
             // 
-            // radioButton1
+            // rdbReadOnlyRW
             // 
-            this.radioButton1.AutoSize = true;
-            this.radioButton1.Location = new System.Drawing.Point(12, 183);
-            this.radioButton1.Name = "radioButton1";
-            this.radioButton1.Size = new System.Drawing.Size(47, 16);
-            this.radioButton1.TabIndex = 7;
-            this.radioButton1.TabStop = true;
-            this.radioButton1.Text = "读写";
-            this.radioButton1.UseVisualStyleBackColor = true;
+            this.rdbReadOnlyRW.AutoSize = true;
+            this.rdbReadOnlyRW.Location = new System.Drawing.Point(12, 183);
+            this.rdbReadOnlyRW.Name = "rdbReadOnlyRW";
+            this.rdbReadOnlyRW.Size = new System.Drawing.Size(47, 16);
+            this.rdbReadOnlyRW.TabIndex = 7;
+            this.rdbReadOnlyRW.TabStop = true;
+            this.rdbReadOnlyRW.Text = "读写";
+            this.rdbReadOnlyRW.UseVisualStyleBackColor = true;
             // 
-            // radioButton2
+            // rdbReadOnlyR
             // 
-            this.radioButton2.AutoSize = true;
-            this.radioButton2.Location = new System.Drawing.Point(75, 183);
-            this.radioButton2.Name = "radioButton2";
-            this.radioButton2.Size = new System.Drawing.Size(47, 16);
-            this.radioButton2.TabIndex = 8;
-            this.radioButton2.TabStop = true;
-            this.radioButton2.Text = "只读";
-            this.radioButton2.UseVisualStyleBackColor = true;
+            this.rdbReadOnlyR.AutoSize = true;
+            this.rdbReadOnlyR.Location = new System.Drawing.Point(75, 183);
+            this.rdbReadOnlyR.Name = "rdbReadOnlyR";
+            this.rdbReadOnlyR.Size = new System.Drawing.Size(47, 16);
+            this.rdbReadOnlyR.TabIndex = 8;
+            this.rdbReadOnlyR.TabStop = true;
+            this.rdbReadOnlyR.Text = "只读";
+            this.rdbReadOnlyR.UseVisualStyleBackColor = true;
             // 
             // label4
             // 
@@ -135,77 +135,77 @@
             this.label5.TabIndex = 10;
             this.label5.Text = "描述";
             // 
-            // textBox3
+            // txtDescription
             // 
-            this.textBox3.Location = new System.Drawing.Point(12, 280);
-            this.textBox3.Multiline = true;
-            this.textBox3.Name = "textBox3";
-            this.textBox3.Size = new System.Drawing.Size(540, 111);
-            this.textBox3.TabIndex = 11;
+            this.txtDescription.Location = new System.Drawing.Point(12, 280);
+            this.txtDescription.Multiline = true;
+            this.txtDescription.Name = "txtDescription";
+            this.txtDescription.Size = new System.Drawing.Size(540, 111);
+            this.txtDescription.TabIndex = 11;
             // 
-            // label6
+            // lblInputChannel
             // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(10, 215);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(53, 12);
-            this.label6.TabIndex = 12;
-            this.label6.Text = "输入通道";
+            this.lblInputChannel.AutoSize = true;
+            this.lblInputChannel.Location = new System.Drawing.Point(10, 215);
+            this.lblInputChannel.Name = "lblInputChannel";
+            this.lblInputChannel.Size = new System.Drawing.Size(53, 12);
+            this.lblInputChannel.TabIndex = 12;
+            this.lblInputChannel.Text = "输入通道";
             // 
-            // comboBox2
+            // cbxInputChannels
             // 
-            this.comboBox2.FormattingEnabled = true;
-            this.comboBox2.Location = new System.Drawing.Point(12, 230);
-            this.comboBox2.Name = "comboBox2";
-            this.comboBox2.Size = new System.Drawing.Size(98, 20);
-            this.comboBox2.TabIndex = 13;
+            this.cbxInputChannels.FormattingEnabled = true;
+            this.cbxInputChannels.Location = new System.Drawing.Point(12, 230);
+            this.cbxInputChannels.Name = "cbxInputChannels";
+            this.cbxInputChannels.Size = new System.Drawing.Size(98, 20);
+            this.cbxInputChannels.TabIndex = 13;
             // 
-            // comboBox3
+            // cbxOutputChannels
             // 
-            this.comboBox3.FormattingEnabled = true;
-            this.comboBox3.Location = new System.Drawing.Point(127, 230);
-            this.comboBox3.Name = "comboBox3";
-            this.comboBox3.Size = new System.Drawing.Size(98, 20);
-            this.comboBox3.TabIndex = 15;
+            this.cbxOutputChannels.FormattingEnabled = true;
+            this.cbxOutputChannels.Location = new System.Drawing.Point(127, 230);
+            this.cbxOutputChannels.Name = "cbxOutputChannels";
+            this.cbxOutputChannels.Size = new System.Drawing.Size(98, 20);
+            this.cbxOutputChannels.TabIndex = 15;
             // 
-            // label7
+            // lblOutputChannel
             // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(125, 215);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(53, 12);
-            this.label7.TabIndex = 14;
-            this.label7.Text = "输出通道";
+            this.lblOutputChannel.AutoSize = true;
+            this.lblOutputChannel.Location = new System.Drawing.Point(125, 215);
+            this.lblOutputChannel.Name = "lblOutputChannel";
+            this.lblOutputChannel.Size = new System.Drawing.Size(53, 12);
+            this.lblOutputChannel.TabIndex = 14;
+            this.lblOutputChannel.Text = "输出通道";
             // 
-            // ctrlJsonPara1
+            // ctrlJsonPara
             // 
-            this.ctrlJsonPara1.AutoScroll = true;
-            this.ctrlJsonPara1.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.ctrlJsonPara1.Location = new System.Drawing.Point(12, 412);
-            this.ctrlJsonPara1.Name = "ctrlJsonPara1";
-            this.ctrlJsonPara1.Size = new System.Drawing.Size(540, 213);
-            this.ctrlJsonPara1.TabIndex = 16;
+            this.ctrlJsonPara.AutoScroll = true;
+            this.ctrlJsonPara.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.ctrlJsonPara.Location = new System.Drawing.Point(12, 413);
+            this.ctrlJsonPara.Name = "ctrlJsonPara";
+            this.ctrlJsonPara.Size = new System.Drawing.Size(540, 213);
+            this.ctrlJsonPara.TabIndex = 16;
             // 
             // FrmDevModel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(569, 648);
-            this.Controls.Add(this.ctrlJsonPara1);
-            this.Controls.Add(this.comboBox3);
-            this.Controls.Add(this.label7);
-            this.Controls.Add(this.comboBox2);
-            this.Controls.Add(this.label6);
-            this.Controls.Add(this.textBox3);
+            this.Controls.Add(this.ctrlJsonPara);
+            this.Controls.Add(this.cbxOutputChannels);
+            this.Controls.Add(this.lblOutputChannel);
+            this.Controls.Add(this.cbxInputChannels);
+            this.Controls.Add(this.lblInputChannel);
+            this.Controls.Add(this.txtDescription);
             this.Controls.Add(this.label5);
             this.Controls.Add(this.label4);
-            this.Controls.Add(this.radioButton2);
-            this.Controls.Add(this.radioButton1);
-            this.Controls.Add(this.comboBox1);
+            this.Controls.Add(this.rdbReadOnlyR);
+            this.Controls.Add(this.rdbReadOnlyRW);
+            this.Controls.Add(this.cbxDataType);
             this.Controls.Add(this.label3);
-            this.Controls.Add(this.textBox2);
+            this.Controls.Add(this.txtIdentifier);
             this.Controls.Add(this.label2);
-            this.Controls.Add(this.txt);
+            this.Controls.Add(this.txtName);
             this.Controls.Add(this.label1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -221,20 +221,20 @@
         #endregion
 
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.TextBox txt;
-        private System.Windows.Forms.TextBox textBox2;
+        private System.Windows.Forms.TextBox txtName;
+        private System.Windows.Forms.TextBox txtIdentifier;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.ComboBox comboBox1;
-        private System.Windows.Forms.RadioButton radioButton1;
-        private System.Windows.Forms.RadioButton radioButton2;
+        private System.Windows.Forms.ComboBox cbxDataType;
+        private System.Windows.Forms.RadioButton rdbReadOnlyRW;
+        private System.Windows.Forms.RadioButton rdbReadOnlyR;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.TextBox textBox3;
-        private System.Windows.Forms.Label label6;
-        private System.Windows.Forms.ComboBox comboBox2;
-        private System.Windows.Forms.ComboBox comboBox3;
-        private System.Windows.Forms.Label label7;
-        private CtrlJsonPara ctrlJsonPara1;
+        private System.Windows.Forms.TextBox txtDescription;
+        private System.Windows.Forms.Label lblInputChannel;
+        private System.Windows.Forms.ComboBox cbxInputChannels;
+        private System.Windows.Forms.ComboBox cbxOutputChannels;
+        private System.Windows.Forms.Label lblOutputChannel;
+        private CtrlJsonPara ctrlJsonPara;
     }
 }

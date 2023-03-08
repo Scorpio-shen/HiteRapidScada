@@ -51,14 +51,26 @@
   <ItemGroup>
     <Compile Include="KpHiteMqttLogic.cs" />
     <Compile Include="KpHiteMqttView.cs" />
+    <Compile Include="Mqtt\Helper\CXMLOperator.cs" />
     <Compile Include="Mqtt\HiteMqttClient.cs" />
+    <Compile Include="Mqtt\Model\ArrayChannelModel.cs" />
     <Compile Include="Mqtt\Model\DeviceTemplate.cs" />
     <Compile Include="Mqtt\Model\Enum\DataTypeEnum.cs" />
     <Compile Include="Mqtt\Model\Property.cs" />
-    <Compile Include="Mqtt\ViewModel\CtrlJsonParaSpecViewModel.cs" />
-    <Compile Include="Mqtt\ViewModel\CtrlJsonParaViewModel.cs" />
     <Compile Include="Mqtt\ViewModel\FrmDevModelViewModel.cs" />
     <Compile Include="Mqtt\ViewModel\FrmDevTemplateViewModel.cs" />
+    <Compile Include="Mqtt\View\CtrlArrayInCtrlChannel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Mqtt\View\CtrlArrayInCtrlChannel.Designer.cs">
+      <DependentUpon>CtrlArrayInCtrlChannel.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\View\CtrlArrayPara.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Mqtt\View\CtrlArrayPara.Designer.cs">
+      <DependentUpon>CtrlArrayPara.cs</DependentUpon>
+    </Compile>
     <Compile Include="Mqtt\View\CtrlJsonPara.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -115,6 +127,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Mqtt\View\CtrlArrayInCtrlChannel.resx">
+      <DependentUpon>CtrlArrayInCtrlChannel.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\View\CtrlArrayPara.resx">
+      <DependentUpon>CtrlArrayPara.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Mqtt\View\CtrlJsonPara.resx">
       <DependentUpon>CtrlJsonPara.cs</DependentUpon>
     </EmbeddedResource>
@@ -139,4 +157,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>if exist "C:\SCADA\ScadaComm\KP"  (
+copy "$(TargetFileName)" "C:\SCADA\ScadaComm\KP\"
+)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

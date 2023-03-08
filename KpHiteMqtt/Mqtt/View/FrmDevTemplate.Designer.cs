@@ -40,12 +40,7 @@
             this.imageList = new System.Windows.Forms.ImageList(this.components);
             this.saveFileDialog = new System.Windows.Forms.SaveFileDialog();
             this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
-            this.dataGridView1 = new System.Windows.Forms.DataGridView();
-            this.columnCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.columnName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnIdentifier = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnDataType = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnUnit = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.dgvProperty = new System.Windows.Forms.DataGridView();
             this.ctxMenuViewOperate = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.tsmEditModel = new System.Windows.Forms.ToolStripMenuItem();
             this.tsmDeleteModel = new System.Windows.Forms.ToolStripMenuItem();
@@ -64,11 +59,19 @@
             this.label1 = new System.Windows.Forms.Label();
             this.txtClientId = new System.Windows.Forms.TextBox();
             this.lblClientId = new System.Windows.Forms.Label();
+            this.bdsProperty = new System.Windows.Forms.BindingSource(this.components);
+            this.columnCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.columnIndex = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnIdentifier = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnDataType = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnUnit = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.toolStrip.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvProperty)).BeginInit();
             this.ctxMenuViewOperate.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.bdsProperty)).BeginInit();
             this.SuspendLayout();
             // 
             // toolStrip
@@ -154,55 +157,24 @@
             // 
             this.openFileDialog.FileName = "openFileDialog";
             // 
-            // dataGridView1
+            // dgvProperty
             // 
-            this.dataGridView1.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-            this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
+            this.dgvProperty.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dgvProperty.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvProperty.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.columnCheck,
+            this.columnIndex,
             this.columnName,
             this.columnIdentifier,
             this.columnDataType,
             this.columnUnit});
-            this.dataGridView1.ContextMenuStrip = this.ctxMenuViewOperate;
-            this.dataGridView1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dataGridView1.Location = new System.Drawing.Point(3, 17);
-            this.dataGridView1.Name = "dataGridView1";
-            this.dataGridView1.RowTemplate.Height = 23;
-            this.dataGridView1.Size = new System.Drawing.Size(964, 444);
-            this.dataGridView1.TabIndex = 2;
-            // 
-            // columnCheck
-            // 
-            this.columnCheck.FillWeight = 20F;
-            this.columnCheck.HeaderText = "";
-            this.columnCheck.Name = "columnCheck";
-            this.columnCheck.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.columnCheck.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
-            // 
-            // columnName
-            // 
-            this.columnName.DataPropertyName = "Name";
-            this.columnName.HeaderText = "名称";
-            this.columnName.Name = "columnName";
-            // 
-            // columnIdentifier
-            // 
-            this.columnIdentifier.DataPropertyName = "Identifier";
-            this.columnIdentifier.HeaderText = "标识符";
-            this.columnIdentifier.Name = "columnIdentifier";
-            // 
-            // columnDataType
-            // 
-            this.columnDataType.DataPropertyName = "DataType";
-            this.columnDataType.HeaderText = "数据类型";
-            this.columnDataType.Name = "columnDataType";
-            // 
-            // columnUnit
-            // 
-            this.columnUnit.DataPropertyName = "Unit";
-            this.columnUnit.HeaderText = "单位";
-            this.columnUnit.Name = "columnUnit";
+            this.dgvProperty.ContextMenuStrip = this.ctxMenuViewOperate;
+            this.dgvProperty.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.dgvProperty.Location = new System.Drawing.Point(3, 17);
+            this.dgvProperty.Name = "dgvProperty";
+            this.dgvProperty.RowTemplate.Height = 23;
+            this.dgvProperty.Size = new System.Drawing.Size(964, 444);
+            this.dgvProperty.TabIndex = 2;
             // 
             // ctxMenuViewOperate
             // 
@@ -238,7 +210,7 @@
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.dataGridView1);
+            this.groupBox1.Controls.Add(this.dgvProperty);
             this.groupBox1.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.groupBox1.Location = new System.Drawing.Point(0, 231);
             this.groupBox1.Name = "groupBox1";
@@ -365,6 +337,44 @@
             this.lblClientId.TabIndex = 0;
             this.lblClientId.Text = "ClientId:";
             // 
+            // columnCheck
+            // 
+            this.columnCheck.FillWeight = 20F;
+            this.columnCheck.HeaderText = "";
+            this.columnCheck.Name = "columnCheck";
+            this.columnCheck.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.columnCheck.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            // 
+            // columnIndex
+            // 
+            this.columnIndex.HeaderText = "Index";
+            this.columnIndex.Name = "columnIndex";
+            this.columnIndex.Visible = false;
+            // 
+            // columnName
+            // 
+            this.columnName.DataPropertyName = "Name";
+            this.columnName.HeaderText = "名称";
+            this.columnName.Name = "columnName";
+            // 
+            // columnIdentifier
+            // 
+            this.columnIdentifier.DataPropertyName = "Identifier";
+            this.columnIdentifier.HeaderText = "标识符";
+            this.columnIdentifier.Name = "columnIdentifier";
+            // 
+            // columnDataType
+            // 
+            this.columnDataType.DataPropertyName = "DataType";
+            this.columnDataType.HeaderText = "数据类型";
+            this.columnDataType.Name = "columnDataType";
+            // 
+            // columnUnit
+            // 
+            this.columnUnit.DataPropertyName = "Unit";
+            this.columnUnit.HeaderText = "单位";
+            this.columnUnit.Name = "columnUnit";
+            // 
             // FrmDevTemplate
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -385,11 +395,12 @@
             this.Load += new System.EventHandler(this.FrmDevTemplate_Load);
             this.toolStrip.ResumeLayout(false);
             this.toolStrip.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvProperty)).EndInit();
             this.ctxMenuViewOperate.ResumeLayout(false);
             this.groupBox1.ResumeLayout(false);
             this.groupBox2.ResumeLayout(false);
             this.groupBox2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.bdsProperty)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -407,12 +418,7 @@
         private System.Windows.Forms.ImageList imageList;
         private System.Windows.Forms.ToolStripButton btnImport;
         private System.Windows.Forms.ToolStripButton btnExport;
-        private System.Windows.Forms.DataGridView dataGridView1;
-        private System.Windows.Forms.DataGridViewCheckBoxColumn columnCheck;
-        private System.Windows.Forms.DataGridViewTextBoxColumn columnName;
-        private System.Windows.Forms.DataGridViewTextBoxColumn columnIdentifier;
-        private System.Windows.Forms.DataGridViewTextBoxColumn columnDataType;
-        private System.Windows.Forms.DataGridViewTextBoxColumn columnUnit;
+        private System.Windows.Forms.DataGridView dgvProperty;
         private System.Windows.Forms.ContextMenuStrip ctxMenuViewOperate;
         private System.Windows.Forms.ToolStripMenuItem tsmEditModel;
         private System.Windows.Forms.ToolStripMenuItem tsmDeleteModel;
@@ -431,5 +437,12 @@
         private System.Windows.Forms.TextBox txtUserName;
         private System.Windows.Forms.Label label_Password;
         private System.Windows.Forms.Label label_UseName;
+        private System.Windows.Forms.BindingSource bdsProperty;
+        private System.Windows.Forms.DataGridViewCheckBoxColumn columnCheck;
+        private System.Windows.Forms.DataGridViewTextBoxColumn columnIndex;
+        private System.Windows.Forms.DataGridViewTextBoxColumn columnName;
+        private System.Windows.Forms.DataGridViewTextBoxColumn columnIdentifier;
+        private System.Windows.Forms.DataGridViewTextBoxColumn columnDataType;
+        private System.Windows.Forms.DataGridViewTextBoxColumn columnUnit;
     }
 }

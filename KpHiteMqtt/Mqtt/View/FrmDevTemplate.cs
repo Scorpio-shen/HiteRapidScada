@@ -1,15 +1,21 @@
 ﻿using KpCommon.Extend;
 using KpCommon.Model;
 using KpCommon.Model.EnumType;
+using KpHiteMqtt.Mqtt.Helper;
 using KpHiteMqtt.Mqtt.Model;
 using KpHiteMqtt.Mqtt.ViewModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Scada;
 using Scada.Comm;
+using Scada.Data.Entities;
 using Scada.UI;
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace KpHiteMqtt.Mqtt.View
@@ -20,6 +26,9 @@ namespace KpHiteMqtt.Mqtt.View
         string _fileName;                                   //载入已定义模板时文件名称或者新建的模板文件名称
         AppDirs _appDirs;
         DeviceTemplate deviceTemplate;                      //模板文件
+        List<InCnl> allInCnls;                              //所有输入通道
+        List<CtrlCnl> allCtrlCnls;                          //所有输出通道
+        int CurrentIndex = default;                         //当前Property的索引
         
         public FrmDevTemplateViewModel ViewModel { get; set; }
 
@@ -35,6 +44,16 @@ namespace KpHiteMqtt.Mqtt.View
         }
 
         public string TemplateFileName { get => _fileName; }
+
+        public List<Property> Properties
+        {
+            get=>deviceTemplate.Properties;
+            set
+            {
+                deviceTemplate.Properties = value;
+                BindProperty(deviceTemplate.Properties);
+            }
+        }
         public FrmDevTemplate(AppDirs appDirs,string fileName)
         {
             InitializeComponent();
@@ -50,6 +69,9 @@ namespace KpHiteMqtt.Mqtt.View
             txtUserName.AddDataBindings(ViewModel,nameof (ViewModel.UserName));
             txtPassword.AddDataBindings(ViewModel, nameof(ViewModel.Password));
             txtAliveInterval.AddDataBindings(ViewModel, nameof(ViewModel.HeartInterval));
+
+            //绑定属性集合
+            dgvProperty.DataSource = bdsProperty;
         }
 
         private void FrmDevTemplate_Load(object sender, EventArgs e)
@@ -67,6 +89,7 @@ namespace KpHiteMqtt.Mqtt.View
             {
                 saveFileDialog.FileName = _fileName;
                 LoadTemplate(_fileName);
+                
             }
             else
             {
@@ -74,7 +97,21 @@ namespace KpHiteMqtt.Mqtt.View
                 saveFileDialog.FileName = NewFileName;
                 deviceTemplate = new DeviceTemplate();
             }
+            //载入所有输入、输出通道
+            LoadConfigInCtrlCnls();
 
+        }
+
+        private void LoadConfigInCtrlCnls()
+        {
+            int nIndex = _appDirs.ConfigDir.IndexOf("Instances");
+            string baseInCnlXml = _appDirs.ConfigDir.Substring(0, nIndex) + "BaseXML\\InCnl.xml";
+            string baseCtrlCnlXml = _appDirs.ConfigDir.Substring(0, nIndex) + "BaseXML\\CtrlCnl.xml";
+            CXMLOperator operatorXml = new CXMLOperator();
+            allInCnls = new List<InCnl>();
+            allInCnls = operatorXml.GetConfig<List<InCnl>>(baseInCnlXml);
+            allCtrlCnls = new List<CtrlCnl>();
+            allCtrlCnls = operatorXml.GetConfig<List<CtrlCnl>>(baseCtrlCnlXml);
 
         }
 
@@ -232,13 +269,41 @@ namespace KpHiteMqtt.Mqtt.View
         #region 新增、删除、编辑物模型
         private void btnAddModel_Click(object sender, EventArgs e)
         {
-            FrmDevModel frm = new FrmDevModel();
-            frm.ShowDialog();
+            var property = new Property()
+            {
+                Index = CurrentIndex++
+            };
+            FrmDevModel frm = new FrmDevModel(property,allInCnls,allCtrlCnls);
+            if(frm.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+            Properties.Add(property);
         }
 
         private void tsmEditModel_Click(object sender, EventArgs e)
         {
-            FrmDevModel frm = new FrmDevModel();
+            Property property = null;
+            property = bdsProperty.Current as Property;
+            if(property == null)
+            {
+                var rows = dgvProperty.SelectedRows;
+                if (rows.Count > 0)
+                {
+                    var indexStr = rows[0].Cells["Index"].Value?.ToString();
+                    if (!string.IsNullOrEmpty(indexStr))
+                    {
+                        property = Properties.FirstOrDefault(p => p.Index == indexStr.ToInt());
+                    }
+                    
+                }
+            }
+            if(property == null)
+            {
+                ScadaUiUtils.ShowError("当前未选中任何要编辑的项!");
+                return; 
+            }
+            FrmDevModel frm = new FrmDevModel(property,allInCnls,allCtrlCnls);
             frm.ShowDialog();
 
         }
@@ -250,6 +315,13 @@ namespace KpHiteMqtt.Mqtt.View
 
         #endregion
 
+        #region 显示属性
+        private void BindProperty(List<Property> properties)
+        {
+            bdsProperty.DataSource = null;
+            bdsProperty.DataSource = properties;
+        }
+        #endregion
 
     }
 }

@@ -28,32 +28,55 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.linkLabel1 = new System.Windows.Forms.LinkLabel();
+            this.linkAddPara = new System.Windows.Forms.LinkLabel();
             this.label1 = new System.Windows.Forms.Label();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.panelPara = new System.Windows.Forms.Panel();
+            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
-            // linkLabel1
+            // linkAddPara
             // 
-            this.linkLabel1.AutoSize = true;
-            this.linkLabel1.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.linkLabel1.LinkBehavior = System.Windows.Forms.LinkBehavior.HoverUnderline;
-            this.linkLabel1.LinkColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(128)))), ((int)(((byte)(210)))));
-            this.linkLabel1.Location = new System.Drawing.Point(85, 10);
-            this.linkLabel1.Name = "linkLabel1";
-            this.linkLabel1.Size = new System.Drawing.Size(65, 12);
-            this.linkLabel1.TabIndex = 0;
-            this.linkLabel1.TabStop = true;
-            this.linkLabel1.Text = "+ 新增参数";
+            this.linkAddPara.AutoSize = true;
+            this.linkAddPara.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.linkAddPara.LinkBehavior = System.Windows.Forms.LinkBehavior.HoverUnderline;
+            this.linkAddPara.LinkColor = System.Drawing.Color.FromArgb(((int)(((byte)(26)))), ((int)(((byte)(128)))), ((int)(((byte)(210)))));
+            this.linkAddPara.Location = new System.Drawing.Point(71, 17);
+            this.linkAddPara.Name = "linkAddPara";
+            this.linkAddPara.Size = new System.Drawing.Size(65, 12);
+            this.linkAddPara.TabIndex = 0;
+            this.linkAddPara.TabStop = true;
+            this.linkAddPara.Text = "+ 新增参数";
+            this.linkAddPara.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkAddPara_LinkClicked);
             // 
             // label1
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.label1.Location = new System.Drawing.Point(3, 10);
+            this.label1.Location = new System.Drawing.Point(6, 17);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(59, 12);
             this.label1.TabIndex = 1;
             this.label1.Text = "Json对象";
+            // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.linkAddPara);
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Dock = System.Windows.Forms.DockStyle.Top;
+            this.groupBox1.Location = new System.Drawing.Point(0, 0);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(540, 43);
+            this.groupBox1.TabIndex = 3;
+            this.groupBox1.TabStop = false;
+            // 
+            // panelPara
+            // 
+            this.panelPara.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panelPara.Location = new System.Drawing.Point(0, 43);
+            this.panelPara.Name = "panelPara";
+            this.panelPara.Size = new System.Drawing.Size(540, 170);
+            this.panelPara.TabIndex = 4;
             // 
             // CtrlJsonPara
             // 
@@ -61,18 +84,21 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoScroll = true;
             this.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.linkLabel1);
+            this.Controls.Add(this.panelPara);
+            this.Controls.Add(this.groupBox1);
             this.Name = "CtrlJsonPara";
             this.Size = new System.Drawing.Size(540, 213);
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
         #endregion
 
-        private System.Windows.Forms.LinkLabel linkLabel1;
+        private System.Windows.Forms.LinkLabel linkAddPara;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.Panel panelPara;
     }
 }

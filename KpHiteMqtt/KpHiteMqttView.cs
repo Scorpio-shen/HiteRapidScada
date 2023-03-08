@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KpHiteMqtt
+namespace Scada.Comm.Devices
 {
     public class KpHiteMqttView : KPView
     {
@@ -18,7 +18,7 @@ namespace KpHiteMqtt
 
         public KpHiteMqttView(int number) : base(number)
         {
-
+            CanShowProps = true;
         }
 
 

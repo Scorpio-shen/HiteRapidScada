@@ -60,6 +60,7 @@
             this.linkEdit.TabIndex = 1;
             this.linkEdit.TabStop = true;
             this.linkEdit.Text = "编辑";
+            this.linkEdit.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkEdit_LinkClicked);
             // 
             // linkDelete
             // 
@@ -73,6 +74,7 @@
             this.linkDelete.TabIndex = 2;
             this.linkDelete.TabStop = true;
             this.linkDelete.Text = "删除";
+            this.linkDelete.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkDelete_LinkClicked);
             // 
             // lblParaName
             // 
@@ -122,7 +124,6 @@
             this.lblOutputChannel.Size = new System.Drawing.Size(23, 12);
             this.lblOutputChannel.TabIndex = 7;
             this.lblOutputChannel.Text = "101";
-            this.lblOutputChannel.Click += new System.EventHandler(this.lblOutputChannel_Click);
             // 
             // CtrlJsonParaSpec
             // 

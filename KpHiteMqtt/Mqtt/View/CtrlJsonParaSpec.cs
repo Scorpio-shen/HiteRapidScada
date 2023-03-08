@@ -1,4 +1,6 @@
-﻿using KpHiteMqtt.Mqtt.ViewModel;
+﻿using KpCommon.Extend;
+using KpHiteMqtt.Mqtt.Model;
+using KpHiteMqtt.Mqtt.ViewModel;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,13 +15,27 @@ namespace KpHiteMqtt.Mqtt.View
 {
     public partial class CtrlJsonParaSpec : UserControl
     {
-        public CtrlJsonParaSpecViewModel ViewModel { get; set; }
+        DataSpecs _dataSpecs;
         public CtrlJsonParaSpec()
         {
             InitializeComponent();
         }
+        public CtrlJsonParaSpec(DataSpecs dataSpecs)
+        {
+            InitializeComponent();
+            _dataSpecs = dataSpecs;
+            //绑定控件
+            lblParaName.AddDataBindings(_dataSpecs, nameof(DataSpecs.ParameterName));
+            lblInputChannel.AddDataBindings(_dataSpecs, nameof(DataSpecs.CnlNum));
+            lblOutputChannel.AddDataBindings(_dataSpecs,nameof(DataSpecs.CtrlCnlNum));
+        }
 
-        private void lblOutputChannel_Click(object sender, EventArgs e)
+        private void linkEdit_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+
+        }
+
+        private void linkDelete_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
 
         }
