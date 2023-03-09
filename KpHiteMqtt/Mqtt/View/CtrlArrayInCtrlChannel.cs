@@ -15,19 +15,21 @@ namespace KpHiteMqtt.Mqtt.View
 {
     public partial class CtrlArrayInCtrlChannel : UserControl
     {
-        List<InCnl> _allInCnls;
-        List<CtrlCnl> _allCtrlCnls;
-        DataArraySpecs _arraySpecs;
+        private InCnl _inCnl;
+        private CtrlCnl _ctrlCnl;
+        private List<InCnl> _allInCnls;
+        private List<CtrlCnl> _allCtrlCnls;
         public CtrlArrayInCtrlChannel()
         {
             InitializeComponent();
         }
-        public CtrlArrayInCtrlChannel(List<InCnl> allInCnls, List<CtrlCnl> allCtrlCnls,DataArraySpecs arraySpecs)
+        public CtrlArrayInCtrlChannel(InCnl inCnl,CtrlCnl ctrlCnl,List<InCnl> allInCnls,List<CtrlCnl> allCtrlCnls)
         {
             InitializeComponent();
-            _allInCnls = allInCnls;
-            _allCtrlCnls = allCtrlCnls;
-            _arraySpecs = arraySpecs;
+            _inCnl = inCnl;
+            _ctrlCnl = ctrlCnl;
+            _allInCnls = allInCnls.Select(ic=> ic.InCnlCopy()).ToList();
+            _allCtrlCnls = allCtrlCnls.Select(cc=>cc.CtrlCnlCopy()).ToList();
         }
 
         private void CtrlArrayInCtrlChannel_Load(object sender, EventArgs e)
@@ -45,7 +47,8 @@ namespace KpHiteMqtt.Mqtt.View
             cbxCtrlCnl.DisplayMember = "Name";
             cbxCtrlCnl.ValueMember = "CnlNum";
             //控件绑定
-            //cbxInCnl.AddDataBindings(_arraySpecs.)
+            cbxInCnl.AddDataBindings(_inCnl, nameof(_inCnl.CnlNum));
+            cbxCtrlCnl.AddDataBindings(_ctrlCnl, nameof(_ctrlCnl.CtrlCnlNum));
 
         }
     }

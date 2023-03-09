@@ -78,6 +78,7 @@ namespace KpHiteMqtt.Mqtt.Model
                 OnPropertyChanged(nameof(InputChannelVisable));
                 OnPropertyChanged(nameof(OutputChannelVisable));
                 OnPropertyChanged(nameof(IsStruct));
+                OnPropertyChanged(nameof(IsArray));
             }
         }
         private bool isreadonly;
@@ -97,9 +98,18 @@ namespace KpHiteMqtt.Mqtt.Model
         /// <summary>
         /// 是否是结构体
         /// </summary>
+        [JsonIgnore]
         public bool IsStruct
         {
             get=>DataType == DataTypeEnum.Struct;
+        }
+        /// <summary>
+        /// 是否是数组类型
+        /// </summary>
+        [JsonIgnore]
+        public bool IsArray
+        {
+            get => DataType == DataTypeEnum.Array;
         }
 
         /// <summary>
@@ -110,7 +120,7 @@ namespace KpHiteMqtt.Mqtt.Model
         {
             get
             {
-                return DataType == DataTypeEnum.Array || DataType == DataTypeEnum.Struct;
+                return DataType != DataTypeEnum.Array && DataType != DataTypeEnum.Struct;
             }
         }
         /// <summary>
@@ -121,7 +131,7 @@ namespace KpHiteMqtt.Mqtt.Model
         {
             get
             {
-                return (DataType == DataTypeEnum.Array || DataType == DataTypeEnum.Struct) && !IsReadOnly;
+                return DataType != DataTypeEnum.Array && DataType != DataTypeEnum.Struct && !IsReadOnly;
             }
         }
 
@@ -192,6 +202,8 @@ namespace KpHiteMqtt.Mqtt.Model
             }
         }
 
+        public 
+
         public event PropertyChangedEventHandler PropertyChanged;
         public void OnPropertyChanged(string proName)
         {
@@ -229,6 +241,7 @@ namespace KpHiteMqtt.Mqtt.Model
             {
                 arraylength = value;
                 OnPropertyChanged(nameof(ArrayLength));
+                OnPropertyChanged(nameof(ArrayChannelString));
             }
         }
 
@@ -240,6 +253,7 @@ namespace KpHiteMqtt.Mqtt.Model
             {
                 incnlums = value;
                 OnPropertyChanged(nameof(InCnlNums));
+                OnPropertyChanged(nameof(ArrayChannelString));
             }
         }
 
@@ -251,6 +265,7 @@ namespace KpHiteMqtt.Mqtt.Model
             {
                 ctrlcnlnums = value;
                 OnPropertyChanged(nameof(CtrlCnlNums));
+                OnPropertyChanged(nameof(ArrayChannelString));
             }
         }
 

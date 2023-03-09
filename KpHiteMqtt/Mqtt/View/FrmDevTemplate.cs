@@ -22,15 +22,25 @@ namespace KpHiteMqtt.Mqtt.View
 {
     public partial class FrmDevTemplate : Form
     {
-        const string NewFileName = "KpHiteModbus_NewTemplate.xml";
+        const string NewFileName = "KpHiteMqtt_NewTemplate.xml";
         string _fileName;                                   //载入已定义模板时文件名称或者新建的模板文件名称
         AppDirs _appDirs;
         DeviceTemplate deviceTemplate;                      //模板文件
-        List<InCnl> allInCnls;                              //所有输入通道
-        List<CtrlCnl> allCtrlCnls;                          //所有输出通道
         int CurrentIndex = default;                         //当前Property的索引
+
+        private static List<InCnl> allInCnls;                              //所有输入通道
+        private static List<CtrlCnl> allCtrlCnls;                          //所有输出通道
         
-        public FrmDevTemplateViewModel ViewModel { get; set; }
+        
+        public static List<InCnl> AllInCnls
+        {
+            get=>allInCnls.Select(incnl=>incnl.InCnlCopy()).ToList();
+        }
+
+        public static List<CtrlCnl> AllCtrlCnls
+        {
+            get=>allCtrlCnls.Select(ctrlcnl=>ctrlcnl.CtrlCnlCopy()).ToList();
+        }
 
         private bool modified;
         public bool Modified
@@ -51,7 +61,7 @@ namespace KpHiteMqtt.Mqtt.View
             set
             {
                 deviceTemplate.Properties = value;
-                BindProperty(deviceTemplate.Properties);
+                //BindProperty(deviceTemplate.Properties);
             }
         }
         public FrmDevTemplate(AppDirs appDirs,string fileName)
@@ -60,18 +70,7 @@ namespace KpHiteMqtt.Mqtt.View
             _appDirs = appDirs;
             _fileName = fileName;
 
-            ViewModel = new FrmDevTemplateViewModel();
-
-            //绑定控件
-            txtClientId.AddDataBindings(ViewModel, nameof(ViewModel.ClientID));
-            txtServerIp.AddDataBindings(ViewModel,nameof(ViewModel.MqttServerIp));
-            txtPort.AddDataBindings(ViewModel, nameof(ViewModel.MqttServerPort));
-            txtUserName.AddDataBindings(ViewModel,nameof (ViewModel.UserName));
-            txtPassword.AddDataBindings(ViewModel, nameof(ViewModel.Password));
-            txtAliveInterval.AddDataBindings(ViewModel, nameof(ViewModel.HeartInterval));
-
-            //绑定属性集合
-            dgvProperty.DataSource = bdsProperty;
+           
         }
 
         private void FrmDevTemplate_Load(object sender, EventArgs e)
@@ -95,11 +94,57 @@ namespace KpHiteMqtt.Mqtt.View
             {
                 //新建
                 saveFileDialog.FileName = NewFileName;
-                deviceTemplate = new DeviceTemplate();
+                deviceTemplate = new DeviceTemplate()
+                {
+                    ConnectionOptions = new HslCommunication.MQTT.MqttConnectionOptions() 
+                    {
+                        Credentials = new HslCommunication.MQTT.MqttCredential()
+                    },
+                    Properties = new List<Property>()
+                };
             }
             //载入所有输入、输出通道
             LoadConfigInCtrlCnls();
 
+            //绑定控件
+            var connectionOption = deviceTemplate.ConnectionOptions;
+
+            txtClientId.AddDataBindings(connectionOption, nameof(connectionOption.ClientId));
+            txtServerIp.AddDataBindings(connectionOption, nameof(connectionOption.IpAddress));
+            txtPort.AddDataBindings(connectionOption, nameof(connectionOption.Port));
+            txtUserName.AddDataBindings(connectionOption.Credentials, nameof(connectionOption.Credentials.UserName));
+            txtPassword.AddDataBindings(connectionOption.Credentials, nameof(connectionOption.Credentials.Password));
+            //txtAliveInterval.AddDataBindings(connectionOption, nameof(connectionOption.KeepAliveSendInterval));
+            var binding = new Binding(nameof(txtAliveInterval.Text), connectionOption, nameof(connectionOption.KeepAliveSendInterval), false, DataSourceUpdateMode.OnPropertyChanged);
+            binding.Format += (binding_sender, binding_e) =>
+            {
+                var span = binding_e.Value as TimeSpan?;
+                if(span != null)
+                {
+                    binding_e.Value = span.Value.TotalSeconds;
+                }
+                else
+                    binding_e.Value = default(double);
+            };
+            txtAliveInterval.DataBindings.Add(binding);
+            //绑定属性集合
+            dgvProperty.AutoGenerateColumns = false;
+            bdsProperty.DataSource = deviceTemplate.Properties;
+            dgvProperty.DataSource = bdsProperty;
+
+            //控件事件
+            txtClientId.TextChanged += ControlProperty_Changed;
+            txtServerIp.TextChanged += ControlProperty_Changed;
+            txtPort.TextChanged += ControlProperty_Changed;
+            txtUserName.TextChanged += ControlProperty_Changed;
+            txtPassword.TextChanged += ControlProperty_Changed;
+            txtAliveInterval.TextChanged += ControlProperty_Changed;
+
+        }
+
+        private void ControlProperty_Changed(object sender, EventArgs e)
+        {
+            Modified = true;
         }
 
         private void LoadConfigInCtrlCnls()
@@ -232,6 +277,12 @@ namespace KpHiteMqtt.Mqtt.View
                 Modified = false;
                 return true;
             }
+            //属性Index重新排序
+            int index = 1;
+            deviceTemplate.Properties.ForEach(p =>
+            {
+                p.Index = index++;
+            });
             if (deviceTemplate.Save(newFileName, out errMsg))
             {
                 _fileName = newFileName;
@@ -255,30 +306,31 @@ namespace KpHiteMqtt.Mqtt.View
             string errMsg = string.Empty;
             if (!deviceTemplate.Load(fileName, out errMsg))
                 ScadaUiUtils.ShowError(errMsg);
-
-            //将载入的连接参数赋值
-            ViewModel.ClientID = deviceTemplate.ConnectionOptions.ClientId;
-            ViewModel.UserName = deviceTemplate.ConnectionOptions.Credentials.UserName;
-            ViewModel.Password = deviceTemplate.ConnectionOptions.Credentials.Password;
-            ViewModel.HeartInterval = deviceTemplate.ConnectionOptions.KeepAliveSendInterval.TotalSeconds;
-            ViewModel.MqttServerIp = deviceTemplate.ConnectionOptions.IpAddress;
-            ViewModel.MqttServerPort = deviceTemplate.ConnectionOptions.Port;
         }
         #endregion
 
         #region 新增、删除、编辑物模型
         private void btnAddModel_Click(object sender, EventArgs e)
         {
+            
             var property = new Property()
             {
                 Index = CurrentIndex++
             };
-            FrmDevModel frm = new FrmDevModel(property,allInCnls,allCtrlCnls);
+            FrmDevModel frm = new FrmDevModel(property);
             if(frm.ShowDialog() != DialogResult.OK)
             {
                 return;
             }
+            //判断物模型是否已存在
+            if (Properties.Any(p => p.Identifier.Equals(property.Identifier)))
+            {
+                ScadaUiUtils.ShowError($"标识符:{property.Identifier}已存在!");
+                return;
+            }
             Properties.Add(property);
+            RefreshDataGridView();
+            Modified = true;
         }
 
         private void tsmEditModel_Click(object sender, EventArgs e)
@@ -303,8 +355,9 @@ namespace KpHiteMqtt.Mqtt.View
                 ScadaUiUtils.ShowError("当前未选中任何要编辑的项!");
                 return; 
             }
-            FrmDevModel frm = new FrmDevModel(property,allInCnls,allCtrlCnls);
+            FrmDevModel frm = new FrmDevModel(property);
             frm.ShowDialog();
+            Modified = true;
 
         }
 
@@ -320,6 +373,14 @@ namespace KpHiteMqtt.Mqtt.View
         {
             bdsProperty.DataSource = null;
             bdsProperty.DataSource = properties;
+        }
+        #endregion
+
+        #region 刷新datagridview显示
+        private void RefreshDataGridView()
+        {
+            bdsProperty.ResetBindings(false);
+            dgvProperty.Invalidate();
         }
         #endregion
 

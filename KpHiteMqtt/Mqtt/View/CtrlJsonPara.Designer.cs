@@ -72,10 +72,11 @@
             // 
             // panelPara
             // 
+            this.panelPara.AutoScroll = true;
             this.panelPara.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelPara.Location = new System.Drawing.Point(0, 43);
             this.panelPara.Name = "panelPara";
-            this.panelPara.Size = new System.Drawing.Size(540, 170);
+            this.panelPara.Size = new System.Drawing.Size(540, 370);
             this.panelPara.TabIndex = 4;
             // 
             // CtrlJsonPara
@@ -87,7 +88,7 @@
             this.Controls.Add(this.panelPara);
             this.Controls.Add(this.groupBox1);
             this.Name = "CtrlJsonPara";
-            this.Size = new System.Drawing.Size(540, 213);
+            this.Size = new System.Drawing.Size(540, 413);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.ResumeLayout(false);

@@ -12,17 +12,17 @@ namespace KpHiteMqtt.Mqtt.Model
         /// <summary>
         /// 数组索引
         /// </summary>
-        [Description("数组索引")]
+        [DisplayName("数组索引")]
         public int ArrayIndex { get; set; }
         /// <summary>
         /// 输入通道号
         /// </summary>
-        [Description("输入通道号")]
-        public int InCnlNum { get; set; }
+        [DisplayName("输入通道号")]
+        public string InCnlNum { get; set; }
         /// <summary>
         /// 输出通道号
         /// </summary>
-        [Description("输出通道号")]
-        public int CtrlCnlNum { get;set; }
+        [DisplayName("输出通道号")]
+        public string CtrlCnlNum { get;set; }
     }
 }

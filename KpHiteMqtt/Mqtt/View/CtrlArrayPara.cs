@@ -3,17 +3,10 @@ using KpCommon.Helper;
 using KpCommon.Model;
 using KpHiteMqtt.Mqtt.Model;
 using KpHiteMqtt.Mqtt.Model.Enum;
-using Scada;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace KpHiteMqtt.Mqtt.View
@@ -21,14 +14,9 @@ namespace KpHiteMqtt.Mqtt.View
     public partial class CtrlArrayPara : UserControl
     {
         private DataArraySpecs _arraySpecs;
-        public CtrlArrayPara(DataArraySpecs arraySpecs)
+        public CtrlArrayPara()
         {
             InitializeComponent();
-            _arraySpecs = arraySpecs;
-        }
-
-        private void CtrlArrayPara_Load(object sender, EventArgs e)
-        {
             //combobox绑定数据源
             Dictionary<string, ArrayDataTypeEnum> keyValueDataTypeEnums = new Dictionary<string, ArrayDataTypeEnum>();
             foreach (ArrayDataTypeEnum type in Enum.GetValues(typeof(ArrayDataTypeEnum)))
@@ -38,13 +26,52 @@ namespace KpHiteMqtt.Mqtt.View
             cbxDataType.DataSource = bdsDataType;
             cbxDataType.DisplayMember = "Key";
             cbxDataType.ValueMember = "Value";
+        }
+        public void InitCtrlArrayPara(DataArraySpecs arraySpecs)
+        {
+            _arraySpecs = arraySpecs;
+            ctrlJsonPara.InitPara(_arraySpecs.DataSpecs);
+
             //控件绑定
             txtArrayLength.AddDataBindings(_arraySpecs, nameof(_arraySpecs.ArrayLength));
-            cbxDataType.AddDataBindings(_arraySpecs,nameof(_arraySpecs.DataType));
+            cbxDataType.AddDataBindings(_arraySpecs, nameof(_arraySpecs.DataType));
             txtArrayChannel.AddDataBindings(_arraySpecs, nameof(_arraySpecs.ArrayChannelString));
             ctrlJsonPara.AddVisableDataBindings(_arraySpecs, nameof(_arraySpecs.IsStruct));
+            cbxDataType.AddDataBindings(_arraySpecs, nameof(_arraySpecs.DataType));
 
-            ctrlJsonPara.DataSpecs = _arraySpecs.DataSpecs;
+            btnImport.DataBindings.Clear();
+            btnExport.DataBindings.Clear();
+            var bindImport = new Binding(nameof(btnImport.Enabled), _arraySpecs, nameof(_arraySpecs.IsStruct), false, DataSourceUpdateMode.OnPropertyChanged);
+            bindImport.Format += (sender, e) =>
+            {
+                var tempValue = (bool)e.Value;
+                e.Value = !tempValue;
+            };
+            var bindExport = new Binding(nameof(btnExport.Enabled), _arraySpecs, nameof(_arraySpecs.IsStruct), false, DataSourceUpdateMode.OnPropertyChanged);
+            bindExport.Format += (sender, e) =>
+            {
+                var tempValue = (bool)e.Value;
+                e.Value = !tempValue;
+            };
+
+            var bindTextBox = new Binding(nameof(btnExport.Enabled), _arraySpecs, nameof(_arraySpecs.IsStruct), false, DataSourceUpdateMode.OnPropertyChanged);
+            bindTextBox.Format += (sender, e) =>
+            {
+                var tempValue = (bool)e.Value;
+                e.Value = !tempValue;
+            };
+            //btnImport.DataBindings.Add(nameof(btnImport.Enabled), _arraySpecs, nameof(_arraySpecs.IsStruct), false, DataSourceUpdateMode.OnPropertyChanged);
+            //btnExport.DataBindings.Add(nameof(btnExport.Enabled), _arraySpecs, nameof(_arraySpecs.IsStruct), false, DataSourceUpdateMode.OnPropertyChanged);
+            //txtArrayChannel.DataBindings.Add(nameof(txtArrayChannel.Enabled),_arraySpecs,nameof(_arraySpecs.IsStruct),false,DataSourceUpdateMode.OnPropertyChanged);
+
+            btnImport.DataBindings.Add(bindImport);
+            btnExport.DataBindings.Add(bindExport);
+            txtArrayChannel.DataBindings.Add(bindTextBox);
+        }
+
+        private void CtrlArrayPara_Load(object sender, EventArgs e)
+        {
+            
         }
 
         #region 通道匹配关系导入、导出
@@ -73,8 +100,10 @@ namespace KpHiteMqtt.Mqtt.View
                 //赋值输入，输出通道
                 foreach( var arrayChannel in arrayChannels )
                 {
-                    _arraySpecs.InCnlNums.Add(arrayChannel.InCnlNum);
-                    _arraySpecs.CtrlCnlNums.Add(arrayChannel.CtrlCnlNum);
+                    if(!string.IsNullOrEmpty(arrayChannel.InCnlNum))
+                    _arraySpecs.InCnlNums.Add(arrayChannel.InCnlNum.ToInt());
+                    if(!string.IsNullOrEmpty(arrayChannel.CtrlCnlNum))
+                        _arraySpecs.CtrlCnlNums.Add(arrayChannel.CtrlCnlNum.ToInt());
                 }
                 txtArrayChannel.Text = _arraySpecs.ArrayChannelString;
             }
@@ -109,8 +138,8 @@ namespace KpHiteMqtt.Mqtt.View
                     arrayChnnelModels.Add(new ArrayChannelModel()
                     {
                         ArrayIndex = i,
-                        InCnlNum = _arraySpecs.InCnlNums[i],
-                        CtrlCnlNum = _arraySpecs.CtrlCnlNums[i],
+                        InCnlNum = i < _arraySpecs.InCnlNums.Count ? _arraySpecs.InCnlNums[i].ToString() : string.Empty,
+                        CtrlCnlNum = i < _arraySpecs.CtrlCnlNums.Count ? _arraySpecs.CtrlCnlNums[i].ToString() : string.Empty,
                     });
                 }
 

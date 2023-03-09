@@ -74,6 +74,7 @@
             // 
             // ctrlJsonPara
             // 
+            this.ctrlJsonPara._allctrlcnls = null;
             this.ctrlJsonPara.AutoScroll = true;
             this.ctrlJsonPara.BackColor = System.Drawing.Color.WhiteSmoke;
             this.ctrlJsonPara.Location = new System.Drawing.Point(11, 207);
@@ -83,7 +84,6 @@
             // 
             // txtArrayChannel
             // 
-            this.txtArrayChannel.Enabled = false;
             this.txtArrayChannel.Location = new System.Drawing.Point(11, 117);
             this.txtArrayChannel.Multiline = true;
             this.txtArrayChannel.Name = "txtArrayChannel";

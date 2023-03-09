@@ -15,15 +15,28 @@ namespace KpHiteMqtt.Mqtt.View
         private List<CtrlCnl> _allCtrlCnls;
         private Property _property;
 
-        public FrmDevModel(Property property,List<InCnl> allInCnls,List<CtrlCnl> allCtrlCnls)
+        private static bool isreadonly = false;
+        public static bool IsReadOnly
+        {
+            get => isreadonly;
+        }
+
+        public FrmDevModel(Property property)
         {
             InitializeComponent();
-            _allCtrlCnls = allCtrlCnls;
-            _allInCnls = allInCnls;
+            _allCtrlCnls = FrmDevTemplate.AllCtrlCnls;
+            _allInCnls = FrmDevTemplate.AllInCnls;
             _property = property;
-
-
+            _property.PropertyChanged += _property_PropertyChanged;
             InitDataBings();
+        }
+
+        private void _property_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName.Equals(nameof(Property.IsReadOnly)))
+            {
+                isreadonly = _property.IsReadOnly;
+            }
         }
 
         private void InitDataBings()
@@ -56,19 +69,33 @@ namespace KpHiteMqtt.Mqtt.View
             //绑定控件
             txtName.AddDataBindings(_property, nameof(Property.Name));
             txtIdentifier.AddDataBindings(_property, nameof(Property.Identifier));
-            rdbReadOnlyRW.AddDataBindings(_property, nameof(Property.IsReadOnly), true);
-            rdbReadOnlyR.AddDataBindings(_property,nameof(Property.IsReadOnly), true);
+            rdbReadOnlyR.AddDataBindings(_property,nameof(Property.IsReadOnly));
             cbxInputChannels.AddDataBindings(_property, nameof(Property.CnlNum));
-            cbxInputChannels.DataBindings.Add(nameof(cbxInputChannels.Visible), _property, nameof(_property.InputChannelVisable), false, DataSourceUpdateMode.OnPropertyChanged);
-            lblInputChannel.AddVisableDataBindings(_property, nameof(_property.InputChannelVisable));
+            cbxInputChannels.AddVisableDataBindings(_property,nameof(Property.InputChannelVisable));
+            lblInputChannel.AddVisableDataBindings(_property, nameof(Property.InputChannelVisable));
             cbxOutputChannels.AddDataBindings(_property, nameof(Property.CtrlCnlNum));
-            cbxOutputChannels.DataBindings.Add(nameof(cbxOutputChannels.Visible), _property, nameof(_property.OutputChannelVisable), false, DataSourceUpdateMode.OnPropertyChanged);
+            cbxOutputChannels.AddVisableDataBindings(_property, nameof(_property.OutputChannelVisable));
             lblOutputChannel.AddVisableDataBindings(_property, nameof(_property.OutputChannelVisable));
             txtDescription.AddDataBindings(_property, nameof(Property.Description));
-            ctrlJsonPara.DataBindings.Add(nameof(ctrlJsonPara.Visible), _property, nameof(_property.IsStruct), false, DataSourceUpdateMode.OnPropertyChanged);
-
-            
+            txtUnit.AddDataBindings(_property,nameof(_property.Unit));
+            ctrlJsonPara.AddVisableDataBindings(_property, nameof(_property.IsStruct));
+            cbxDataType.AddDataBindings(_property, nameof(_property.DataType));
+            ctrlArrayPara.AddVisableDataBindings(_property, nameof(_property.IsArray));
+            //控件参数赋值
+            //数组
+            ctrlArrayPara.InitCtrlArrayPara(_property.ArraySpecs);
+            //Json参数
+            ctrlJsonPara.InitPara(_property.DataSpecsList);
         }
 
+        private void btnConfirm_Click(object sender, EventArgs e)
+        {
+            DialogResult = DialogResult.OK;
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            DialogResult= DialogResult.Cancel;
+        }
     }
 }

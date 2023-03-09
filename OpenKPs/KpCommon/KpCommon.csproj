@@ -73,6 +73,7 @@
     <Compile Include="Attributes\ExcelHeaderSortAttribute.cs" />
     <Compile Include="DIService\DIModbusService\ModbusServiceExtend.cs" />
     <Compile Include="DIService\DIServiceHelper.cs" />
+    <Compile Include="Extend\ChannelCnlExtend.cs" />
     <Compile Include="Extend\ControlExtend.cs" />
     <Compile Include="Extend\EnumHelper.cs" />
     <Compile Include="Extend\StringExtendMethod.cs" />

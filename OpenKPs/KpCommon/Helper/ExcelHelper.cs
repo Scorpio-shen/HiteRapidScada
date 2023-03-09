@@ -285,12 +285,24 @@ namespace KpCommon.Helper
                                 sortTemp.Sort = new KeyValuePair<string, string>(displayName.DisplayName, item.Name);
 
                             sortTemps.Add(sortTemp);
+                            var sortList = sortTemps.OrderBy(s => s.SortIndex);
+                            dict = sortList.Select(s => s.Sort).ToDictionary(s => s.Key, s => s.Value);
+                        }
+                        else
+                        {
+                            if (isToExcel)
+                            {
+                                dict.Add(item.Name, displayName.DisplayName);
+                            }
+                            else
+                            {
+                                dict.Add(displayName.DisplayName, item.Name);
+                            }
                         }
                     }
 
                 }
-                var sortList = sortTemps.OrderBy(s => s.SortIndex);
-                dict = sortList.Select(s => s.Sort).ToDictionary(s => s.Key, s => s.Value);
+                
             }
             catch (Exception e)
             {

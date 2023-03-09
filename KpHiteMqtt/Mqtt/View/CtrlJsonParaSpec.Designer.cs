@@ -36,13 +36,15 @@
             this.label3 = new System.Windows.Forms.Label();
             this.lblInputChannel = new System.Windows.Forms.Label();
             this.lblOutputChannel = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.lblIdentifier = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.label1.Location = new System.Drawing.Point(24, 14);
+            this.label1.Location = new System.Drawing.Point(13, 14);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(59, 12);
             this.label1.TabIndex = 0;
@@ -79,17 +81,17 @@
             // lblParaName
             // 
             this.lblParaName.AutoSize = true;
-            this.lblParaName.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.lblParaName.Location = new System.Drawing.Point(89, 10);
+            this.lblParaName.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.lblParaName.Location = new System.Drawing.Point(78, 14);
             this.lblParaName.Name = "lblParaName";
-            this.lblParaName.Size = new System.Drawing.Size(0, 20);
+            this.lblParaName.Size = new System.Drawing.Size(0, 12);
             this.lblParaName.TabIndex = 3;
             // 
             // label2
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.label2.Location = new System.Drawing.Point(182, 14);
+            this.label2.Location = new System.Drawing.Point(238, 14);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(59, 12);
             this.label2.TabIndex = 4;
@@ -99,7 +101,7 @@
             // 
             this.label3.AutoSize = true;
             this.label3.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.label3.Location = new System.Drawing.Point(312, 14);
+            this.label3.Location = new System.Drawing.Point(342, 14);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(59, 12);
             this.label3.TabIndex = 5;
@@ -109,7 +111,7 @@
             // 
             this.lblInputChannel.AutoSize = true;
             this.lblInputChannel.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.lblInputChannel.Location = new System.Drawing.Point(247, 14);
+            this.lblInputChannel.Location = new System.Drawing.Point(303, 14);
             this.lblInputChannel.Name = "lblInputChannel";
             this.lblInputChannel.Size = new System.Drawing.Size(23, 12);
             this.lblInputChannel.TabIndex = 6;
@@ -119,17 +121,38 @@
             // 
             this.lblOutputChannel.AutoSize = true;
             this.lblOutputChannel.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.lblOutputChannel.Location = new System.Drawing.Point(377, 14);
+            this.lblOutputChannel.Location = new System.Drawing.Point(407, 14);
             this.lblOutputChannel.Name = "lblOutputChannel";
             this.lblOutputChannel.Size = new System.Drawing.Size(23, 12);
             this.lblOutputChannel.TabIndex = 7;
             this.lblOutputChannel.Text = "101";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label4.Location = new System.Drawing.Point(118, 14);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(47, 12);
+            this.label4.TabIndex = 8;
+            this.label4.Text = "标识符:";
+            // 
+            // lblIdentifier
+            // 
+            this.lblIdentifier.AutoSize = true;
+            this.lblIdentifier.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.lblIdentifier.Location = new System.Drawing.Point(171, 14);
+            this.lblIdentifier.Name = "lblIdentifier";
+            this.lblIdentifier.Size = new System.Drawing.Size(0, 12);
+            this.lblIdentifier.TabIndex = 9;
             // 
             // CtrlJsonParaSpec
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(227)))), ((int)(((byte)(242)))), ((int)(((byte)(253)))));
+            this.Controls.Add(this.lblIdentifier);
+            this.Controls.Add(this.label4);
             this.Controls.Add(this.lblOutputChannel);
             this.Controls.Add(this.lblInputChannel);
             this.Controls.Add(this.label3);
@@ -140,6 +163,7 @@
             this.Controls.Add(this.label1);
             this.Name = "CtrlJsonParaSpec";
             this.Size = new System.Drawing.Size(532, 44);
+            this.Load += new System.EventHandler(this.CtrlJsonParaSpec_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -155,5 +179,7 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label lblInputChannel;
         private System.Windows.Forms.Label lblOutputChannel;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.Label lblIdentifier;
     }
 }

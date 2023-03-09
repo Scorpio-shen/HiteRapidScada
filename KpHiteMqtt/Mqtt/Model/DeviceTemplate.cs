@@ -66,6 +66,7 @@ namespace KpHiteMqtt.Mqtt.Model
                 #region 基础参数
                 var temp = new Property
                 {
+                    Index = property.GetAttrAsInt("Index"),
                     Identifier = property.GetAttrAsString("Identifier"),
                     Name = property.GetAttrAsString("Name"),
                     DataType = property.GetAttrAsEnum<DataTypeEnum>("DataType", DataTypeEnum.Int32),
@@ -86,7 +87,7 @@ namespace KpHiteMqtt.Mqtt.Model
                 temp.ArraySpecs.DataType = arrayElement.GetAttrAsEnum<ArrayDataTypeEnum>("DataType", ArrayDataTypeEnum.Int32);
                 temp.ArraySpecs.ArrayLength = arrayElement.GetAttrAsInt("ArrayLength");
                 //数组内部输入通道
-                var cnlNumsNode = arrayElement.SelectSingleNode("ArraySpecs:CnlNums");
+                var cnlNumsNode = arrayElement.SelectSingleNode("CnlNums");
                 var cnlNumsElement = cnlNumsNode as XmlElement;
                 foreach(XmlElement cnlElement in cnlNumsElement.SelectNodes("CnlNum"))
                 {
@@ -94,7 +95,7 @@ namespace KpHiteMqtt.Mqtt.Model
                 }
 
                 //数组内部输出通道
-                var ctrlCnlNumsNode = arrayElement.SelectSingleNode("ArraySpecs:CtrlCnlNums");
+                var ctrlCnlNumsNode = arrayElement.SelectSingleNode("CtrlCnlNums");
                 var ctrlCnlElement = ctrlCnlNumsNode as XmlElement;
                 foreach(XmlElement ctrlcnlElement in ctrlCnlElement.ChildNodes)
                 {
@@ -102,7 +103,7 @@ namespace KpHiteMqtt.Mqtt.Model
                 }
 
                 //数组内部Json参数
-                foreach(XmlElement dataspecElem in arrayElement.SelectSingleNode("ArraySpecs:DataSpecs").ChildNodes)
+                foreach(XmlElement dataspecElem in arrayElement.SelectSingleNode("DataSpecs").ChildNodes)
                 {
                     temp.ArraySpecs.DataSpecs.Add(new DataSpecs
                     {
@@ -175,6 +176,7 @@ namespace KpHiteMqtt.Mqtt.Model
             {
                 #region 基础参数
                 var pElement = propertyElement.AppendElem("Property");
+                pElement.SetAttribute("Index", property.Index);
                 pElement.SetAttribute("Name", property.Name);
                 pElement.SetAttribute("Identifier", property.Identifier);
                 pElement.SetAttribute("Description", property.Description);
@@ -189,21 +191,21 @@ namespace KpHiteMqtt.Mqtt.Model
                 var arraySpecsElement = pElement.AppendElem("ArraySpecs");
                 arraySpecsElement.SetAttribute("DataType", property.ArraySpecs.DataType);
                 arraySpecsElement.SetAttribute("ArrayLength", property.ArraySpecs.ArrayLength);
-                var arrayCnlElement = arraySpecsElement.AppendElem("ArraySpecs:CnlNums");
+                var arrayCnlElement = arraySpecsElement.AppendElem("CnlNums");
                 foreach (var cnlnum in property.ArraySpecs.InCnlNums)
                 {
                     var cnlElement = arrayCnlElement.AppendElem("CnlNum");
                     cnlElement.InnerText = cnlnum.ToString();
                 }
                 //输出通道
-                var arrayCtrlCnlElemnt = arraySpecsElement.AppendElem("ArraySpecs:CtrlCnlNums");
+                var arrayCtrlCnlElemnt = arraySpecsElement.AppendElem("CtrlCnlNums");
                 foreach (var ctrlnum in property.ArraySpecs.CtrlCnlNums)
                 {
                     var ctrlElement = arrayCtrlCnlElemnt.AppendElem("CtrlNum");
                     ctrlElement.InnerText = ctrlnum.ToString();
                 }
                 //数组内部Json参数
-                var arraySpecsElements = arraySpecsElement.AppendElem("ArraySpecs:DataSpecs");
+                var arraySpecsElements = arraySpecsElement.AppendElem("DataSpecs");
                 foreach(var dataspec in property.ArraySpecs.DataSpecs)
                 {
                     var specElement = arraySpecsElements.AppendElem("Spec");
