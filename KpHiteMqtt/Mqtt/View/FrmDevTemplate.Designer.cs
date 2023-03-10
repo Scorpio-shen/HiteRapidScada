@@ -42,7 +42,7 @@
             this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
             this.dgvProperty = new System.Windows.Forms.DataGridView();
             this.columnCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.columnIndex = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnId = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.columnName = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.columnIdentifier = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.columnDataType = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -66,6 +66,7 @@
             this.txtClientId = new System.Windows.Forms.TextBox();
             this.lblClientId = new System.Windows.Forms.Label();
             this.bdsProperty = new System.Windows.Forms.BindingSource(this.components);
+            this.btnAddTopic = new System.Windows.Forms.Button();
             this.toolStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvProperty)).BeginInit();
             this.ctxMenuViewOperate.SuspendLayout();
@@ -165,7 +166,7 @@
             this.dgvProperty.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvProperty.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.columnCheck,
-            this.columnIndex,
+            this.columnId,
             this.columnName,
             this.columnIdentifier,
             this.columnDataType,
@@ -175,7 +176,7 @@
             this.dgvProperty.Location = new System.Drawing.Point(3, 17);
             this.dgvProperty.Name = "dgvProperty";
             this.dgvProperty.RowTemplate.Height = 23;
-            this.dgvProperty.Size = new System.Drawing.Size(964, 444);
+            this.dgvProperty.Size = new System.Drawing.Size(964, 545);
             this.dgvProperty.TabIndex = 2;
             // 
             // columnCheck
@@ -186,11 +187,12 @@
             this.columnCheck.Resizable = System.Windows.Forms.DataGridViewTriState.True;
             this.columnCheck.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
             // 
-            // columnIndex
+            // columnId
             // 
-            this.columnIndex.HeaderText = "Index";
-            this.columnIndex.Name = "columnIndex";
-            this.columnIndex.Visible = false;
+            this.columnId.DataPropertyName = "Id";
+            this.columnId.HeaderText = "Id";
+            this.columnId.Name = "columnId";
+            this.columnId.Visible = false;
             // 
             // columnName
             // 
@@ -240,7 +242,7 @@
             // 
             // btnAddModel
             // 
-            this.btnAddModel.Location = new System.Drawing.Point(885, 197);
+            this.btnAddModel.Location = new System.Drawing.Point(885, 201);
             this.btnAddModel.Name = "btnAddModel";
             this.btnAddModel.Size = new System.Drawing.Size(82, 32);
             this.btnAddModel.TabIndex = 4;
@@ -252,9 +254,9 @@
             // 
             this.groupBox1.Controls.Add(this.dgvProperty);
             this.groupBox1.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.groupBox1.Location = new System.Drawing.Point(0, 231);
+            this.groupBox1.Location = new System.Drawing.Point(0, 239);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(970, 464);
+            this.groupBox1.Size = new System.Drawing.Size(970, 565);
             this.groupBox1.TabIndex = 5;
             this.groupBox1.TabStop = false;
             // 
@@ -278,6 +280,7 @@
             this.groupBox2.Size = new System.Drawing.Size(970, 166);
             this.groupBox2.TabIndex = 6;
             this.groupBox2.TabStop = false;
+            this.groupBox2.Text = "Mqtt服务器连接参数";
             // 
             // txtPassword
             // 
@@ -377,11 +380,22 @@
             this.lblClientId.TabIndex = 0;
             this.lblClientId.Text = "ClientId:";
             // 
+            // btnAddTopic
+            // 
+            this.btnAddTopic.Location = new System.Drawing.Point(797, 201);
+            this.btnAddTopic.Name = "btnAddTopic";
+            this.btnAddTopic.Size = new System.Drawing.Size(82, 32);
+            this.btnAddTopic.TabIndex = 7;
+            this.btnAddTopic.Text = "添加Topic";
+            this.btnAddTopic.UseVisualStyleBackColor = true;
+            this.btnAddTopic.Click += new System.EventHandler(this.btnAddTopic_Click);
+            // 
             // FrmDevTemplate
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(970, 695);
+            this.ClientSize = new System.Drawing.Size(970, 804);
+            this.Controls.Add(this.btnAddTopic);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.btnAddModel);
@@ -441,10 +455,11 @@
         private System.Windows.Forms.Label label_UseName;
         private System.Windows.Forms.BindingSource bdsProperty;
         private System.Windows.Forms.DataGridViewCheckBoxColumn columnCheck;
-        private System.Windows.Forms.DataGridViewTextBoxColumn columnIndex;
+        private System.Windows.Forms.DataGridViewTextBoxColumn columnId;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnName;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnIdentifier;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnDataType;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnUnit;
+        private System.Windows.Forms.Button btnAddTopic;
     }
 }

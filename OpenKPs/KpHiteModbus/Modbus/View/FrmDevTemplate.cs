@@ -316,15 +316,7 @@ namespace KpHiteModbus.Modbus.View
             if (string.IsNullOrEmpty(newFileName))
                 return false;
 
-            string errMsg = string.Empty;
-            if (saveAs)
-            {
-                JObject jobect = JObject.Parse( JsonConvert.SerializeObject(deviceTemplate));
-                File.WriteAllText(newFileName,jobect.ToString());
-                _fileName = newFileName;
-                Modified = false;
-                return true;
-            }
+            string errMsg;
             if (deviceTemplate.Save(newFileName, out errMsg))
             {
                 _fileName = newFileName;

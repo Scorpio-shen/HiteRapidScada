@@ -40,6 +40,10 @@
     <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
       <HintPath>..\..\packages\SharpZipLib.0.86.0\lib\20\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="NewLife.Core, Version=10.2.2023.301, Culture=neutral, PublicKeyToken=8343210f0b524456, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\NewLife.Core.10.2.2023.301\lib\net461\NewLife.Core.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -58,8 +62,12 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Management" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\System.ValueTuple.4.5.0\lib\net461\System.ValueTuple.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
@@ -67,6 +75,9 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="XCode, Version=11.6.8461.3774, Culture=neutral, PublicKeyToken=8343210f0b524456, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\NewLife.XCode.11.6.2023.302\lib\net461\XCode.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Attributes\DataTypeByteCountAttribute.cs" />
@@ -78,7 +89,9 @@
     <Compile Include="Extend\EnumHelper.cs" />
     <Compile Include="Extend\StringExtendMethod.cs" />
     <Compile Include="Extend\XmlExtension.cs" />
+    <Compile Include="Helper\EncryptionHelper.cs" />
     <Compile Include="Helper\ExcelHelper.cs" />
+    <Compile Include="Helper\SnowflakeHelper.cs" />
     <Compile Include="Helper\XMLHelper.cs" />
     <Compile Include="Hsl\Algorithms\ConnectPool\ConnectPool.cs" />
     <Compile Include="Hsl\Algorithms\ConnectPool\IConnector.cs" />
@@ -780,6 +793,7 @@
     <EmbeddedResource Include="Hsl\Properties\Resources.resx" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Entity\Model.xml" />
     <Content Include="Hsl\imgaes\abstr1.png" />
     <Content Include="Hsl\imgaes\abstr11.png" />
     <Content Include="Hsl\imgaes\Activity_16xLG.png" />

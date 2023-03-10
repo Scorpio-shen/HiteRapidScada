@@ -57,7 +57,13 @@
     <Compile Include="Mqtt\Model\ArrayChannelModel.cs" />
     <Compile Include="Mqtt\Model\DeviceTemplate.cs" />
     <Compile Include="Mqtt\Model\Enum\DataTypeEnum.cs" />
+    <Compile Include="Mqtt\Model\HiteMqttCmdModel.cs" />
+    <Compile Include="Mqtt\Model\HiteMqttDataModel.cs" />
+    <Compile Include="Mqtt\Model\InputChannelModel.cs" />
     <Compile Include="Mqtt\Model\Property.cs" />
+    <Compile Include="Mqtt\MqttHandle\IMqttHandle.cs" />
+    <Compile Include="Mqtt\MqttHandle\MqttHandle_Cmd_Receive.cs" />
+    <Compile Include="Mqtt\MqttHandle\MqttHandle_post_reply.cs" />
     <Compile Include="Mqtt\ViewModel\FrmDevModelViewModel.cs" />
     <Compile Include="Mqtt\ViewModel\FrmDevTemplateViewModel.cs" />
     <Compile Include="Mqtt\View\CtrlArrayInCtrlChannel.cs">
@@ -107,6 +113,12 @@
     </Compile>
     <Compile Include="Mqtt\View\FrmDevTemplate.Designer.cs">
       <DependentUpon>FrmDevTemplate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\View\FrmTopics.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Mqtt\View\FrmTopics.Designer.cs">
+      <DependentUpon>FrmTopics.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
@@ -158,6 +170,9 @@
     <EmbeddedResource Include="Mqtt\View\FrmDevTemplate.resx">
       <DependentUpon>FrmDevTemplate.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\View\FrmTopics.resx">
+      <DependentUpon>FrmTopics.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -166,6 +181,7 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>if exist "C:\SCADA\ScadaComm\KP"  (

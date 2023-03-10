@@ -5,10 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Utils;
+using static HslCommunication.MQTT.MqttClient;
 
 namespace KpHiteMqtt.Mqtt
 {
-    public delegate void MqttMessageReceive(string topic, string content);
+    public delegate void MqttMessageReceived(string topic, string content);
     public class HiteMqttClient
     {
         private MqttClient mqttClient;
@@ -23,7 +24,9 @@ namespace KpHiteMqtt.Mqtt
         }
 
         #region 事件
-        public event MqttMessageReceive OnMqttMessageReceived;
+        public event MqttMessageReceived OnMqttMessageReceived;
+        public event EventHandler OnMqttConnected;
+        public event EventHandler OnMqttDisConnected;
         #endregion
 
         #region 属性
@@ -35,13 +38,10 @@ namespace KpHiteMqtt.Mqtt
 
 
         #region 连接与断开
-        public bool ConnectServer()
+        public OperateResult ConnectServer()
         {
-            if (IsConnected)
-                return true;
-
             var result = mqttClient.ConnectServer();
-            return result.IsSuccess;
+            return result;
         }
 
         public void DisConnect()
@@ -84,11 +84,13 @@ namespace KpHiteMqtt.Mqtt
         private void MqttClient_OnNetworkError(object sender, EventArgs e)
         {
             _writeToLog?.Invoke($"HiteMqttClient:MqttClient_OnNetworkError,Mqtt网络异常");
+            OnMqttDisConnected?.Invoke(sender, e);
         }
 
         private void MqttClient_OnClientConnected(MqttClient client)
         {
             _writeToLog?.Invoke($"HiteMqttClient:MqttClient_OnClientConnected,Mqtt成功连接,连接参数{client.ConnectionOptions.ToJsonString()}");
+            OnMqttConnected?.Invoke(client, new EventArgs());
         }
         #endregion
 

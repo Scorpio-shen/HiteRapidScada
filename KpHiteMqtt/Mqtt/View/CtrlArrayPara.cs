@@ -97,6 +97,8 @@ namespace KpHiteMqtt.Mqtt.View
                     ScadaUiUtils.ShowError($"导入数据长度与输入数组长度不匹配!");
                     return;
                 }
+                _arraySpecs.InCnlNums.Clear();
+                _arraySpecs.CtrlCnlNums.Clear();
                 //赋值输入，输出通道
                 foreach( var arrayChannel in arrayChannels )
                 {

@@ -57,4 +57,18 @@ namespace KpHiteMqtt.Mqtt.Model.Enum
         [Description("text(字符串)")]
         Text,
     }
+
+    public static class DataTypeEnumExtend
+    {
+        public static DataTypeEnum ToDataTypeEnum(this ArrayDataTypeEnum arrayDataTypeEnum)
+        {
+            if (System.Enum.TryParse<DataTypeEnum>(arrayDataTypeEnum.ToString(), out var dataTypeEnum))
+            {
+                return dataTypeEnum;
+            }
+            else
+                return DataTypeEnum.Int32;
+
+        }
+    }
 }

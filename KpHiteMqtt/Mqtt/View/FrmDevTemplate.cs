@@ -268,21 +268,21 @@ namespace KpHiteMqtt.Mqtt.View
             if (string.IsNullOrEmpty(newFileName))
                 return false;
 
-            string errMsg = string.Empty;
-            if (saveAs)
-            {
-                JObject jobect = JObject.Parse( JsonConvert.SerializeObject(deviceTemplate));
-                File.WriteAllText(newFileName,jobect.ToString());
-                _fileName = newFileName;
-                Modified = false;
-                return true;
-            }
+            string errMsg;
             //属性Index重新排序
             int index = 1;
             deviceTemplate.Properties.ForEach(p =>
             {
-                p.Index = index++;
+                p.Id = index++;
             });
+            //获取物模型关联的输入、输出通道
+            var incnlnums = deviceTemplate.GetInCnls();
+            var ctrlcnlnums = deviceTemplate.GetCtrlCnls();
+            var incnls = allInCnls.Where(incnl => incnlnums.Contains(incnl.CnlNum));
+            var ctrlcnls = allCtrlCnls.Where(ctrlcnl => ctrlcnlnums.Contains(ctrlcnl.CtrlCnlNum));
+
+            deviceTemplate.InCnls = incnls.ToList();
+            deviceTemplate.CtrlCnls = ctrlcnls.ToList();    
             if (deviceTemplate.Save(newFileName, out errMsg))
             {
                 _fileName = newFileName;
@@ -315,7 +315,7 @@ namespace KpHiteMqtt.Mqtt.View
             
             var property = new Property()
             {
-                Index = CurrentIndex++
+                Id = CurrentIndex++
             };
             FrmDevModel frm = new FrmDevModel(property);
             if(frm.ShowDialog() != DialogResult.OK)
@@ -345,7 +345,7 @@ namespace KpHiteMqtt.Mqtt.View
                     var indexStr = rows[0].Cells["Index"].Value?.ToString();
                     if (!string.IsNullOrEmpty(indexStr))
                     {
-                        property = Properties.FirstOrDefault(p => p.Index == indexStr.ToInt());
+                        property = Properties.FirstOrDefault(p => p.Id == indexStr.ToInt());
                     }
                     
                 }
@@ -381,6 +381,18 @@ namespace KpHiteMqtt.Mqtt.View
         {
             bdsProperty.ResetBindings(false);
             dgvProperty.Invalidate();
+        }
+        #endregion
+
+        #region 添加Topic
+        private void btnAddTopic_Click(object sender, EventArgs e)
+        {
+            FrmTopics frm = new FrmTopics(deviceTemplate);
+            var drResult = frm.ShowDialog();
+            if(drResult == DialogResult.OK)
+            {
+                Modified = true;
+            }
         }
         #endregion
 

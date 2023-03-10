@@ -1,5 +1,6 @@
 ﻿using KpHiteMqtt.Mqtt.Model.Enum;
 using Newtonsoft.Json;
+using Scada.Data.Entities;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
@@ -13,14 +14,14 @@ namespace KpHiteMqtt.Mqtt.Model
     /// </summary>
     public class Property : INotifyPropertyChanged
     {
-        private int index;
-        public int Index
+        private int id;
+        public int Id
         {
-            get => index;
+            get => id;
             set
             {
-                index = value;
-                OnPropertyChanged(nameof(Index));
+                id = value;
+                OnPropertyChanged(nameof(Id));
             }
         }
         /// <summary>
@@ -172,8 +173,7 @@ namespace KpHiteMqtt.Mqtt.Model
                 unit = value;
                 OnPropertyChanged(nameof(Unit));
             }
-        }
-
+        } 
         private int cnlnum;
         /// <summary>
         /// 输入通道Num
@@ -201,8 +201,6 @@ namespace KpHiteMqtt.Mqtt.Model
                 OnPropertyChanged(nameof(CtrlCnlNum));
             }
         }
-
-        public 
 
         public event PropertyChangedEventHandler PropertyChanged;
         public void OnPropertyChanged(string proName)
