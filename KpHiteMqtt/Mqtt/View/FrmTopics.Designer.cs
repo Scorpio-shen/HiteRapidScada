@@ -28,33 +28,37 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.Windows.Forms.TreeNode treeNode5 = new System.Windows.Forms.TreeNode("订阅");
-            System.Windows.Forms.TreeNode treeNode6 = new System.Windows.Forms.TreeNode("发布");
+            this.components = new System.ComponentModel.Container();
+            System.Windows.Forms.TreeNode treeNode1 = new System.Windows.Forms.TreeNode("订阅");
+            System.Windows.Forms.TreeNode treeNode2 = new System.Windows.Forms.TreeNode("发布");
             this.tvTopics = new System.Windows.Forms.TreeView();
             this.btnSubscribe = new System.Windows.Forms.Button();
-            this.btnPublish = new System.Windows.Forms.Button();
             this.txtTopic = new System.Windows.Forms.TextBox();
             this.btnConfirm = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
+            this.ctmsTvTopics = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.tspDeleteNode = new System.Windows.Forms.ToolStripMenuItem();
+            this.ctmsTvTopics.SuspendLayout();
             this.SuspendLayout();
             // 
             // tvTopics
             // 
+            this.tvTopics.ContextMenuStrip = this.ctmsTvTopics;
             this.tvTopics.Location = new System.Drawing.Point(13, 51);
             this.tvTopics.Name = "tvTopics";
-            treeNode5.Name = "nodeSubscribe";
-            treeNode5.Text = "订阅";
-            treeNode6.Name = "nodePublish";
-            treeNode6.Text = "发布";
+            treeNode1.Name = "nodeSubscribe";
+            treeNode1.Text = "订阅";
+            treeNode2.Name = "nodePublish";
+            treeNode2.Text = "发布";
             this.tvTopics.Nodes.AddRange(new System.Windows.Forms.TreeNode[] {
-            treeNode5,
-            treeNode6});
+            treeNode1,
+            treeNode2});
             this.tvTopics.Size = new System.Drawing.Size(384, 166);
             this.tvTopics.TabIndex = 0;
             // 
             // btnSubscribe
             // 
-            this.btnSubscribe.Location = new System.Drawing.Point(235, 7);
+            this.btnSubscribe.Location = new System.Drawing.Point(322, 7);
             this.btnSubscribe.Name = "btnSubscribe";
             this.btnSubscribe.Size = new System.Drawing.Size(75, 38);
             this.btnSubscribe.TabIndex = 1;
@@ -62,21 +66,11 @@
             this.btnSubscribe.UseVisualStyleBackColor = true;
             this.btnSubscribe.Click += new System.EventHandler(this.btnSubscribe_Click);
             // 
-            // btnPublish
-            // 
-            this.btnPublish.Location = new System.Drawing.Point(322, 7);
-            this.btnPublish.Name = "btnPublish";
-            this.btnPublish.Size = new System.Drawing.Size(75, 38);
-            this.btnPublish.TabIndex = 2;
-            this.btnPublish.Text = "发布";
-            this.btnPublish.UseVisualStyleBackColor = true;
-            this.btnPublish.Click += new System.EventHandler(this.btnPublish_Click);
-            // 
             // txtTopic
             // 
             this.txtTopic.Location = new System.Drawing.Point(13, 16);
             this.txtTopic.Name = "txtTopic";
-            this.txtTopic.Size = new System.Drawing.Size(216, 21);
+            this.txtTopic.Size = new System.Drawing.Size(303, 21);
             this.txtTopic.TabIndex = 3;
             // 
             // btnConfirm
@@ -99,6 +93,20 @@
             this.btnCancel.UseVisualStyleBackColor = true;
             this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
             // 
+            // ctmsTvTopics
+            // 
+            this.ctmsTvTopics.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.tspDeleteNode});
+            this.ctmsTvTopics.Name = "ctmsTvTopics";
+            this.ctmsTvTopics.Size = new System.Drawing.Size(101, 26);
+            // 
+            // tspDeleteNode
+            // 
+            this.tspDeleteNode.Name = "tspDeleteNode";
+            this.tspDeleteNode.Size = new System.Drawing.Size(100, 22);
+            this.tspDeleteNode.Text = "删除";
+            this.tspDeleteNode.Click += new System.EventHandler(this.tspDeleteNode_Click);
+            // 
             // FrmTopics
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -107,7 +115,6 @@
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnConfirm);
             this.Controls.Add(this.txtTopic);
-            this.Controls.Add(this.btnPublish);
             this.Controls.Add(this.btnSubscribe);
             this.Controls.Add(this.tvTopics);
             this.MaximizeBox = false;
@@ -116,6 +123,7 @@
             this.ShowIcon = false;
             this.Text = "FrmTopics";
             this.Load += new System.EventHandler(this.FrmTopics_Load);
+            this.ctmsTvTopics.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -125,9 +133,10 @@
 
         private System.Windows.Forms.TreeView tvTopics;
         private System.Windows.Forms.Button btnSubscribe;
-        private System.Windows.Forms.Button btnPublish;
         private System.Windows.Forms.TextBox txtTopic;
         private System.Windows.Forms.Button btnConfirm;
         private System.Windows.Forms.Button btnCancel;
+        private System.Windows.Forms.ContextMenuStrip ctmsTvTopics;
+        private System.Windows.Forms.ToolStripMenuItem tspDeleteNode;
     }
 }

@@ -17,28 +17,40 @@ namespace KpHiteMqtt.Mqtt.View
 {
     public partial class CtrlJsonParaSpec : UserControl
     {
+        private bool _showchannels;
         DataSpecs _dataSpecs;
         public event Action<DataSpecs> OnDeleteJsonPara;
+        public event Action<DataSpecs> OnModifyJsonPara;
         public CtrlJsonParaSpec()
         {
             InitializeComponent();
         }
-        public CtrlJsonParaSpec(DataSpecs dataSpecs)
+        public CtrlJsonParaSpec(DataSpecs dataSpecs,bool showchannels)
         {
             InitializeComponent();
             _dataSpecs = dataSpecs;
+            _showchannels = showchannels;
             //绑定控件
             lblParaName.AddDataBindings(_dataSpecs, nameof(DataSpecs.ParameterName));
-            lblInputChannel.AddDataBindings(_dataSpecs, nameof(DataSpecs.CnlNum));
+            lblInputChannel.AddDataBindings(_dataSpecs, nameof(DataSpecs.InCnlNum));
             lblOutputChannel.AddDataBindings(_dataSpecs,nameof(DataSpecs.CtrlCnlNum));
             lblIdentifier.AddDataBindings(_dataSpecs, nameof(DataSpecs.Identifier));
+
+            if (!_showchannels)
+            {
+                lblInput.Visible = false;
+                lblInputChannel.Visible = false;
+                lbloutput.Visible = false;
+                lblOutputChannel.Visible = false;
+            }
         }
 
         private void linkEdit_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             FrmDevJsonPara frm = new FrmDevJsonPara();
-            frm.InitParameters(_dataSpecs);
+            frm.InitParameters(_dataSpecs,_showchannels);
             frm.ShowDialog();
+            OnModifyJsonPara?.Invoke(_dataSpecs);
         }
 
         private void linkDelete_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

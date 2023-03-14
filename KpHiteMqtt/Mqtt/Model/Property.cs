@@ -1,8 +1,12 @@
 ﻿using KpHiteMqtt.Mqtt.Model.Enum;
 using Newtonsoft.Json;
 using Scada.Data.Entities;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -135,15 +139,14 @@ namespace KpHiteMqtt.Mqtt.Model
                 return DataType != DataTypeEnum.Array && DataType != DataTypeEnum.Struct && !IsReadOnly;
             }
         }
-
-        private DataArraySpecs arraySpecs = new DataArraySpecs();
-        public DataArraySpecs ArraySpecs
+        private DataArraySpecs dataArraySpecs = new DataArraySpecs();
+        public DataArraySpecs DataArraySpecs
         {
-            get => arraySpecs;
+            get => dataArraySpecs;
             set
             {
-                arraySpecs = value;
-                OnPropertyChanged(nameof(ArraySpecs));
+                dataArraySpecs = value;
+                OnPropertyChanged(nameof(DataArraySpecs));
             }
         }
 
@@ -211,6 +214,17 @@ namespace KpHiteMqtt.Mqtt.Model
 
     public class DataArraySpecs : INotifyPropertyChanged
     {
+        private string identifier;
+        public string Identifier
+        {
+            get=>identifier;
+            set
+            {
+                identifier = value;
+                OnPropertyChanged(nameof(Identifier));
+                OnPropertyChanged(nameof(ArrayChannelString));
+            }
+        }
         private ArrayDataTypeEnum datatype;
         public ArrayDataTypeEnum DataType
         {
@@ -220,6 +234,7 @@ namespace KpHiteMqtt.Mqtt.Model
                 datatype = value;
                 OnPropertyChanged(nameof(DataType));
                 OnPropertyChanged(nameof(IsStruct));
+                OnPropertyChanged(nameof(ArrayChannelString));
             }
         }
 
@@ -238,34 +253,192 @@ namespace KpHiteMqtt.Mqtt.Model
             set
             {
                 arraylength = value;
+                if(arraylength < arraySpecs.Count)
+                {
+                    do
+                    {
+                        arraySpecs.RemoveAt(arraySpecs.Count - 1);
+
+                    }
+                    while (arraylength < arraySpecs.Count && arraySpecs.Count > 0);
+                }
+                else if(arraylength > arraySpecs.Count)
+                {
+                    var count = arraySpecs.Count;
+                    for(int i = 0;i < arraylength - count; i++)
+                    {
+                        arraySpecs.Add(new Model.ArraySpecs
+                        {
+                            DataSpecs = this.DataSpecs.Select(d => d.Clone() as DataSpecs).ToList(),
+                        });
+                    }
+                }
                 OnPropertyChanged(nameof(ArrayLength));
                 OnPropertyChanged(nameof(ArrayChannelString));
             }
         }
 
-        private List<int> incnlums = new List<int>();
-        public List<int> InCnlNums
+        private List<ArraySpecs> arraySpecs = new List<ArraySpecs>();
+        public List<ArraySpecs> ArraySpecs
         {
-            get => incnlums;
+            get => arraySpecs;
             set
             {
-                incnlums = value;
-                OnPropertyChanged(nameof(InCnlNums));
+                arraySpecs = value;
+                OnPropertyChanged(nameof(ArraySpecs));
                 OnPropertyChanged(nameof(ArrayChannelString));
             }
         }
 
-        private List<int> ctrlcnlnums = new List<int>();
-        public List<int> CtrlCnlNums
+        private List<DataSpecs> dataSpecs = new List<DataSpecs>();
+        /// <summary>
+        /// 用于存储数组统一Json参数
+        /// </summary>
+        [JsonIgnore]
+        public List<DataSpecs> DataSpecs
         {
-            get=> ctrlcnlnums;
+            get => dataSpecs;
             set
             {
-                ctrlcnlnums = value;
-                OnPropertyChanged(nameof(CtrlCnlNums));
-                OnPropertyChanged(nameof(ArrayChannelString));
+                dataSpecs = value;
+                OnPropertyChanged(nameof(DataSpecs));
             }
         }
+
+        public void SetArrayDataSpecs()
+        {
+            foreach (var spec in arraySpecs)
+            {
+                List<DataSpecs> removeSpecs = new List<DataSpecs>(); //要移除的参数
+                List<DataSpecs> addSpecs = new List<DataSpecs>();    //要添加的参数
+                                                                     //遍历原有的参数，获取需要移除的参数
+                foreach (var olddataSpecs in spec.DataSpecs)
+                {
+                    if (!dataSpecs.Any(d => d.Identifier.Equals(olddataSpecs.Identifier)))
+                    {
+                        //需要移除
+                        removeSpecs.Add(olddataSpecs);
+                    }
+                }
+
+                foreach (var newdataSpecs in dataSpecs)
+                {
+                    if (!spec.DataSpecs.Any(d => d.Identifier.Equals(newdataSpecs.Identifier)))
+                    {
+                        //需要添加
+                        addSpecs.Add(newdataSpecs.Clone() as DataSpecs);
+                    }
+                }
+
+                foreach (var re in removeSpecs)
+                {
+                    spec.DataSpecs.Remove(re);
+                }
+
+                spec.DataSpecs.AddRange(addSpecs);
+            }
+            OnPropertyChanged(nameof(ArrayChannelString));
+        }
+
+        public string ArrayChannelString
+        {
+            get => GetArrayChannelString(Identifier);
+        }
+        private string GetArrayChannelString(string identifier)
+        {
+            List<ArrayChannelMap> maps = new List<ArrayChannelMap>();
+            for (int i = 0; i < arraylength; i++)
+            {
+                var map = new ArrayChannelMap()
+                {
+                    Index = i,
+                    Identifier = identifier + $"[{i}]",
+                };
+                if (i < ArraySpecs.Count)
+                {
+                    var arrayspec = ArraySpecs[i];
+                    map.InputChannel = arrayspec.InCnlNum;
+                    map.OutputChannel = arrayspec.CtrlCnlNum;
+
+                    if (DataType == ArrayDataTypeEnum.Struct)
+                    {
+                        
+                        map.Parameters = new Dictionary<string, Parameter>();
+                        foreach (var specs in arrayspec.DataSpecs)
+                        {
+                            map.Parameters.Add(specs.Identifier, new Parameter
+                            {
+                                InputChannel = specs.InCnlNum,
+                                OutputChannel = specs.InCnlNum,
+                            });
+                        }
+                    }
+                }
+                
+
+                maps.Add(map);
+            }
+            return ConvertJsonString(JsonConvert.SerializeObject(maps));
+
+        }
+
+        private string ConvertJsonString(string str)
+        {
+            //格式化json字符串
+            JsonSerializer serializer = new JsonSerializer();
+            TextReader tr = new StringReader(str);
+            JsonTextReader jtr = new JsonTextReader(tr);
+            object obj = serializer.Deserialize(jtr);
+            if (obj != null)
+            {
+                StringWriter textWriter = new StringWriter();
+                JsonTextWriter jsonWriter = new JsonTextWriter(textWriter)
+                {
+                    Formatting = Formatting.Indented,
+                    Indentation = 4,
+                    IndentChar = ' '
+                };
+                serializer.Serialize(jsonWriter, obj);
+                return textWriter.ToString();
+            }
+            else
+            {
+                return str;
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        public void OnPropertyChanged(string proName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(proName));
+        }
+
+    }
+
+    public class ArraySpecs : INotifyPropertyChanged
+    {
+        private int incnlnum;
+        public int InCnlNum
+        {
+            get => incnlnum;
+            set
+            {
+                incnlnum = value;
+                OnPropertyChanged(nameof(InCnlNum));         
+            }
+        }
+
+        private int ctrlcnlnum;
+        public int CtrlCnlNum
+        {
+            get=>ctrlcnlnum;
+            set
+            {
+                ctrlcnlnum = value;
+                OnPropertyChanged(nameof(CtrlCnlNum));
+            }
+        }
+
 
         private List<DataSpecs> dataSpecs = new List<DataSpecs>();
         public List<DataSpecs> DataSpecs
@@ -278,42 +451,16 @@ namespace KpHiteMqtt.Mqtt.Model
             }
         }
 
-        public string ArrayChannelString
-        {
-            get
-            {
-                StringBuilder builder = new StringBuilder();
-                for(int i = 0;i < arraylength; i++)
-                {
-                    builder.Append($"数组索引:{i}");
-                    if (i < InCnlNums.Count)
-                    {
-                        builder.Append($",输入通道:{InCnlNums[i]}");
-                    }
-
-                    if(i < CtrlCnlNums.Count)
-                    {
-                        builder.Append($",输出通道:{CtrlCnlNums[i]}");
-                    }
-
-                    builder.Append("\r\n");
-                }
-
-                return builder.ToString();
-            }
-        }
-
         public event PropertyChangedEventHandler PropertyChanged;
         public void OnPropertyChanged(string proName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(proName));
         }
-
     }
     /// <summary>
     /// Json参数
     /// </summary>
-    public class DataSpecs : INotifyPropertyChanged
+    public class DataSpecs : INotifyPropertyChanged,ICloneable
     {
         private string parametername;
         /// <summary>
@@ -357,17 +504,17 @@ namespace KpHiteMqtt.Mqtt.Model
             }
         }
 
-        private int cnlnum;
+        private int incnlnum;
         /// <summary>
         /// 输入通道Num
         /// </summary>
-        public int CnlNum
+        public int InCnlNum
         {
-            get => cnlnum;
+            get => incnlnum;
             set
             {
-                cnlnum = value;
-                OnPropertyChanged(nameof(CnlNum));
+                incnlnum = value;
+                OnPropertyChanged(nameof(InCnlNum));
             }
         }
 
@@ -403,6 +550,11 @@ namespace KpHiteMqtt.Mqtt.Model
         public void OnPropertyChanged(string proName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(proName));
+        }
+
+        public object Clone()
+        {
+            return MemberwiseClone();
         }
     }
 }

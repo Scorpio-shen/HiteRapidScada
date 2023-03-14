@@ -46,14 +46,14 @@ namespace KpHiteMqtt.Mqtt.View
             bdsInputChannels.DataSource = _allInCnls;
             cbxInputChannels.DataSource = bdsInputChannels;
             cbxInputChannels.DisplayMember = "CnlNum";
-            cbxInputChannels.ValueMember = "Name";
+            cbxInputChannels.ValueMember = "CnlNum";
 
             //输出通道
             BindingSource bdsOutputChannels = new BindingSource();
             bdsOutputChannels.DataSource = _allCtrlCnls;
             cbxOutputChannels.DataSource = bdsOutputChannels;
             cbxOutputChannels.DisplayMember = "CtrlCnlNum";
-            cbxOutputChannels.ValueMember = "Name";
+            cbxOutputChannels.ValueMember = "CtrlCnlNum";
             //绑定存储器类
             Dictionary<string, DataTypeEnum> keyValueDataTypeEnums = new Dictionary<string, DataTypeEnum>();
             foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))
@@ -71,10 +71,10 @@ namespace KpHiteMqtt.Mqtt.View
             txtIdentifier.AddDataBindings(_property, nameof(Property.Identifier));
             rdbReadOnlyR.AddDataBindings(_property,nameof(Property.IsReadOnly));
             cbxInputChannels.AddDataBindings(_property, nameof(Property.CnlNum));
-            cbxInputChannels.AddVisableDataBindings(_property,nameof(Property.InputChannelVisable));
+            cbxInputChannels.AddVisableDataBindings(_property,nameof(Property.InputChannelVisable),needClear:false);
             lblInputChannel.AddVisableDataBindings(_property, nameof(Property.InputChannelVisable));
             cbxOutputChannels.AddDataBindings(_property, nameof(Property.CtrlCnlNum));
-            cbxOutputChannels.AddVisableDataBindings(_property, nameof(_property.OutputChannelVisable));
+            cbxOutputChannels.AddVisableDataBindings(_property, nameof(_property.OutputChannelVisable),needClear:false);
             lblOutputChannel.AddVisableDataBindings(_property, nameof(_property.OutputChannelVisable));
             txtDescription.AddDataBindings(_property, nameof(Property.Description));
             txtUnit.AddDataBindings(_property,nameof(_property.Unit));
@@ -83,9 +83,9 @@ namespace KpHiteMqtt.Mqtt.View
             ctrlArrayPara.AddVisableDataBindings(_property, nameof(_property.IsArray));
             //控件参数赋值
             //数组
-            ctrlArrayPara.InitCtrlArrayPara(_property.ArraySpecs);
+            ctrlArrayPara.InitCtrlArrayPara(_property);
             //Json参数
-            ctrlJsonPara.InitPara(_property.DataSpecsList);
+            ctrlJsonPara.InitPara(_property.DataSpecsList,showjsonchannels:true);
         }
 
         private void btnConfirm_Click(object sender, EventArgs e)

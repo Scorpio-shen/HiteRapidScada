@@ -19,18 +19,32 @@ namespace KpHiteMqtt.Mqtt.View
         private List<DataSpecs> _dataSpecsList;
         private List<InCnl> _allincnls { get;set; }
         public List<CtrlCnl> _allctrlcnls { get;set; }
+
+        public List<DataSpecs> DataSpecsList
+        {
+            get => _dataSpecsList;
+            set
+            {
+                _dataSpecsList = value;
+                //OnDataSpecsChanged(_dataSpecsList);
+            }
+        }
+
+        public event Action<List<DataSpecs>> DataSpecsChanged;
+
+        private bool _showjsonchannels;
         public CtrlJsonPara()
         {
             InitializeComponent();
         }
 
         #region 参数初始化
-        public void InitPara(List<DataSpecs> dataSpecsList)
+        public void InitPara(List<DataSpecs> dataSpecsList,bool showjsonchannels)
         {
-            _dataSpecsList = dataSpecsList;
+            DataSpecsList = dataSpecsList;
             _allincnls = FrmDevTemplate.AllInCnls;
             _allctrlcnls = FrmDevTemplate.AllCtrlCnls;
-
+            _showjsonchannels = showjsonchannels;
             ShowJsonPara();
         }
         #endregion
@@ -40,17 +54,18 @@ namespace KpHiteMqtt.Mqtt.View
             FrmDevJsonPara frm = new FrmDevJsonPara();
             frm.StartPosition = FormStartPosition.CenterParent;
             var dataSpecs = new DataSpecs();
-            frm.InitParameters(dataSpecs);
+            frm.InitParameters(dataSpecs, _showjsonchannels);
             if (frm.ShowDialog() != DialogResult.OK)
                 return;
             //判断该辨识符的参数是否已存在
-            if (_dataSpecsList.Any(d => d.Identifier.Equals(dataSpecs.Identifier)))
+            if (DataSpecsList.Any(d => d.Identifier.Equals(dataSpecs.Identifier)))
             {
                 ScadaUiUtils.ShowError($"标识符:{dataSpecs.Identifier}已存在!");
                 return;
             }
-            _dataSpecsList.Add(dataSpecs);
+            DataSpecsList.Add(dataSpecs);
             ShowJsonPara();
+            OnDataSpecsChanged(DataSpecsList);
         }
         #endregion
 
@@ -59,29 +74,42 @@ namespace KpHiteMqtt.Mqtt.View
         {
             panelPara.Controls.Clear();
             Point startPoint = new Point(4, 6);
-            foreach (DataSpecs dataSpecs in _dataSpecsList)
+            foreach (DataSpecs dataSpecs in DataSpecsList)
             {
-                var control = new CtrlJsonParaSpec(dataSpecs)
+                var control = new CtrlJsonParaSpec(dataSpecs, _showjsonchannels)
                 {
                     Location = startPoint
                 };
                 control.OnDeleteJsonPara += Control_OnDeleteJsonPara;
+                control.OnModifyJsonPara += Control_OnModifyJsonPara;
                 panelPara.Controls.Add(control);
                 startPoint.Y += 50;
             }
         }
 
+        private void Control_OnModifyJsonPara(DataSpecs obj)
+        {
+            OnDataSpecsChanged(DataSpecsList);
+        }
+
         private void Control_OnDeleteJsonPara(DataSpecs dataSpecs)
         {
             //要删除此参数
-            if(_dataSpecsList.Any(d => d.Identifier.Equals(dataSpecs.Identifier)))
+            if(DataSpecsList.Any(d => d.Identifier.Equals(dataSpecs.Identifier)))
             {
-                _dataSpecsList.Remove(dataSpecs);
+                DataSpecsList.Remove(dataSpecs);
                 ShowJsonPara();
+                OnDataSpecsChanged(DataSpecsList);
             }
 
         }
         #endregion
 
+        #region 触发事件
+        private void OnDataSpecsChanged(List<DataSpecs> dataSpecs)
+        {
+            DataSpecsChanged?.Invoke(dataSpecs);
+        }
+        #endregion
     }
 }

@@ -32,8 +32,8 @@
             this.linkEdit = new System.Windows.Forms.LinkLabel();
             this.linkDelete = new System.Windows.Forms.LinkLabel();
             this.lblParaName = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
+            this.lblInput = new System.Windows.Forms.Label();
+            this.lbloutput = new System.Windows.Forms.Label();
             this.lblInputChannel = new System.Windows.Forms.Label();
             this.lblOutputChannel = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
@@ -87,25 +87,25 @@
             this.lblParaName.Size = new System.Drawing.Size(0, 12);
             this.lblParaName.TabIndex = 3;
             // 
-            // label2
+            // lblInput
             // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.label2.Location = new System.Drawing.Point(238, 14);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(59, 12);
-            this.label2.TabIndex = 4;
-            this.label2.Text = "输入通道:";
+            this.lblInput.AutoSize = true;
+            this.lblInput.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.lblInput.Location = new System.Drawing.Point(238, 14);
+            this.lblInput.Name = "lblInput";
+            this.lblInput.Size = new System.Drawing.Size(59, 12);
+            this.lblInput.TabIndex = 4;
+            this.lblInput.Text = "输入通道:";
             // 
-            // label3
+            // lbloutput
             // 
-            this.label3.AutoSize = true;
-            this.label3.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.label3.Location = new System.Drawing.Point(342, 14);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(59, 12);
-            this.label3.TabIndex = 5;
-            this.label3.Text = "输出通道:";
+            this.lbloutput.AutoSize = true;
+            this.lbloutput.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.lbloutput.Location = new System.Drawing.Point(342, 14);
+            this.lbloutput.Name = "lbloutput";
+            this.lbloutput.Size = new System.Drawing.Size(59, 12);
+            this.lbloutput.TabIndex = 5;
+            this.lbloutput.Text = "输出通道:";
             // 
             // lblInputChannel
             // 
@@ -155,8 +155,8 @@
             this.Controls.Add(this.label4);
             this.Controls.Add(this.lblOutputChannel);
             this.Controls.Add(this.lblInputChannel);
-            this.Controls.Add(this.label3);
-            this.Controls.Add(this.label2);
+            this.Controls.Add(this.lbloutput);
+            this.Controls.Add(this.lblInput);
             this.Controls.Add(this.lblParaName);
             this.Controls.Add(this.linkDelete);
             this.Controls.Add(this.linkEdit);
@@ -175,8 +175,8 @@
         private System.Windows.Forms.LinkLabel linkEdit;
         private System.Windows.Forms.LinkLabel linkDelete;
         private System.Windows.Forms.Label lblParaName;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Label lblInput;
+        private System.Windows.Forms.Label lbloutput;
         private System.Windows.Forms.Label lblInputChannel;
         private System.Windows.Forms.Label lblOutputChannel;
         private System.Windows.Forms.Label label4;

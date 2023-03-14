@@ -1,4 +1,6 @@
-﻿using KpHiteMqtt.Mqtt.Model;
+﻿using HslCommunication;
+using KpHiteMqtt.Mqtt.Model;
+using KpHiteMqtt.Mqtt.Model.Response;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -14,38 +16,181 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
     public class MqttHandle_Cmd_Receive : MqttHandleBase
     {
         protected override string Topic => "/HiteScada/ScadaTest/event/cmd";
+
         /// <summary>
         /// 通道
         /// </summary>
         public Action<int, object> SetCtrlCnlValue;
-        
+
+        private List<Property> properties;
         public override void Handle(string topic, string content)
         {
+            properties = DeviceTemplate.Properties;
             try
             {
                 var payload = JsonConvert.DeserializeObject<HiteMqttPayload>(content);
-                var mqttContents = JsonConvert.DeserializeObject<List<MqttContent>>(payload.Content);
+                var mqttContents = JsonConvert.DeserializeObject<List<MqttModelContent>>(payload.Content);
 
+                WriteToLog($"MqttHandle_Cmd_Receive:Handle,接收服务器下发指令,payload:{payload.ToJsonString()}");
+                List<MqttCmdResponse> cmdResponses = new List<MqttCmdResponse>();
                 foreach(var mqttcontent in mqttContents)
                 {
-                    if(mqttcontent.DataTypeValue == Model.Enum.DataTypeEnum.Array)
+                    var cmdResponse = new MqttCmdResponse()
                     {
+                        Id = mqttcontent.Id,
+                        Identifier = mqttcontent.Identifier,
+                        IsSuccess = true,
+                        Message = "操作成功"
+                    };
+                    cmdResponses.Add(cmdResponse);
+                    try
+                    {
+                        //查询到属性对象
+                        var property = properties.FirstOrDefault(p => p.Id.Equals(mqttcontent.Id));
+                        if(property == null)
+                        {
+                            cmdResponse.IsSuccess = false;
+                            cmdResponse.Message = $"未找到Id为{mqttcontent.Id}的物模型";
+                            continue;
+                        }
+                        if (property.DataType == Model.Enum.DataTypeEnum.Array)
+                        {
+                            var pIdentifiers = new List<string>();
+                            for (int i = 0; i < property.DataArraySpecs.ArrayLength; i++)
+                            {
 
+                                pIdentifiers.Add(property.Identifier + $"[{i}]");
+                            }
+                            if (property.DataArraySpecs.DataType == Model.Enum.ArrayDataTypeEnum.Struct)
+                            {
+                                var identifier = mqttcontent.Identifier;
+                                if (!pIdentifiers.Any(id => id.Equals(identifier)))
+                                {
+                                    cmdResponse.IsSuccess = false;
+                                    cmdResponse.Message = $"未找到标识符为:{identifier}的物模型";
+                                    continue;
+                                }
+                                //获取索引
+                                var index = int.Parse(identifier.Substring(identifier.Length - 2));
+                                //获取Json参数
+                                if(property.DataArraySpecs.ArraySpecs.Count > index)
+                                {
+                                    var arraySpecs = property.DataArraySpecs.ArraySpecs[index];
+                                    foreach(var parameter in mqttcontent.Parameters)
+                                    {
+                                        var dataspecs = arraySpecs.DataSpecs.FirstOrDefault(d => d.Identifier == parameter.Identifier);
+                                        if(dataspecs != null)
+                                        {
+                                            SetCtrlCnlValue(dataspecs.CtrlCnlNum, parameter.Value);
+                                            WriteToLog($"MqttHandle_Cmd_Receive:Handle,执行服务器下发Cmd指令,输出通道号:{dataspecs.CtrlCnlNum},写入值:{parameter.Value},原始内容:{parameter.ToJsonString()}");
+                                        }
+                                    }
+                                }
+                               
+                            }
+                            else
+                            {
+                                var identifier = mqttcontent.Identifier;
+                                if (!pIdentifiers.Any(id => id.Equals(identifier)))
+                                {
+                                    cmdResponse.IsSuccess = false;
+                                    cmdResponse.Message = $"未找到标识符为:{identifier}的物模型";
+                                    continue;
+                                }
+                                //获取索引
+                                var index = int.Parse(identifier.Substring(identifier.Length - 2));
+                                //获取输出通道
+                                if(mqttcontent.Value == null)
+                                {
+                                    cmdResponse.IsSuccess = false;
+                                    cmdResponse.Message = "Value值不能为null";
+                                    continue;
+                                }
+
+                                if(property.DataArraySpecs?.ArraySpecs?.Count > index)
+                                {
+                                    var ctrlcnlnum = property.DataArraySpecs.ArraySpecs[index].CtrlCnlNum;
+                                    SetCtrlCnlValue(ctrlcnlnum, mqttcontent.Value);
+                                    WriteToLog($"MqttHandle_Cmd_Receive:Handle,执行服务器下发Cmd指令,输出通道号:{ctrlcnlnum},写入值:{mqttcontent.Value},原始内容:{mqttcontent.ToJsonString()}");
+                                }
+                                
+                            }
+                            
+                        }
+                        else if (property.DataType == Model.Enum.DataTypeEnum.Struct)
+                        {
+                            StringBuilder msgBulider = new StringBuilder();
+                            foreach (var parameter in mqttcontent.Parameters)
+                            {
+                                var dataSpecs = property.DataSpecsList.FirstOrDefault(d => d.Identifier.Equals(parameter.Identifier));
+                                if(dataSpecs == null)
+                                {
+                                    msgBulider.AppendLine($"参数:{dataSpecs.Identifier},执行失败,未找到该参数;");
+                                    continue;
+                                }
+                                else
+                                {
+                                    if(parameter.Value != null)
+                                    {
+                                        SetCtrlCnlValue(dataSpecs.CtrlCnlNum, parameter.Value);
+                                        WriteToLog($"MqttHandle_Cmd_Receive:Handle,执行服务器下发Cmd指令,输出通道号:{parameter.CtrlCnlNum},写入值:{parameter.Value},参数Parameter:{parameter.ToJsonString()}");
+                                    }
+                                    else
+                                    {
+                                        msgBulider.AppendLine($"参数:{parameter.Identifier},Value值不能为null");
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //基础物模型
+                            if (mqttcontent.Value != null)
+                            {
+                                SetCtrlCnlValue(property.CtrlCnlNum, mqttcontent.Value);
+                                //记录日志
+                                WriteToLog($"MqttHandle_Cmd_Receive:Handle,执行服务器下发Cmd指令,输出通道号:{property.CtrlCnlNum},写入值:{mqttcontent.Value},原始内容:{mqttcontent.ToJsonString()}");
+                            }
+                            else
+                            {
+                                cmdResponse.IsSuccess = false;
+                                cmdResponse.Message = "Value值不能为null";
+                            }
+                        }
                     }
-                    else if(mqttcontent.DataTypeValue == Model.Enum.DataTypeEnum.Struct)
+                    catch(Exception ex)
                     {
-
-                    }
-                    else
-                    {
-
+                        cmdResponse.IsSuccess = false;
+                        cmdResponse.Message = $"操作失败,{ex.Message}";
                     }
                 }
+
+                //回复服务器
+                ResponServer(ScadaSystemTopics.MqttCmdReply_Publish, payload.MessageId, 200, "成功接收指令", cmdResponses);
             }
             catch (Exception ex)
             {
-
+                WriteToLog($"MqttHandle_Cmd_Receive:Handle,接收服务器指令异常,{ex.Message}");
             }
+        }
+
+        private void ResponServer(string topic, string messageId,int code,string message,List<MqttCmdResponse> cmdResponses)
+        {
+            
+            var mqttResponse = new MqttResponse
+            {
+                Code = code,
+                Message = message,
+                Content = JsonConvert.SerializeObject(cmdResponses)
+            };
+            var payload = new HiteMqttPayload
+            {
+                MessageId = messageId,
+                Time = DateTime.UtcNow.ToString("yyyy-MM-dd hh:mm:ss"),
+                Content = JsonConvert.SerializeObject(mqttResponse)
+            };
+
+            MqttClient.PublishAsync(topic,payload).Wait();
         }
     }
 }

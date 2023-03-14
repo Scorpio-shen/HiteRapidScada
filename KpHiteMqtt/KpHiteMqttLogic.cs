@@ -27,16 +27,12 @@ namespace Scada.Comm.Devices
         Dictionary<int, InputChannelModel> InputChannelModels;
         HiteMqttClient mqttClient;
         HiteMqttPayload mqttPayload;        //要Publish的Mqtt数据
-        List<MqttContent> mqttContents;     //具体消息内容
+        List<MqttModelContent> mqttContents;     //具体消息内容
         List<IMqttHandle> handles;          //Mqtt消息处理类
-        public KpHiteMqttLogic() : base()
-        {
-            
-            
-        }
 
         public KpHiteMqttLogic(int number) : base(number) 
         {
+            ConnRequired = false;
         }
 
         public override void OnAddedToCommLine()
@@ -66,17 +62,23 @@ namespace Scada.Comm.Devices
 
         private void InitMqttHandle()
         {
-            var interfaceType = typeof(IMqttHandle);
+            var interfaceType = typeof(MqttHandleBase);
             var assembly = interfaceType.Assembly;
             var implements = assembly.GetTypes().Where(a => interfaceType.IsAssignableFrom(a) && a != interfaceType).ToList();
 
+            handles = new List<IMqttHandle>();
             handles.AddRange(implements.Select(i => Activator.CreateInstance(i) as IMqttHandle));
             foreach(var handle in handles)
             {
-                if (handle.GetType().Name.Equals(typeof(MqttHandle_Cmd_Receive)))
+                handle.DeviceTemplate = deviceTemplate;
+                handle.MqttClient = mqttClient;
+                handle.InputChannelModels = InputChannelModels;
+                handle.WriteToLog = WriteToLog;
+                if (handle.GetType().Name.Equals(typeof(MqttHandle_Cmd_Receive).Name))
                 {
                     var cmdHandle = handle as MqttHandle_Cmd_Receive;
                     cmdHandle.SetCtrlCnlValue = SetCtrlCnlValue;
+
                 }
             }
         }
@@ -128,7 +130,7 @@ namespace Scada.Comm.Devices
         {
             try
             {
-                foreach (MqttContent content in mqttContents)
+                foreach (MqttModelContent content in mqttContents)
                 {
                     if (content.DataTypeValue == DataTypeEnum.Struct)
                     {
@@ -136,7 +138,7 @@ namespace Scada.Comm.Devices
                         {
                             if (InputChannelModels.ContainsKey(spec.InCnlNum.Value))
                             {
-                                spec.Value = InputChannelModels[spec.InCnlNum.Value]?.ToString();
+                                spec.Value = InputChannelModels[spec.InCnlNum.Value]?.Value.ToString();
                             }
                         }
                     }
@@ -150,10 +152,12 @@ namespace Scada.Comm.Devices
                     }
                 }
 
-                var payload = JsonConvert.SerializeObject(mqttPayload);
+                mqttPayload.MessageId = SnowflakeHelper.GetNewId().ToString();
+                mqttPayload.Time = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
                 mqttPayload.Content = JsonConvert.SerializeObject(mqttContents);
+                var payload = JsonConvert.SerializeObject(mqttPayload);
                 var result = mqttClient.PublishAsync(
-                    topic: deviceTemplate.PublishTopics[0],
+                    topic:ScadaSystemTopics.MqttTsModelData_Publish,
                     payload: Encoding.UTF8.GetBytes(EncryptionHelper.Base64Encode(payload)),
                     mqttQuality: MqttQualityOfServiceLevel.AtMostOnce).Result;
 
@@ -241,35 +245,45 @@ namespace Scada.Comm.Devices
                 mqttClient.OnMqttConnected += MqttClient_OnMqttConnected;
                 //初始化Mqtt Payload
                 mqttPayload = new HiteMqttPayload();
-                mqttContents = new List<MqttContent>();
+                mqttContents = new List<MqttModelContent>();
                 deviceTemplate.Properties.ForEach(p =>
                 {
                     if (p.DataType == KpHiteMqtt.Mqtt.Model.Enum.DataTypeEnum.Array)
                     {
-                        for (int i = 0; i < p.ArraySpecs.ArrayLength; i++)
+                        for (int i = 0; i < p.DataArraySpecs.ArrayLength; i++)
                         {
-                            var mqttContent = new MqttContent
+
+                            var mqttContent = new MqttModelContent
                             {
                                 Id = p.Id.ToString(),
                                 Identifier = p.Identifier + $"[{i}]",
                                 //DataType = p.DataType.ToString(),
-                                DataTypeValue = p.ArraySpecs.DataType.ToDataTypeEnum(),
+                                DataTypeValue = p.DataArraySpecs.DataType.ToDataTypeEnum(),
                                 Name = p.Name,
                                 Value = null,
-                                Parameters = null
+                                Parameters = null,
                             };
-                            if (p.ArraySpecs.DataType == KpHiteMqtt.Mqtt.Model.Enum.ArrayDataTypeEnum.Struct)
+                            if (i > p.DataArraySpecs.ArraySpecs.Count)
+                                break;
+
+                            var arrayspec = p.DataArraySpecs.ArraySpecs[i];
+                            if (p.DataArraySpecs.DataType == ArrayDataTypeEnum.Struct)
                             {
-                                mqttContent.Parameters = p.ArraySpecs.DataSpecs.Select(ad => new MqttSpecs
+                                mqttContent.Parameters = arrayspec.DataSpecs.Select(ad=>new MqttModelSpecs
                                 {
                                     Identifier = ad.Identifier,
                                     //DataType = ad.DataType.ToString(),
                                     DataTypeValue = ad.DataType,
                                     ParameterName = ad.ParameterName,
-                                    InCnlNum = ad.CnlNum,
+                                    InCnlNum = ad.InCnlNum,
                                     CtrlCnlNum = ad.CtrlCnlNum,
                                     Value = null,
                                 }).ToList();
+                            }
+                            else
+                            {
+                                mqttContent.InCnlNum = arrayspec.InCnlNum;
+                                mqttContent.CtrlCnlNum = arrayspec.CtrlCnlNum;
                             }
                             mqttContents.Add(mqttContent);
                         }
@@ -277,7 +291,7 @@ namespace Scada.Comm.Devices
                     }
                     else if (p.DataType == KpHiteMqtt.Mqtt.Model.Enum.DataTypeEnum.Struct)
                     {
-                        var mqttContent = new MqttContent
+                        var mqttContent = new MqttModelContent
                         {
                             Id = p.Id.ToString(),
                             //DataType = p.DataType.ToString(),
@@ -285,17 +299,17 @@ namespace Scada.Comm.Devices
                             Identifier = p.Identifier,
                             Name = p.Name,
                             Value = null,
-                            Parameters = new List<MqttSpecs>()
+                            Parameters = new List<MqttModelSpecs>()
                         };
                         foreach (var dataspec in p.DataSpecsList)
                         {
-                            mqttContent.Parameters.Add(new MqttSpecs
+                            mqttContent.Parameters.Add(new MqttModelSpecs
                             {
                                 Identifier = dataspec.Identifier,
                                 //DataType = dataspec.DataType.ToString(),
                                 DataTypeValue = dataspec.DataType,
                                 ParameterName = dataspec.ParameterName,
-                                InCnlNum = dataspec.CnlNum,
+                                InCnlNum = dataspec.InCnlNum,
                                 CtrlCnlNum = dataspec.CtrlCnlNum,
                                 Value = null
                             });
@@ -304,7 +318,7 @@ namespace Scada.Comm.Devices
                     }
                     else
                     {
-                        var mqttContent = new MqttContent
+                        var mqttContent = new MqttModelContent
                         {
                             Id = p.Id.ToString(),
                             InCnlNum = p.CnlNum,
@@ -352,6 +366,7 @@ namespace Scada.Comm.Devices
         private void MqttClient_OnMqttConnected(object sender, EventArgs e)
         {
             //订阅Topic
+            
             if (mqttClient.IsConnected && deviceTemplate.SubscribeTopics.Count > 0)
             {
                 foreach(var topic in deviceTemplate.SubscribeTopics)

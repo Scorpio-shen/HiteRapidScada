@@ -19,6 +19,7 @@ namespace KpHiteModbus.Modbus.View
     {
         private DataSpecs _dataSpecs;
         private bool _isreadonly;
+        private bool _showChannels;
         List<InCnl> _allInCnls;
         List<CtrlCnl> _allCtrlCnls;
         
@@ -27,9 +28,10 @@ namespace KpHiteModbus.Modbus.View
             InitializeComponent();
         }
 
-        public void InitParameters(DataSpecs dataSpecs)
+        public void InitParameters(DataSpecs dataSpecs,bool showChannels)
         {
             _dataSpecs = dataSpecs;
+            _showChannels = showChannels;
             _allInCnls = FrmDevTemplate.AllInCnls;
             _allCtrlCnls = FrmDevTemplate.AllCtrlCnls;
             _isreadonly = FrmDevModel.IsReadOnly;
@@ -43,6 +45,14 @@ namespace KpHiteModbus.Modbus.View
             {
                 lblOutputChannel.Visible = true;
                 cbxOutputChannels.Visible = true;
+            }
+
+            if (!_showChannels)
+            {
+                lblInputChannel.Visible = false;
+                cbxInputChannels.Visible = false;
+                lblOutputChannel.Visible = false;
+                cbxOutputChannels.Visible = false;
             }
         }
 
@@ -75,7 +85,7 @@ namespace KpHiteModbus.Modbus.View
             txtIdentifier.AddDataBindings(_dataSpecs,nameof(_dataSpecs.Identifier));
             txtUnit.AddDataBindings(_dataSpecs, nameof(_dataSpecs.Unit));   
             cbxDataType.AddDataBindings(_dataSpecs, nameof(_dataSpecs.DataType));
-            cbxInputChannels.AddDataBindings(_dataSpecs, nameof(_dataSpecs.CnlNum));
+            cbxInputChannels.AddDataBindings(_dataSpecs, nameof(_dataSpecs.InCnlNum));
             cbxOutputChannels.AddDataBindings(_dataSpecs, nameof(_dataSpecs.CtrlCnlNum));
 
         }

@@ -1,5 +1,8 @@
 ﻿using HslCommunication;
 using HslCommunication.MQTT;
+using KpCommon.Helper;
+using KpHiteMqtt.Mqtt.Model;
+using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Text;
@@ -14,6 +17,7 @@ namespace KpHiteMqtt.Mqtt
     {
         private MqttClient mqttClient;
         private Log.WriteLineDelegate _writeToLog;
+
         public HiteMqttClient(MqttConnectionOptions mqttConnectionOptions,Log.WriteLineDelegate writeToLog)
         {
             _writeToLog = writeToLog;
@@ -95,6 +99,14 @@ namespace KpHiteMqtt.Mqtt
         #endregion
 
         #region 数据Publish
+        /// <summary>
+        /// 发布数据
+        /// </summary>
+        /// <param name="topic"></param>
+        /// <param name="payload">Base64加密后转字节数据</param>
+        /// <param name="mqttQuality"></param>
+        /// <param name="retain"></param>
+        /// <returns></returns>
         public async Task<bool> PublishAsync(string topic, byte[] payload,MqttQualityOfServiceLevel mqttQuality = MqttQualityOfServiceLevel.AtMostOnce,bool retain = false)
         {
             if(!IsConnected)
@@ -103,6 +115,21 @@ namespace KpHiteMqtt.Mqtt
             {
                 Topic = topic,
                 Payload = payload,
+                QualityOfServiceLevel = mqttQuality,
+                Retain = retain
+            });
+            return result.IsSuccess;
+        }
+
+        public async Task<bool> PublishAsync(string topic,HiteMqttPayload payload, MqttQualityOfServiceLevel mqttQuality = MqttQualityOfServiceLevel.AtMostOnce, bool retain = false)
+        {
+            if (!IsConnected)
+                return false;
+            var payloadStr = JsonConvert.SerializeObject(payload);
+            var result = await mqttClient.PublishMessageAsync(new MqttApplicationMessage
+            {
+                Topic = topic,
+                Payload = Encoding.UTF8.GetBytes(EncryptionHelper.Base64Encode(payloadStr)),
                 QualityOfServiceLevel = mqttQuality,
                 Retain = retain
             });

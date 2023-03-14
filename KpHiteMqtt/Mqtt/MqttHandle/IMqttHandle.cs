@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Utils;
 
 namespace KpHiteMqtt.Mqtt.MqttHandle
 {
@@ -12,6 +13,8 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
         DeviceTemplate DeviceTemplate { get; set; }
         Dictionary<int, InputChannelModel> InputChannelModels { get; set; }
         HiteMqttClient MqttClient { get; set; }
+
+        Log.WriteLineDelegate WriteToLog { get; set; }    
 
         bool HandleTopic(string topic);
 
@@ -24,6 +27,7 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
         public DeviceTemplate DeviceTemplate {get; set;}
         public Dictionary<int, InputChannelModel> InputChannelModels { get; set; }
         public HiteMqttClient MqttClient { get; set; }
+        public Log.WriteLineDelegate WriteToLog { get;set; }
 
         public abstract void Handle(string topic, string content);
 

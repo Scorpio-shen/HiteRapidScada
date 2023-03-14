@@ -41,12 +41,6 @@
             this.saveFileDialog = new System.Windows.Forms.SaveFileDialog();
             this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
             this.dgvProperty = new System.Windows.Forms.DataGridView();
-            this.columnCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.columnId = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnIdentifier = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnDataType = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnUnit = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ctxMenuViewOperate = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.tsmEditModel = new System.Windows.Forms.ToolStripMenuItem();
             this.tsmDeleteModel = new System.Windows.Forms.ToolStripMenuItem();
@@ -67,6 +61,13 @@
             this.lblClientId = new System.Windows.Forms.Label();
             this.bdsProperty = new System.Windows.Forms.BindingSource(this.components);
             this.btnAddTopic = new System.Windows.Forms.Button();
+            this.columnCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.columnId = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnIdentifier = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnDataType = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnUnit = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.column_Description = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.toolStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvProperty)).BeginInit();
             this.ctxMenuViewOperate.SuspendLayout();
@@ -170,7 +171,8 @@
             this.columnName,
             this.columnIdentifier,
             this.columnDataType,
-            this.columnUnit});
+            this.columnUnit,
+            this.column_Description});
             this.dgvProperty.ContextMenuStrip = this.ctxMenuViewOperate;
             this.dgvProperty.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dgvProperty.Location = new System.Drawing.Point(3, 17);
@@ -178,45 +180,6 @@
             this.dgvProperty.RowTemplate.Height = 23;
             this.dgvProperty.Size = new System.Drawing.Size(964, 545);
             this.dgvProperty.TabIndex = 2;
-            // 
-            // columnCheck
-            // 
-            this.columnCheck.FillWeight = 20F;
-            this.columnCheck.HeaderText = "";
-            this.columnCheck.Name = "columnCheck";
-            this.columnCheck.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.columnCheck.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
-            // 
-            // columnId
-            // 
-            this.columnId.DataPropertyName = "Id";
-            this.columnId.HeaderText = "Id";
-            this.columnId.Name = "columnId";
-            this.columnId.Visible = false;
-            // 
-            // columnName
-            // 
-            this.columnName.DataPropertyName = "Name";
-            this.columnName.HeaderText = "名称";
-            this.columnName.Name = "columnName";
-            // 
-            // columnIdentifier
-            // 
-            this.columnIdentifier.DataPropertyName = "Identifier";
-            this.columnIdentifier.HeaderText = "标识符";
-            this.columnIdentifier.Name = "columnIdentifier";
-            // 
-            // columnDataType
-            // 
-            this.columnDataType.DataPropertyName = "DataType";
-            this.columnDataType.HeaderText = "数据类型";
-            this.columnDataType.Name = "columnDataType";
-            // 
-            // columnUnit
-            // 
-            this.columnUnit.DataPropertyName = "Unit";
-            this.columnUnit.HeaderText = "单位";
-            this.columnUnit.Name = "columnUnit";
             // 
             // ctxMenuViewOperate
             // 
@@ -390,6 +353,51 @@
             this.btnAddTopic.UseVisualStyleBackColor = true;
             this.btnAddTopic.Click += new System.EventHandler(this.btnAddTopic_Click);
             // 
+            // columnCheck
+            // 
+            this.columnCheck.FillWeight = 20F;
+            this.columnCheck.HeaderText = "";
+            this.columnCheck.Name = "columnCheck";
+            this.columnCheck.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.columnCheck.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            // 
+            // columnId
+            // 
+            this.columnId.DataPropertyName = "Id";
+            this.columnId.HeaderText = "Id";
+            this.columnId.Name = "columnId";
+            this.columnId.Visible = false;
+            // 
+            // columnName
+            // 
+            this.columnName.DataPropertyName = "Name";
+            this.columnName.HeaderText = "名称";
+            this.columnName.Name = "columnName";
+            // 
+            // columnIdentifier
+            // 
+            this.columnIdentifier.DataPropertyName = "Identifier";
+            this.columnIdentifier.HeaderText = "标识符";
+            this.columnIdentifier.Name = "columnIdentifier";
+            // 
+            // columnDataType
+            // 
+            this.columnDataType.DataPropertyName = "DataType";
+            this.columnDataType.HeaderText = "数据类型";
+            this.columnDataType.Name = "columnDataType";
+            // 
+            // columnUnit
+            // 
+            this.columnUnit.DataPropertyName = "Unit";
+            this.columnUnit.HeaderText = "单位";
+            this.columnUnit.Name = "columnUnit";
+            // 
+            // column_Description
+            // 
+            this.column_Description.DataPropertyName = "Description";
+            this.column_Description.HeaderText = "描述";
+            this.column_Description.Name = "column_Description";
+            // 
             // FrmDevTemplate
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -454,12 +462,13 @@
         private System.Windows.Forms.Label label_Password;
         private System.Windows.Forms.Label label_UseName;
         private System.Windows.Forms.BindingSource bdsProperty;
+        private System.Windows.Forms.Button btnAddTopic;
         private System.Windows.Forms.DataGridViewCheckBoxColumn columnCheck;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnId;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnName;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnIdentifier;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnDataType;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnUnit;
-        private System.Windows.Forms.Button btnAddTopic;
+        private System.Windows.Forms.DataGridViewTextBoxColumn column_Description;
     }
 }

@@ -18,9 +18,9 @@ namespace KpHiteMqtt.Mqtt.Model
         public string Time { get; set; }
     }
     /// <summary>
-    /// 数据内容
+    /// Mqtt物模型数据内容
     /// </summary>
-    public class MqttContent
+    public class MqttModelContent
     {
         /// <summary>
         /// 是否是只读
@@ -36,7 +36,7 @@ namespace KpHiteMqtt.Mqtt.Model
         /// 输出通道号
         /// </summary>
         [JsonIgnore]
-        public int? CtrlCnlNum { get;set; } = null;
+        public int? CtrlCnlNum { get; set; } = null;
         /// <summary>
         /// Id
         /// </summary>
@@ -56,17 +56,19 @@ namespace KpHiteMqtt.Mqtt.Model
 
         public string DataType
         {
-            get=>DataTypeValue.ToString();
+            get => DataTypeValue.ToString();
         }
         /// <summary>
         /// 存储实际类型值
         /// </summary>
         [JsonIgnore]
-        public DataTypeEnum DataTypeValue { get;set; }
-        public List<MqttSpecs> Parameters { get; set; }
+        public DataTypeEnum DataTypeValue { get; set; }
+        public List<MqttModelSpecs> Parameters { get; set; }
     }
-
-    public class MqttSpecs
+    /// <summary>
+    /// Mqtt物模型Json参数
+    /// </summary>
+    public class MqttModelSpecs
     {
         [JsonIgnore]
         public int? InCnlNum { get; set; } = null;
@@ -74,15 +76,16 @@ namespace KpHiteMqtt.Mqtt.Model
         [JsonIgnore]
         public int? CtrlCnlNum { get; set; } = null;
         public string ParameterName { get; set; }
-        public string Identifier { get;set; }
+        public string Identifier { get; set; }
         public string Value { get; set; }
         public string DataType
         {
-            get=>DataTypeValue.ToString();
+            get => DataTypeValue.ToString();
         }
         [JsonIgnore]
         public StructDataTypeEnum DataTypeValue { get; set; }
     }
 
 
+    
 }

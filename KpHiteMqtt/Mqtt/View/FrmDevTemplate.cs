@@ -94,14 +94,18 @@ namespace KpHiteMqtt.Mqtt.View
             {
                 //新建
                 saveFileDialog.FileName = NewFileName;
-                deviceTemplate = new DeviceTemplate()
+                deviceTemplate = new DeviceTemplate();
+                if (deviceTemplate.PublishTopics.Count == 0)
                 {
-                    ConnectionOptions = new HslCommunication.MQTT.MqttConnectionOptions() 
-                    {
-                        Credentials = new HslCommunication.MQTT.MqttCredential()
-                    },
-                    Properties = new List<Property>()
-                };
+                    deviceTemplate.PublishTopics.Add(ScadaSystemTopics.MqttTsModelData_Publish);
+                    deviceTemplate.PublishTopics.Add(ScadaSystemTopics.MqttCmdReply_Publish);
+                }
+
+                if (deviceTemplate.SubscribeTopics.Count == 0)
+                {
+                    deviceTemplate.SubscribeTopics.Add(ScadaSystemTopics.MqttTsModelDataReply_Subscribe);
+                    deviceTemplate.SubscribeTopics.Add(ScadaSystemTopics.MqttCmd_Subscribe);
+                }
             }
             //载入所有输入、输出通道
             LoadConfigInCtrlCnls();
@@ -388,6 +392,7 @@ namespace KpHiteMqtt.Mqtt.View
         private void btnAddTopic_Click(object sender, EventArgs e)
         {
             FrmTopics frm = new FrmTopics(deviceTemplate);
+            frm.StartPosition = FormStartPosition.CenterParent;
             var drResult = frm.ShowDialog();
             if(drResult == DialogResult.OK)
             {

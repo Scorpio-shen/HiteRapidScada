@@ -5,6 +5,7 @@ using Scada;
 using Scada.Data.Entities;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,27 +20,34 @@ namespace KpHiteMqtt.Mqtt.Model
         /// <summary>
         /// 连接参数
         /// </summary>
-        public MqttConnectionOptions ConnectionOptions { get; set; }
+        public MqttConnectionOptions ConnectionOptions { get; set; } = new MqttConnectionOptions()
+        {
+            Credentials = new MqttCredential()
+        };
         /// <summary>
         /// 订阅Topic(服务端的指令)
         /// </summary>
-        public List<string> SubscribeTopics { get;set; }
+        public List<string> SubscribeTopics { get;set; } = new List<string>()
+        {
+            //默认添加系统自带Topic
+
+        };
         /// <summary>
         /// 发布Topic(物模型数据)
         /// </summary>
-        public List<string> PublishTopics { get;set; }
+        public List<string> PublishTopics { get;set; } = new List<string> { };
         /// <summary>
         /// 物模型集合
         /// </summary>
-        public List<Property> Properties { get; set; }
+        public List<Property> Properties { get; set; } = new List<Property>();
         /// <summary>
         /// 物模型关联的输入通道集合
         /// </summary>
-        public List<InCnl> InCnls { get; set; }
+        public List<InCnl> InCnls { get; set; } = new List<InCnl>();
         /// <summary>
         /// 物模型关联的输出通道集合
         /// </summary>
-        public List<CtrlCnl> CtrlCnls { get; set; }
+        public List<CtrlCnl> CtrlCnls { get; set; } = new List<CtrlCnl>();
         #region 保存载入XML
         public bool Load(string fileName, out string errMsg)
         {
@@ -63,7 +71,6 @@ namespace KpHiteMqtt.Mqtt.Model
             //连接参数
             var connectionNode = rootElement.SelectSingleNode("ConnectionOptions");
             var connectionElement = connectionNode as XmlElement;
-            if (ConnectionOptions == null)
                 ConnectionOptions = new MqttConnectionOptions()
                 {
                     ClientId = connectionElement.GetAttrAsString("ClientId"),
@@ -94,41 +101,53 @@ namespace KpHiteMqtt.Mqtt.Model
                     CnlNum = property.GetAttrAsInt("CnlNum"),
                     CtrlCnlNum = property.GetAttrAsInt("CtrlCnlNum"),
                     DataSpecsList = new List<DataSpecs>(),
-                    ArraySpecs = new DataArraySpecs()
+                    DataArraySpecs = new DataArraySpecs()
                 };
                 #endregion
 
                 #region 数组参数
-                var arraySpecsNode = property.SelectSingleNode("ArraySpecs");
-                var arrayElement = arraySpecsNode as XmlElement;
-                temp.ArraySpecs.DataType = arrayElement.GetAttrAsEnum<ArrayDataTypeEnum>("DataType", ArrayDataTypeEnum.Int32);
-                temp.ArraySpecs.ArrayLength = arrayElement.GetAttrAsInt("ArrayLength");
-                //数组内部输入通道
-                var cnlNumsNode = arrayElement.SelectSingleNode("CnlNums");
-                var cnlNumsElement = cnlNumsNode as XmlElement;
-                foreach(XmlElement cnlElement in cnlNumsElement.SelectNodes("CnlNum"))
+                var dataArraySpecsNode = property.SelectSingleNode("DataArraySpecs");
+                var dataArraySpecsElement = dataArraySpecsNode as XmlElement;
+                temp.DataArraySpecs.DataType = dataArraySpecsElement.GetAttrAsEnum("DataType", ArrayDataTypeEnum.Int32);
+                temp.DataArraySpecs.ArrayLength = dataArraySpecsElement.GetAttrAsInt("ArrayLength");
+                //数组内部参数
+                var arraySpecsesNode = dataArraySpecsNode.SelectSingleNode("ArraySpecses");
+                temp.DataArraySpecs.ArraySpecs = new List<ArraySpecs>();
+                foreach (XmlElement arraySpecsElement in arraySpecsesNode.ChildNodes)
                 {
-                    temp.ArraySpecs.InCnlNums.Add(cnlElement.InnerText.ToInt());
+                    var arraySpec = new ArraySpecs();
+                    arraySpec.InCnlNum = arraySpecsElement.GetAttrAsInt("InCnlNum");
+                    arraySpec.CtrlCnlNum = arraySpecsElement.GetAttrAsInt("CtrlCnlNum");
+                    //数组内部Json参数
+                    arraySpec.DataSpecs = new List<DataSpecs>();
+
+                    foreach(XmlElement dataspecElem in arraySpecsElement.SelectSingleNode("DataSpecs").SelectNodes("Spec"))
+                    {
+                        arraySpec.DataSpecs.Add(new DataSpecs()
+                        {
+                            DataType = dataspecElem.GetAttrAsEnum<StructDataTypeEnum>("DataType"),
+                            Identifier = dataspecElem.GetAttrAsString("Identifier"),
+                            ParameterName = dataspecElem.GetAttrAsString("ParameterName"),
+                            Unit = dataspecElem.GetAttrAsString("Unit"),
+                            InCnlNum = dataspecElem.GetAttrAsInt("InCnlNum"),
+                            CtrlCnlNum = dataspecElem.GetAttrAsInt("CtrlCnlNum")
+                        });
+                    }
+                    temp.DataArraySpecs.ArraySpecs.Add(arraySpec);
                 }
 
-                //数组内部输出通道
-                var ctrlCnlNumsNode = arrayElement.SelectSingleNode("CtrlCnlNums");
-                var ctrlCnlElement = ctrlCnlNumsNode as XmlElement;
-                foreach(XmlElement ctrlcnlElement in ctrlCnlElement.ChildNodes)
+                //json参数
+                temp.DataArraySpecs.DataSpecs = new List<DataSpecs>();
+                var dataSpecsesNode = dataArraySpecsNode.SelectSingleNode("DataSpecses");
+                foreach(XmlElement dataspecElem in dataSpecsesNode.ChildNodes)
                 {
-                    temp.ArraySpecs.CtrlCnlNums.Add(ctrlcnlElement.InnerText.ToInt());
-                }
-
-                //数组内部Json参数
-                foreach(XmlElement dataspecElem in arrayElement.SelectSingleNode("DataSpecs").ChildNodes)
-                {
-                    temp.ArraySpecs.DataSpecs.Add(new DataSpecs
+                    temp.DataArraySpecs.DataSpecs.Add(new DataSpecs
                     {
                         DataType = dataspecElem.GetAttrAsEnum<StructDataTypeEnum>("DataType"),
                         Identifier = dataspecElem.GetAttrAsString("Identifier"),
                         ParameterName = dataspecElem.GetAttrAsString("ParameterName"),
                         Unit = dataspecElem.GetAttrAsString("Unit"),
-                        CnlNum = dataspecElem.GetAttrAsInt("CnlNum"),
+                        InCnlNum = dataspecElem.GetAttrAsInt("InCnlNum"),
                         CtrlCnlNum = dataspecElem.GetAttrAsInt("CtrlCnlNum")
                     });
                 }
@@ -142,7 +161,7 @@ namespace KpHiteMqtt.Mqtt.Model
                         Identifier = dataspecElem.GetAttrAsString("Identifier"),
                         ParameterName = dataspecElem.GetAttrAsString("ParameterName"),
                         Unit = dataspecElem.GetAttrAsString("Unit"),
-                        CnlNum = dataspecElem.GetAttrAsInt("CnlNum"),
+                        InCnlNum = dataspecElem.GetAttrAsInt("InCnlNum"),
                         CtrlCnlNum = dataspecElem.GetAttrAsInt("CtrlCnlNum")
                     });
                 }
@@ -154,6 +173,34 @@ namespace KpHiteMqtt.Mqtt.Model
             LoadInputChannel(rootElement);
             CtrlCnls = new List<CtrlCnl>();
             LoadOutputChannel(rootElement);
+
+            //Topics
+            var publishTopicNode = rootElement.SelectSingleNode("PublishTopics");
+            foreach(XmlElement publishtopic in publishTopicNode.ChildNodes)
+            {
+                PublishTopics.Add(publishtopic.InnerText);
+            }
+
+            var subscribeTopicNode = rootElement.SelectSingleNode("SubscribeTopics");
+            foreach(XmlElement subscribetopic in subscribeTopicNode.ChildNodes)
+            {
+                SubscribeTopics.Add(subscribetopic.InnerText);
+            }
+
+            //判断是否有加载系统自带Topic
+            if (!PublishTopics.Contains(ScadaSystemTopics.MqttTsModelData_Publish))
+                PublishTopics.Add(ScadaSystemTopics.MqttTsModelData_Publish);
+
+            if (!PublishTopics.Contains(ScadaSystemTopics.MqttCmdReply_Publish))
+                PublishTopics.Add(ScadaSystemTopics.MqttCmdReply_Publish);
+
+            if (!SubscribeTopics.Contains(ScadaSystemTopics.MqttTsModelDataReply_Subscribe))
+                SubscribeTopics.Add(ScadaSystemTopics.MqttTsModelDataReply_Subscribe);
+
+            if (!SubscribeTopics.Contains(ScadaSystemTopics.MqttCmd_Subscribe))
+                SubscribeTopics.Add(ScadaSystemTopics.MqttCmd_Subscribe);
+
+
         }
 
         private void LoadInputChannel(XmlElement rootElement)
@@ -305,38 +352,49 @@ namespace KpHiteMqtt.Mqtt.Model
                 pElement.SetAttribute("DataType", property.DataType);
                 pElement.SetAttribute("IsReadOnly", property.IsReadOnly);
                 //pElement.SetAttribute("ArrayLength", property.ArrayLength);
+                pElement.SetAttribute("CnlNum", property.CnlNum.ToString());
+                pElement.SetAttribute("CtrlCnlNum", property.CtrlCnlNum.ToString());
                 pElement.SetAttribute("Unit", property.Unit);
                 #endregion
 
                 #region 数组类型参数
                 //数组参数
-                var arraySpecsElement = pElement.AppendElem("ArraySpecs");
-                arraySpecsElement.SetAttribute("DataType", property.ArraySpecs.DataType);
-                arraySpecsElement.SetAttribute("ArrayLength", property.ArraySpecs.ArrayLength);
-                var arrayCnlElement = arraySpecsElement.AppendElem("CnlNums");
-                foreach (var cnlnum in property.ArraySpecs.InCnlNums)
+                var dataArraySpecsElement = pElement.AppendElem("DataArraySpecs");
+                dataArraySpecsElement.SetAttribute("DataType", property.DataArraySpecs.DataType);
+                dataArraySpecsElement.SetAttribute("ArrayLength", property.DataArraySpecs.ArrayLength);
+
+                var arraySpecsesElement = dataArraySpecsElement.AppendElem("ArraySpecses");
+                foreach(var arraySpecs in property.DataArraySpecs.ArraySpecs)
                 {
-                    var cnlElement = arrayCnlElement.AppendElem("CnlNum");
-                    cnlElement.InnerText = cnlnum.ToString();
+                    var arraySpecsElement = arraySpecsesElement.AppendElem("ArraySpecs");
+                    arraySpecsElement.SetAttribute("InCnlNum", arraySpecs.InCnlNum);
+                    arraySpecsElement.SetAttribute("CtrlCnlNum", arraySpecs.CtrlCnlNum);
+                    //数组内部Json参数
+                    var arraySpecsElements = arraySpecsElement.AppendElem("DataSpecs");
+                    foreach (var data in arraySpecs.DataSpecs)
+                    {
+                        var specElement = arraySpecsElements.AppendElem("Spec");
+                        specElement.SetAttribute("Identifier", data.Identifier);
+                        specElement.SetAttribute("ParameterName", data.ParameterName);
+                        specElement.SetAttribute("DataType", data.DataType);
+                        specElement.SetAttribute("Unit", data.Unit);
+                        specElement.SetAttribute("InCnlNum", data.InCnlNum);
+                        specElement.SetAttribute("CtrlCnlNum", data.CtrlCnlNum);
+                    }
                 }
-                //输出通道
-                var arrayCtrlCnlElemnt = arraySpecsElement.AppendElem("CtrlCnlNums");
-                foreach (var ctrlnum in property.ArraySpecs.CtrlCnlNums)
+
+
+                //Json参数
+                var dataSpecsElement = dataArraySpecsElement.AppendElem("DataSpecses");
+                foreach(var data in property.DataArraySpecs.DataSpecs)
                 {
-                    var ctrlElement = arrayCtrlCnlElemnt.AppendElem("CtrlNum");
-                    ctrlElement.InnerText = ctrlnum.ToString();
-                }
-                //数组内部Json参数
-                var arraySpecsElements = arraySpecsElement.AppendElem("DataSpecs");
-                foreach(var dataspec in property.ArraySpecs.DataSpecs)
-                {
-                    var specElement = arraySpecsElements.AppendElem("Spec");
-                    specElement.SetAttribute("Identifier", dataspec.Identifier);
-                    specElement.SetAttribute("ParameterName", dataspec.ParameterName);
-                    specElement.SetAttribute("DataType", dataspec.DataType);
-                    specElement.SetAttribute("Unit", dataspec.Unit);
-                    specElement.SetAttribute("CnlNum", dataspec.CnlNum);
-                    specElement.SetAttribute("CtrlCnlNum", dataspec.CtrlCnlNum);
+                    var dataElement = dataSpecsElement.AppendElem("DataSpecs");
+                    dataElement.SetAttribute("Identifier", data.Identifier);
+                    dataElement.SetAttribute("ParameterName", data.ParameterName);
+                    dataElement.SetAttribute("DataType", data.DataType);
+                    dataElement.SetAttribute("Unit", data.Unit);
+                    dataElement.SetAttribute("InCnlNum", data.InCnlNum);
+                    dataElement.SetAttribute("CtrlCnlNum", data.CtrlCnlNum);
                 }
                 #endregion
 
@@ -350,7 +408,7 @@ namespace KpHiteMqtt.Mqtt.Model
                     specElement.SetAttribute("ParameterName", dataspec.ParameterName);
                     specElement.SetAttribute("DataType", dataspec.DataType);
                     specElement.SetAttribute("Unit", dataspec.Unit);
-                    specElement.SetAttribute("CnlNum", dataspec.CnlNum);
+                    specElement.SetAttribute("InCnlNum", dataspec.InCnlNum);
                     specElement.SetAttribute("CtrlCnlNum", dataspec.CtrlCnlNum);
                 }
                 #endregion
@@ -359,6 +417,18 @@ namespace KpHiteMqtt.Mqtt.Model
             //输入、输出通道
             SaveInputChannel(InCnls,rootElement);
             SaveOutputChannel(CtrlCnls,rootElement);
+
+            //Topics
+            var publishTopicElement = rootElement.AppendElem("PublishTopics");
+            foreach(var publishTopic in PublishTopics)
+            {
+                var element = publishTopicElement.AppendElem("PublishTopic",publishTopic);
+            }
+            var subscribeTopicElement = rootElement.AppendElem("SubscribeTopics");
+            foreach (var subscribetopic in SubscribeTopics)
+            {
+                subscribeTopicElement.AppendElem("SubscribeTopic", subscribetopic);
+            }
 
         }
         private void SaveInputChannel(List<InCnl> inputChannels, XmlElement rootElement)
@@ -418,18 +488,18 @@ namespace KpHiteMqtt.Mqtt.Model
             {
                 if (p.DataType == DataTypeEnum.Array)
                 {
-                    if(p.ArraySpecs.IsStruct)
+                    if(p.DataArraySpecs.IsStruct)
                     {
-                        incnls.AddRange(p.ArraySpecs.DataSpecs.Select(asp => asp.CnlNum));
+                        incnls.AddRange(p.DataArraySpecs.ArraySpecs.SelectMany(asp=>asp.DataSpecs.Select(d=>d.InCnlNum)));
                     }
                     else
                     {
-                        incnls.AddRange(p.ArraySpecs.InCnlNums);
+                        incnls.AddRange(p.DataArraySpecs.ArraySpecs.Select(asp=>asp.InCnlNum));
                     }
                 }
                 else if (p.DataType == DataTypeEnum.Struct)
                 {
-                    incnls.AddRange(p.DataSpecsList.Select(ds => ds.CnlNum));
+                    incnls.AddRange(p.DataSpecsList.Select(ds => ds.InCnlNum));
                 }
                 else
                 {
@@ -453,13 +523,13 @@ namespace KpHiteMqtt.Mqtt.Model
                     return;
                 if (p.DataType == DataTypeEnum.Array)
                 {
-                    if (p.ArraySpecs.IsStruct)
+                    if (p.DataArraySpecs.IsStruct)
                     {
-                        ctrlcnls.AddRange(p.ArraySpecs.DataSpecs.Select(asp => asp.CtrlCnlNum));
+                        ctrlcnls.AddRange(p.DataArraySpecs.ArraySpecs.SelectMany(asp => asp.DataSpecs.Select(d=>d.CtrlCnlNum)));
                     }
                     else
                     {
-                        ctrlcnls.AddRange(p.ArraySpecs.CtrlCnlNums);
+                        ctrlcnls.AddRange(p.DataArraySpecs.ArraySpecs.Select(asp => asp.CtrlCnlNum));
                     }
                 }
                 else if (p.DataType == DataTypeEnum.Struct)
