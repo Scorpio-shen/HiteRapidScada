@@ -11,7 +11,7 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
 {
     public class MqttHandle_post_reply : MqttHandleBase
     {
-        protected override string Topic => "/HiteScada/ScadaTest/modeldata/post_reply";
+        protected override string Topic => ScadaSystemTopics.MqttTsModelDataReply_Subscribe;
 
         public override void Handle(string topic, string content)
         {

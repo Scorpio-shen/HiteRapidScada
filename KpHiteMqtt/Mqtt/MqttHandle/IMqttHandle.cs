@@ -16,7 +16,7 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
 
         Log.WriteLineDelegate WriteToLog { get; set; }    
 
-        bool HandleTopic(string topic);
+        bool CanHandleTopic(string topic);
 
         void Handle(string topic, string content);
     }
@@ -31,7 +31,7 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
 
         public abstract void Handle(string topic, string content);
 
-        public bool HandleTopic(string topic)
+        public bool CanHandleTopic(string topic)
         {
             return Topic.Equals(topic);
         }

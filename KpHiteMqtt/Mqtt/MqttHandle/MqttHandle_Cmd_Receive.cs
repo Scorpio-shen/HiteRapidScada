@@ -1,4 +1,5 @@
 ﻿using HslCommunication;
+using KpCommon.Helper;
 using KpHiteMqtt.Mqtt.Model;
 using KpHiteMqtt.Mqtt.Model.Response;
 using Newtonsoft.Json;
@@ -15,7 +16,7 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
     /// </summary>
     public class MqttHandle_Cmd_Receive : MqttHandleBase
     {
-        protected override string Topic => "/HiteScada/ScadaTest/event/cmd";
+        protected override string Topic => ScadaSystemTopics.MqttCmd_Subscribe;
 
         /// <summary>
         /// 通道
@@ -28,7 +29,8 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
             properties = DeviceTemplate.Properties;
             try
             {
-                var payload = JsonConvert.DeserializeObject<HiteMqttPayload>(content);
+                var decodeContent = EncryptionHelper.Base64Decode(content);
+                var payload = JsonConvert.DeserializeObject<HiteMqttPayload>(decodeContent);
                 var mqttContents = JsonConvert.DeserializeObject<List<MqttModelContent>>(payload.Content);
 
                 WriteToLog($"MqttHandle_Cmd_Receive:Handle,接收服务器下发指令,payload:{payload.ToJsonString()}");
@@ -46,7 +48,7 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
                     try
                     {
                         //查询到属性对象
-                        var property = properties.FirstOrDefault(p => p.Id.Equals(mqttcontent.Id));
+                        var property = properties.FirstOrDefault(p => p.Id.ToString() == mqttcontent.Id);
                         if(property == null)
                         {
                             cmdResponse.IsSuccess = false;
@@ -55,23 +57,27 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
                         }
                         if (property.DataType == Model.Enum.DataTypeEnum.Array)
                         {
-                            var pIdentifiers = new List<string>();
+                            var pIdentifiers = new List<IdentifierArrayModel>();
                             for (int i = 0; i < property.DataArraySpecs.ArrayLength; i++)
                             {
-
-                                pIdentifiers.Add(property.Identifier + $"[{i}]");
+                                pIdentifiers.Add(new IdentifierArrayModel()
+                                {
+                                    Identifier = property.Identifier + $"[{i}]",
+                                    Index = i
+                                });
                             }
                             if (property.DataArraySpecs.DataType == Model.Enum.ArrayDataTypeEnum.Struct)
                             {
                                 var identifier = mqttcontent.Identifier;
-                                if (!pIdentifiers.Any(id => id.Equals(identifier)))
+                                var pIdentifier = pIdentifiers.FirstOrDefault(id => id.Identifier.Equals(identifier));
+                                if (pIdentifier == null)
                                 {
                                     cmdResponse.IsSuccess = false;
                                     cmdResponse.Message = $"未找到标识符为:{identifier}的物模型";
                                     continue;
                                 }
                                 //获取索引
-                                var index = int.Parse(identifier.Substring(identifier.Length - 2));
+                                var index = pIdentifier.Index;
                                 //获取Json参数
                                 if(property.DataArraySpecs.ArraySpecs.Count > index)
                                 {
@@ -91,14 +97,15 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
                             else
                             {
                                 var identifier = mqttcontent.Identifier;
-                                if (!pIdentifiers.Any(id => id.Equals(identifier)))
+                                var pIdentifier = pIdentifiers.FirstOrDefault(id => id.Identifier.Equals(identifier));
+                                if (pIdentifier == null)
                                 {
                                     cmdResponse.IsSuccess = false;
                                     cmdResponse.Message = $"未找到标识符为:{identifier}的物模型";
                                     continue;
                                 }
                                 //获取索引
-                                var index = int.Parse(identifier.Substring(identifier.Length - 2));
+                                var index = pIdentifier.Index;
                                 //获取输出通道
                                 if(mqttcontent.Value == null)
                                 {
@@ -192,5 +199,11 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
 
             MqttClient.PublishAsync(topic,payload).Wait();
         }
+    }
+
+    public class IdentifierArrayModel
+    {
+        public string Identifier { get; set; }
+        public int Index { get; set; }
     }
 }

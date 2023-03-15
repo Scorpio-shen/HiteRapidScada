@@ -388,7 +388,8 @@ namespace Scada.Comm.Devices
 
             foreach(var handle in handles)
             {
-                handle.Handle(topic, content);
+                if(handle.CanHandleTopic(topic))
+                    handle.Handle(topic, content);
             }
         }
         #endregion
