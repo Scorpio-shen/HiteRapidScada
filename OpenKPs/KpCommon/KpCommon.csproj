@@ -91,6 +91,7 @@
     <Compile Include="Extend\XmlExtension.cs" />
     <Compile Include="Helper\EncryptionHelper.cs" />
     <Compile Include="Helper\ExcelHelper.cs" />
+    <Compile Include="Helper\JsonHelper.cs" />
     <Compile Include="Helper\SnowflakeHelper.cs" />
     <Compile Include="Helper\XMLHelper.cs" />
     <Compile Include="Hsl\Algorithms\ConnectPool\ConnectPool.cs" />

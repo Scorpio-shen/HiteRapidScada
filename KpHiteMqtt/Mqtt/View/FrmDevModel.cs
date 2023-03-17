@@ -52,8 +52,12 @@ namespace KpHiteMqtt.Mqtt.View
             BindingSource bdsOutputChannels = new BindingSource();
             bdsOutputChannels.DataSource = _allCtrlCnls;
             cbxOutputChannels.DataSource = bdsOutputChannels;
+            cbxOutputChannels.DropDownStyle = ComboBoxStyle.DropDown;
             cbxOutputChannels.DisplayMember = "CtrlCnlNum";
             cbxOutputChannels.ValueMember = "CtrlCnlNum";
+
+            cbxOutputChannels.AutoCompleteMode = AutoCompleteMode.Suggest;
+            cbxOutputChannels.AutoCompleteSource= AutoCompleteSource.ListItems;
             //绑定存储器类
             Dictionary<string, DataTypeEnum> keyValueDataTypeEnums = new Dictionary<string, DataTypeEnum>();
             foreach (DataTypeEnum type in Enum.GetValues(typeof(DataTypeEnum)))

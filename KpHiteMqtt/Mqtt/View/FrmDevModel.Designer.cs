@@ -154,21 +154,21 @@
             this.cbxInputChannels.FormattingEnabled = true;
             this.cbxInputChannels.Location = new System.Drawing.Point(12, 238);
             this.cbxInputChannels.Name = "cbxInputChannels";
-            this.cbxInputChannels.Size = new System.Drawing.Size(98, 20);
+            this.cbxInputChannels.Size = new System.Drawing.Size(216, 20);
             this.cbxInputChannels.TabIndex = 13;
             // 
             // cbxOutputChannels
             // 
             this.cbxOutputChannels.FormattingEnabled = true;
-            this.cbxOutputChannels.Location = new System.Drawing.Point(127, 238);
+            this.cbxOutputChannels.Location = new System.Drawing.Point(235, 238);
             this.cbxOutputChannels.Name = "cbxOutputChannels";
-            this.cbxOutputChannels.Size = new System.Drawing.Size(98, 20);
+            this.cbxOutputChannels.Size = new System.Drawing.Size(216, 20);
             this.cbxOutputChannels.TabIndex = 15;
             // 
             // lblOutputChannel
             // 
             this.lblOutputChannel.AutoSize = true;
-            this.lblOutputChannel.Location = new System.Drawing.Point(125, 223);
+            this.lblOutputChannel.Location = new System.Drawing.Point(233, 223);
             this.lblOutputChannel.Name = "lblOutputChannel";
             this.lblOutputChannel.Size = new System.Drawing.Size(53, 12);
             this.lblOutputChannel.TabIndex = 14;
@@ -233,6 +233,7 @@
             this.ctrlJsonPara._allctrlcnls = null;
             this.ctrlJsonPara.AutoScroll = true;
             this.ctrlJsonPara.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.ctrlJsonPara.DataSpecsList = null;
             this.ctrlJsonPara.Location = new System.Drawing.Point(12, 455);
             this.ctrlJsonPara.Name = "ctrlJsonPara";
             this.ctrlJsonPara.Size = new System.Drawing.Size(540, 413);

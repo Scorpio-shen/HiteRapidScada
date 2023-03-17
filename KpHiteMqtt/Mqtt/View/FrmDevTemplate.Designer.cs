@@ -41,12 +41,23 @@
             this.saveFileDialog = new System.Windows.Forms.SaveFileDialog();
             this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
             this.dgvProperty = new System.Windows.Forms.DataGridView();
+            this.columnCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
+            this.columnId = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnName = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnIdentifier = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnDataType = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.columnUnit = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.column_Description = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ctxMenuViewOperate = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.tsmEditModel = new System.Windows.Forms.ToolStripMenuItem();
             this.tsmDeleteModel = new System.Windows.Forms.ToolStripMenuItem();
             this.btnAddModel = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.txtDeviceSn = new System.Windows.Forms.TextBox();
+            this.label5 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.chkUseTls = new System.Windows.Forms.CheckBox();
             this.txtPassword = new System.Windows.Forms.TextBox();
             this.txtUserName = new System.Windows.Forms.TextBox();
             this.label_Password = new System.Windows.Forms.Label();
@@ -61,13 +72,7 @@
             this.lblClientId = new System.Windows.Forms.Label();
             this.bdsProperty = new System.Windows.Forms.BindingSource(this.components);
             this.btnAddTopic = new System.Windows.Forms.Button();
-            this.columnCheck = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-            this.columnId = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnIdentifier = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnDataType = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.columnUnit = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.column_Description = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.btnImportExcel = new System.Windows.Forms.Button();
             this.toolStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvProperty)).BeginInit();
             this.ctxMenuViewOperate.SuspendLayout();
@@ -181,6 +186,51 @@
             this.dgvProperty.Size = new System.Drawing.Size(964, 545);
             this.dgvProperty.TabIndex = 2;
             // 
+            // columnCheck
+            // 
+            this.columnCheck.FillWeight = 20F;
+            this.columnCheck.HeaderText = "";
+            this.columnCheck.Name = "columnCheck";
+            this.columnCheck.Resizable = System.Windows.Forms.DataGridViewTriState.True;
+            this.columnCheck.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
+            // 
+            // columnId
+            // 
+            this.columnId.DataPropertyName = "Id";
+            this.columnId.HeaderText = "Id";
+            this.columnId.Name = "columnId";
+            this.columnId.Visible = false;
+            // 
+            // columnName
+            // 
+            this.columnName.DataPropertyName = "Name";
+            this.columnName.HeaderText = "名称";
+            this.columnName.Name = "columnName";
+            // 
+            // columnIdentifier
+            // 
+            this.columnIdentifier.DataPropertyName = "Identifier";
+            this.columnIdentifier.HeaderText = "标识符";
+            this.columnIdentifier.Name = "columnIdentifier";
+            // 
+            // columnDataType
+            // 
+            this.columnDataType.DataPropertyName = "DataType";
+            this.columnDataType.HeaderText = "数据类型";
+            this.columnDataType.Name = "columnDataType";
+            // 
+            // columnUnit
+            // 
+            this.columnUnit.DataPropertyName = "Unit";
+            this.columnUnit.HeaderText = "单位";
+            this.columnUnit.Name = "columnUnit";
+            // 
+            // column_Description
+            // 
+            this.column_Description.DataPropertyName = "Description";
+            this.column_Description.HeaderText = "描述";
+            this.column_Description.Name = "column_Description";
+            // 
             // ctxMenuViewOperate
             // 
             this.ctxMenuViewOperate.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -225,6 +275,10 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.txtDeviceSn);
+            this.groupBox2.Controls.Add(this.label5);
+            this.groupBox2.Controls.Add(this.label3);
+            this.groupBox2.Controls.Add(this.chkUseTls);
             this.groupBox2.Controls.Add(this.txtPassword);
             this.groupBox2.Controls.Add(this.txtUserName);
             this.groupBox2.Controls.Add(this.label_Password);
@@ -245,16 +299,52 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Mqtt服务器连接参数";
             // 
+            // txtDeviceSn
+            // 
+            this.txtDeviceSn.Location = new System.Drawing.Point(576, 25);
+            this.txtDeviceSn.Name = "txtDeviceSn";
+            this.txtDeviceSn.Size = new System.Drawing.Size(129, 21);
+            this.txtDeviceSn.TabIndex = 17;
+            // 
+            // label5
+            // 
+            this.label5.Font = new System.Drawing.Font("宋体", 9F);
+            this.label5.Location = new System.Drawing.Point(500, 28);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(70, 14);
+            this.label5.TabIndex = 16;
+            this.label5.Text = "设备号:";
+            this.label5.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(136, 143);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(47, 12);
+            this.label3.TabIndex = 15;
+            this.label3.Text = "UseTls:";
+            // 
+            // chkUseTls
+            // 
+            this.chkUseTls.AutoSize = true;
+            this.chkUseTls.Location = new System.Drawing.Point(189, 143);
+            this.chkUseTls.Name = "chkUseTls";
+            this.chkUseTls.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            this.chkUseTls.Size = new System.Drawing.Size(15, 14);
+            this.chkUseTls.TabIndex = 14;
+            this.chkUseTls.UseVisualStyleBackColor = true;
+            // 
             // txtPassword
             // 
-            this.txtPassword.Location = new System.Drawing.Point(568, 61);
+            this.txtPassword.Location = new System.Drawing.Point(576, 98);
             this.txtPassword.Name = "txtPassword";
             this.txtPassword.Size = new System.Drawing.Size(129, 21);
             this.txtPassword.TabIndex = 12;
             // 
             // txtUserName
             // 
-            this.txtUserName.Location = new System.Drawing.Point(568, 24);
+            this.txtUserName.Location = new System.Drawing.Point(576, 61);
             this.txtUserName.Name = "txtUserName";
             this.txtUserName.Size = new System.Drawing.Size(129, 21);
             this.txtUserName.TabIndex = 13;
@@ -262,7 +352,7 @@
             // label_Password
             // 
             this.label_Password.Font = new System.Drawing.Font("宋体", 9F);
-            this.label_Password.Location = new System.Drawing.Point(492, 64);
+            this.label_Password.Location = new System.Drawing.Point(500, 101);
             this.label_Password.Name = "label_Password";
             this.label_Password.Size = new System.Drawing.Size(70, 14);
             this.label_Password.TabIndex = 10;
@@ -272,7 +362,7 @@
             // label_UseName
             // 
             this.label_UseName.Font = new System.Drawing.Font("宋体", 9F);
-            this.label_UseName.Location = new System.Drawing.Point(492, 27);
+            this.label_UseName.Location = new System.Drawing.Point(500, 64);
             this.label_UseName.Name = "label_UseName";
             this.label_UseName.Size = new System.Drawing.Size(70, 14);
             this.label_UseName.TabIndex = 11;
@@ -281,7 +371,7 @@
             // 
             // txtAliveInterval
             // 
-            this.txtAliveInterval.Location = new System.Drawing.Point(568, 102);
+            this.txtAliveInterval.Location = new System.Drawing.Point(576, 139);
             this.txtAliveInterval.Name = "txtAliveInterval";
             this.txtAliveInterval.Size = new System.Drawing.Size(129, 21);
             this.txtAliveInterval.TabIndex = 7;
@@ -289,7 +379,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(485, 106);
+            this.label4.Location = new System.Drawing.Point(493, 143);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(77, 12);
             this.label4.TabIndex = 6;
@@ -353,56 +443,22 @@
             this.btnAddTopic.UseVisualStyleBackColor = true;
             this.btnAddTopic.Click += new System.EventHandler(this.btnAddTopic_Click);
             // 
-            // columnCheck
+            // btnImportExcel
             // 
-            this.columnCheck.FillWeight = 20F;
-            this.columnCheck.HeaderText = "";
-            this.columnCheck.Name = "columnCheck";
-            this.columnCheck.Resizable = System.Windows.Forms.DataGridViewTriState.True;
-            this.columnCheck.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Automatic;
-            // 
-            // columnId
-            // 
-            this.columnId.DataPropertyName = "Id";
-            this.columnId.HeaderText = "Id";
-            this.columnId.Name = "columnId";
-            this.columnId.Visible = false;
-            // 
-            // columnName
-            // 
-            this.columnName.DataPropertyName = "Name";
-            this.columnName.HeaderText = "名称";
-            this.columnName.Name = "columnName";
-            // 
-            // columnIdentifier
-            // 
-            this.columnIdentifier.DataPropertyName = "Identifier";
-            this.columnIdentifier.HeaderText = "标识符";
-            this.columnIdentifier.Name = "columnIdentifier";
-            // 
-            // columnDataType
-            // 
-            this.columnDataType.DataPropertyName = "DataType";
-            this.columnDataType.HeaderText = "数据类型";
-            this.columnDataType.Name = "columnDataType";
-            // 
-            // columnUnit
-            // 
-            this.columnUnit.DataPropertyName = "Unit";
-            this.columnUnit.HeaderText = "单位";
-            this.columnUnit.Name = "columnUnit";
-            // 
-            // column_Description
-            // 
-            this.column_Description.DataPropertyName = "Description";
-            this.column_Description.HeaderText = "描述";
-            this.column_Description.Name = "column_Description";
+            this.btnImportExcel.Location = new System.Drawing.Point(709, 201);
+            this.btnImportExcel.Name = "btnImportExcel";
+            this.btnImportExcel.Size = new System.Drawing.Size(82, 32);
+            this.btnImportExcel.TabIndex = 8;
+            this.btnImportExcel.Text = "导入Excel";
+            this.btnImportExcel.UseVisualStyleBackColor = true;
+            this.btnImportExcel.Click += new System.EventHandler(this.btnImportExcel_Click);
             // 
             // FrmDevTemplate
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(970, 804);
+            this.Controls.Add(this.btnImportExcel);
             this.Controls.Add(this.btnAddTopic);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
@@ -470,5 +526,10 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn columnDataType;
         private System.Windows.Forms.DataGridViewTextBoxColumn columnUnit;
         private System.Windows.Forms.DataGridViewTextBoxColumn column_Description;
+        private System.Windows.Forms.CheckBox chkUseTls;
+        private System.Windows.Forms.TextBox txtDeviceSn;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Button btnImportExcel;
     }
 }

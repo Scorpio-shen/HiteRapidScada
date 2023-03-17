@@ -34,6 +34,9 @@
     <Reference Include="KpModbus">
       <HintPath>..\OpenKPs\KpModbus\obj\Debug\KpModbus.dll</HintPath>
     </Reference>
+    <Reference Include="MQTTnet, Version=4.1.4.563, Culture=neutral, PublicKeyToken=fdb7629f2e364a63, processorArchitecture=MSIL">
+      <HintPath>..\packages\MQTTnet.4.1.4.563\lib\net461\MQTTnet.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -61,7 +64,10 @@
     <Compile Include="Mqtt\Model\HiteMqttCmdModel.cs" />
     <Compile Include="Mqtt\Model\HiteMqttDataModel.cs" />
     <Compile Include="Mqtt\Model\InputChannelModel.cs" />
+    <Compile Include="Mqtt\Model\MqttConnectionOptions.cs" />
     <Compile Include="Mqtt\Model\Property.cs" />
+    <Compile Include="Mqtt\Model\Request\MqttMonitorData.cs" />
+    <Compile Include="Mqtt\Model\Request\MqttMonitorDataSet.cs" />
     <Compile Include="Mqtt\Model\Response\MqttCmdResponse.cs" />
     <Compile Include="Mqtt\Model\Response\MqttResponse.cs" />
     <Compile Include="Mqtt\Model\ScadaSystemTopics.cs" />
@@ -185,9 +191,7 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Mqtt\Model\Request\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>if exist "C:\SCADA\ScadaComm\KP"  (

@@ -1,8 +1,10 @@
 ﻿using KpCommon.Extend;
+using KpCommon.Helper;
 using KpCommon.Model;
 using KpCommon.Model.EnumType;
 using KpHiteMqtt.Mqtt.Helper;
 using KpHiteMqtt.Mqtt.Model;
+using KpHiteMqtt.Mqtt.Model.Enum;
 using KpHiteMqtt.Mqtt.ViewModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -61,7 +63,7 @@ namespace KpHiteMqtt.Mqtt.View
             set
             {
                 deviceTemplate.Properties = value;
-                //BindProperty(deviceTemplate.Properties);
+                BindProperty(deviceTemplate.Properties);
             }
         }
         public FrmDevTemplate(AppDirs appDirs,string fileName)
@@ -116,8 +118,10 @@ namespace KpHiteMqtt.Mqtt.View
             txtClientId.AddDataBindings(connectionOption, nameof(connectionOption.ClientId));
             txtServerIp.AddDataBindings(connectionOption, nameof(connectionOption.IpAddress));
             txtPort.AddDataBindings(connectionOption, nameof(connectionOption.Port));
-            txtUserName.AddDataBindings(connectionOption.Credentials, nameof(connectionOption.Credentials.UserName));
-            txtPassword.AddDataBindings(connectionOption.Credentials, nameof(connectionOption.Credentials.Password));
+            txtDeviceSn.AddDataBindings(connectionOption,nameof(connectionOption.DeviceSn));
+            txtUserName.AddDataBindings(connectionOption, nameof(connectionOption.UserName));
+            txtPassword.AddDataBindings(connectionOption, nameof(connectionOption.Password));
+            chkUseTls.AddDataBindings(connectionOption, nameof(connectionOption.UseTsl));
             //txtAliveInterval.AddDataBindings(connectionOption, nameof(connectionOption.KeepAliveSendInterval));
             var binding = new Binding(nameof(txtAliveInterval.Text), connectionOption, nameof(connectionOption.KeepAliveSendInterval), false, DataSourceUpdateMode.OnPropertyChanged);
             binding.Format += (binding_sender, binding_e) =>
@@ -143,6 +147,8 @@ namespace KpHiteMqtt.Mqtt.View
             txtUserName.TextChanged += ControlProperty_Changed;
             txtPassword.TextChanged += ControlProperty_Changed;
             txtAliveInterval.TextChanged += ControlProperty_Changed;
+            txtDeviceSn.TextChanged += ControlProperty_Changed;
+            chkUseTls.CheckedChanged += ControlProperty_Changed;
 
         }
 
@@ -213,13 +219,33 @@ namespace KpHiteMqtt.Mqtt.View
         private void btnImport_Click(object sender, EventArgs e)
         {
             var openFile = new OpenFileDialog();
-            openFile.SetFilter(TempleteKeyString.OpenExcelFilterStr);
+            openFile.SetFilter(TempleteKeyString.OpenJsonFilterStr);
             var reuslt = openFile.ShowDialog();
             if (reuslt != DialogResult.OK)
                 return;
             Modified = true;
             var filePath = openFile.FileName;
+            ImportDataModel(filePath);
+        }
 
+        private void ImportDataModel(string filePath)
+        {
+            var property = Properties;
+            try
+            {
+                using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                {
+                    using (var sr = new StreamReader(fs))
+                    {
+                        var jsonStr = sr.ReadToEnd();
+                        Properties = JsonConvert.DeserializeObject<List<Property>>(jsonStr);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ScadaUiUtils.ShowError($"导入物模型异常,{ex.Message}");
+            }
         }
         /// <summary>
         /// 导出
@@ -229,12 +255,119 @@ namespace KpHiteMqtt.Mqtt.View
         private void btnExport_Click(object sender, EventArgs e)
         {
             SaveFileDialog saveFile = new SaveFileDialog();
-            saveFile.SetFilter(TempleteKeyString.OpenExcelFilterStr);
+            saveFile.SetFilter(TempleteKeyString.SaveJsonFilterStr);
             var reuslt = saveFile.ShowDialog();
             if (reuslt != DialogResult.OK)
                 return;
             var filePath = saveFile.FileName;
-            var extensionName = Path.GetExtension(filePath);
+            
+            //导出物模型
+            ExportDataModel(filePath);
+        }
+
+        private void ExportDataModel(string filePath)
+        {
+            #region 注释
+            //var mqttContents = new List<MqttModelContent>();
+            //Properties.ForEach(p =>
+            //{
+            //    if (p.DataType == DataTypeEnum.Array)
+            //    {
+            //        for (int i = 0; i < p.DataArraySpecs.ArrayLength; i++)
+            //        {
+
+            //            var mqttContent = new MqttModelContent
+            //            {
+            //                Id = p.Id.ToString(),
+            //                Identifier = p.Identifier + $"[{i}]",
+            //                //DataType = p.DataType.ToString(),
+            //                DataTypeValue = p.DataArraySpecs.DataType.ToDataTypeEnum(),
+            //                Name = p.Name,
+            //                Value = null,
+            //                Parameters = null,
+            //            };
+            //            if (i > p.DataArraySpecs.ArraySpecs.Count)
+            //                break;
+
+            //            var arrayspec = p.DataArraySpecs.ArraySpecs[i];
+            //            if (p.DataArraySpecs.DataType == ArrayDataTypeEnum.Struct)
+            //            {
+            //                mqttContent.Parameters = arrayspec.DataSpecs.Select(ad => new MqttModelSpecs
+            //                {
+            //                    Identifier = ad.Identifier,
+            //                    //DataType = ad.DataType.ToString(),
+            //                    DataTypeValue = ad.DataType,
+            //                    ParameterName = ad.ParameterName,
+            //                    InCnlNum = ad.InCnlNum,
+            //                    CtrlCnlNum = ad.CtrlCnlNum,
+            //                    Value = null,
+            //                }).ToList();
+            //            }
+            //            else
+            //            {
+            //                mqttContent.InCnlNum = arrayspec.InCnlNum;
+            //                mqttContent.CtrlCnlNum = arrayspec.CtrlCnlNum;
+            //            }
+            //            mqttContents.Add(mqttContent);
+            //        }
+
+            //    }
+            //    else if (p.DataType == KpHiteMqtt.Mqtt.Model.Enum.DataTypeEnum.Struct)
+            //    {
+            //        var mqttContent = new MqttModelContent
+            //        {
+            //            Id = p.Id.ToString(),
+            //            //DataType = p.DataType.ToString(),
+            //            DataTypeValue = p.DataType,
+            //            Identifier = p.Identifier,
+            //            Name = p.Name,
+            //            Value = null,
+            //            Parameters = new List<MqttModelSpecs>()
+            //        };
+            //        foreach (var dataspec in p.DataSpecsList)
+            //        {
+            //            mqttContent.Parameters.Add(new MqttModelSpecs
+            //            {
+            //                Identifier = dataspec.Identifier,
+            //                //DataType = dataspec.DataType.ToString(),
+            //                DataTypeValue = dataspec.DataType,
+            //                ParameterName = dataspec.ParameterName,
+            //                InCnlNum = dataspec.InCnlNum,
+            //                CtrlCnlNum = dataspec.CtrlCnlNum,
+            //                Value = null
+            //            });
+            //        }
+            //        mqttContents.Add(mqttContent);
+            //    }
+            //    else
+            //    {
+            //        var mqttContent = new MqttModelContent
+            //        {
+            //            Id = p.Id.ToString(),
+            //            InCnlNum = p.CnlNum,
+            //            CtrlCnlNum = p.CtrlCnlNum,
+            //            Name = p.Name,
+            //            Identifier = p.Identifier,
+            //            //DataType = p.DataType.ToString(),
+            //            DataTypeValue = p.DataType,
+            //            Parameters = null,
+            //            Value = null
+            //        };
+            //        mqttContents.Add(mqttContent);
+
+            //    }
+            //});
+            #endregion
+
+
+            using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.ReadWrite))
+            {
+                using(var sw = new StreamWriter(fs))
+                {
+                    var content =JsonHelper.ConvertJsonString(JsonConvert.SerializeObject(Properties));
+                    sw.Write(content);
+                }
+            }
         }
         #endregion
 
@@ -377,6 +510,7 @@ namespace KpHiteMqtt.Mqtt.View
         {
             bdsProperty.DataSource = null;
             bdsProperty.DataSource = properties;
+            bdsProperty.ResetBindings(true);
         }
         #endregion
 
@@ -401,5 +535,40 @@ namespace KpHiteMqtt.Mqtt.View
         }
         #endregion
 
+        private void btnImportExcel_Click(object sender, EventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog();  
+            var result = openFileDialog.ShowDialog();
+            if (result != DialogResult.OK)
+                return;
+            var file = openFileDialog.FileName;
+            var models =  ExcelHelper.GetListExtend<TempModel>(file, 0);
+
+            var properties = models.Select(m => new Property
+            {
+                Identifier = m.Name,
+                Name = m.Name,
+                Description = m.Description,
+                DataType = m.DataType == "BOOL" ? DataTypeEnum.Bool : DataTypeEnum.Int32,
+                CnlNum = allInCnls.FirstOrDefault(i=>i.Name.EndsWith(m.Name))?.CnlNum ?? default,
+                CtrlCnlNum = allCtrlCnls.FirstOrDefault(i => i.Name.EndsWith(m.Name))?.CtrlCnlNum ?? default,
+            }).ToList();
+            
+            Properties = properties;
+        }
+    }
+
+    public class TempModel
+    {
+        [DisplayName("变量名")]
+        public string Name { get; set; }
+        [DisplayName("数据类型")]
+        public string DataType { get; set; }
+        [DisplayName("变量地址")]
+        public string Address { get; set; }
+        [DisplayName("Scada侧读取地址")]
+        public string AddressScada { get; set; }
+        [DisplayName("变量描述")]
+       public string Description { get;set; }
     }
 }

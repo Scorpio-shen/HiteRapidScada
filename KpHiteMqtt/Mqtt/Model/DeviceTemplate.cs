@@ -7,8 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
 
@@ -20,10 +18,7 @@ namespace KpHiteMqtt.Mqtt.Model
         /// <summary>
         /// 连接参数
         /// </summary>
-        public MqttConnectionOptions ConnectionOptions { get; set; } = new MqttConnectionOptions()
-        {
-            Credentials = new MqttCredential()
-        };
+        public MqttConnectionOptions ConnectionOptions { get; set; } = new MqttConnectionOptions();
         /// <summary>
         /// 订阅Topic(服务端的指令)
         /// </summary>
@@ -76,11 +71,10 @@ namespace KpHiteMqtt.Mqtt.Model
                     ClientId = connectionElement.GetAttrAsString("ClientId"),
                     IpAddress = connectionElement.GetAttrAsString("IpAddress"),
                     Port = connectionElement.GetAttrAsInt("Port"),
-                    Credentials = new MqttCredential
-                    {
-                        UserName = connectionElement.GetAttrAsString("UserName"),
-                        Password = connectionElement.GetAttrAsString("Password")
-                    },
+                    UserName = connectionElement.GetAttrAsString("UserName"),
+                    Password = connectionElement.GetAttrAsString("Password"),
+                    UseTsl = connectionElement.GetAttrAsBool("UseTsl"),
+                    DeviceSn = connectionElement.GetAttrAsString("DeviceSn"),
                     KeepAliveSendInterval = TimeSpan.FromSeconds(connectionElement.GetAttrAsInt("KeepAliveSendInterval")),
                 };
             //物模型
@@ -335,9 +329,11 @@ namespace KpHiteMqtt.Mqtt.Model
             connectElement.SetAttribute("ClientId", ConnectionOptions.ClientId);
             connectElement.SetAttribute("IpAddress", ConnectionOptions.IpAddress);
             connectElement.SetAttribute("Port", ConnectionOptions.Port.ToString());
-            connectElement.SetAttribute("UserName", ConnectionOptions.Credentials.UserName);
-            connectElement.SetAttribute("Password", ConnectionOptions.Credentials.Password);
+            connectElement.SetAttribute("UserName", ConnectionOptions.UserName);
+            connectElement.SetAttribute("Password", ConnectionOptions.Password);
+            connectElement.SetAttribute("UseTsl", ConnectionOptions.UseTsl);
             connectElement.SetAttribute("KeepAliveSendInterval", ConnectionOptions.KeepAliveSendInterval.TotalSeconds);
+            connectElement.SetAttribute("DeviceSn", ConnectionOptions.DeviceSn);
             //物模型
             var propertyElement = rootElement.AppendElem("Properties");
             

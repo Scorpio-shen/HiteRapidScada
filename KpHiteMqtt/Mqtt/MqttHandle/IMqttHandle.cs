@@ -31,7 +31,7 @@ namespace KpHiteMqtt.Mqtt.MqttHandle
 
         public abstract void Handle(string topic, string content);
 
-        public bool CanHandleTopic(string topic)
+        public virtual bool CanHandleTopic(string topic)
         {
             return Topic.Equals(topic);
         }

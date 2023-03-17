@@ -1,17 +1,13 @@
 ﻿using HslCommunication.MQTT;
 using KpCommon.Extend;
 using KpCommon.Helper;
-using KpHiteMqtt.Mqtt;
 using KpHiteMqtt.Mqtt.Model;
 using KpHiteMqtt.Mqtt.Model.Response;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -43,9 +39,20 @@ namespace HiteMqttTest
 
                 //连接Mqtt服务器
                 deviceTemplate.ConnectionOptions.ClientId = new Guid().ToString();
-                deviceTemplate.ConnectionOptions.Credentials.UserName = "ClientTest";
-                deviceTemplate.ConnectionOptions.Credentials.Password = "ClientPassword";
-                mqttClient = new MqttClient(deviceTemplate.ConnectionOptions);
+                deviceTemplate.ConnectionOptions.UserName = "ClientTest";
+                deviceTemplate.ConnectionOptions.Password = "ClientPassword";
+                mqttClient = new MqttClient(new HslCommunication.MQTT.MqttConnectionOptions
+                {
+                    ClientId = deviceTemplate.ConnectionOptions.ClientId,
+                    IpAddress = deviceTemplate.ConnectionOptions.IpAddress,
+                    Credentials = new MqttCredential
+                    {
+                        UserName = deviceTemplate.ConnectionOptions.UserName,
+                        Password = deviceTemplate.ConnectionOptions.Password
+                    },
+                    Port = deviceTemplate.ConnectionOptions.Port,
+                    
+                });
                 mqttClient.OnClientConnected += MqttClient_OnClientConnected;
                 mqttClient.OnMqttMessageReceived += MqttClient_OnMqttMessageReceived;
             }
@@ -141,6 +148,12 @@ namespace HiteMqttTest
                 var result = mqttClient.ConnectServer();
                 Debug.WriteLine(result.IsSuccess);
             }
+        }
+
+        private void btnTest_Click(object sender, EventArgs e)
+        {
+            var str= EncryptionHelper.StandMd5Encrypt16(txtModelWrite.Text);
+            Debug.WriteLine(str);
         }
     }
 

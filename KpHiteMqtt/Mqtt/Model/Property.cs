@@ -90,6 +90,7 @@ namespace KpHiteMqtt.Mqtt.Model
         /// <summary>
         /// 是否是只读
         /// </summary>
+        [JsonIgnore]    
         public bool IsReadOnly
         {
             get => isreadonly;
@@ -237,7 +238,7 @@ namespace KpHiteMqtt.Mqtt.Model
                 OnPropertyChanged(nameof(ArrayChannelString));
             }
         }
-
+        [JsonIgnore]
         public bool IsStruct
         {
             get=>DataType == ArrayDataTypeEnum.Struct;
@@ -253,26 +254,26 @@ namespace KpHiteMqtt.Mqtt.Model
             set
             {
                 arraylength = value;
-                if(arraylength < arraySpecs.Count)
-                {
-                    do
-                    {
-                        arraySpecs.RemoveAt(arraySpecs.Count - 1);
+                //if(arraylength < arraySpecs.Count)
+                //{
+                //    do
+                //    {
+                //        arraySpecs.RemoveAt(arraySpecs.Count - 1);
 
-                    }
-                    while (arraylength < arraySpecs.Count && arraySpecs.Count > 0);
-                }
-                else if(arraylength > arraySpecs.Count)
-                {
-                    var count = arraySpecs.Count;
-                    for(int i = 0;i < arraylength - count; i++)
-                    {
-                        arraySpecs.Add(new Model.ArraySpecs
-                        {
-                            DataSpecs = this.DataSpecs.Select(d => d.Clone() as DataSpecs).ToList(),
-                        });
-                    }
-                }
+                //    }
+                //    while (arraylength < arraySpecs.Count && arraySpecs.Count > 0);
+                //}
+                //else if(arraylength > arraySpecs.Count)
+                //{
+                //    var count = arraySpecs.Count;
+                //    for(int i = 0;i < arraylength - count; i++)
+                //    {
+                //        arraySpecs.Add(new Model.ArraySpecs
+                //        {
+                //            DataSpecs = this.DataSpecs.Select(d => d.Clone() as DataSpecs).ToList(),
+                //        });
+                //    }
+                //}
                 OnPropertyChanged(nameof(ArrayLength));
                 OnPropertyChanged(nameof(ArrayChannelString));
             }
@@ -339,7 +340,7 @@ namespace KpHiteMqtt.Mqtt.Model
             }
             OnPropertyChanged(nameof(ArrayChannelString));
         }
-
+        [JsonIgnore]
         public string ArrayChannelString
         {
             get => GetArrayChannelString(Identifier);

@@ -1,23 +1,18 @@
-﻿using HslCommunication.MQTT;
-using KpCommon.Extend;
-using KpCommon.Helper;
-using KpHiteMqtt.Mqtt;
+﻿using KpHiteMqtt.Mqtt;
 using KpHiteMqtt.Mqtt.Model;
 using KpHiteMqtt.Mqtt.Model.Enum;
+using KpHiteMqtt.Mqtt.Model.Request;
 using KpHiteMqtt.Mqtt.MqttHandle;
+using MQTTnet.Protocol;
 using Newtonsoft.Json;
 using Scada.Data.Configuration;
-using Scada.Data.Entities;
 using Scada.Data.Tables;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading;
-
-using System.Threading.Tasks;
 
 namespace Scada.Comm.Devices
 {
@@ -26,7 +21,7 @@ namespace Scada.Comm.Devices
         DeviceTemplate deviceTemplate;
         Dictionary<int, InputChannelModel> InputChannelModels;
         HiteMqttClient mqttClient;
-        HiteMqttPayload mqttPayload;        //要Publish的Mqtt数据
+        //HiteMqttPayload mqttPayload;        //要Publish的Mqtt数据
         List<MqttModelContent> mqttContents;     //具体消息内容
         List<IMqttHandle> handles;          //Mqtt消息处理类
 
@@ -119,6 +114,10 @@ namespace Scada.Comm.Devices
             }
             else
             {
+                if (!mqttClient.IsConnected)
+                {
+                    ConnectMqttServer();
+                }
                 //获取通道数据值
                 GetValues();
                 //Mqtt Publish
@@ -130,6 +129,7 @@ namespace Scada.Comm.Devices
         {
             try
             {
+                //判断是否
                 foreach (MqttModelContent content in mqttContents)
                 {
                     if (content.DataTypeValue == DataTypeEnum.Struct)
@@ -152,13 +152,18 @@ namespace Scada.Comm.Devices
                     }
                 }
 
-                mqttPayload.MessageId = SnowflakeHelper.GetNewId().ToString();
-                mqttPayload.Time = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-                mqttPayload.Content = JsonConvert.SerializeObject(mqttContents);
-                var payload = JsonConvert.SerializeObject(mqttPayload);
+                var monitorData = new MqttMonitorData();
+                monitorData.time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                monitorData.Data = mqttContents.Select(c=>new MonitorData
+                {
+                    name = c.Identifier,
+                    value = c.Value,
+                }).ToList();
+                var pubTopic = ScadaSystemTopics.MqttTsModelData_Publish.Replace("{设备号}", deviceTemplate.ConnectionOptions.DeviceSn);
+                var payload = JsonConvert.SerializeObject(monitorData);
                 var result = mqttClient.PublishAsync(
-                    topic:ScadaSystemTopics.MqttTsModelData_Publish,
-                    payload: Encoding.UTF8.GetBytes(EncryptionHelper.Base64Encode(payload)),
+                    topic: pubTopic,
+                    payload: Encoding.UTF8.GetBytes(payload),
                     mqttQuality: MqttQualityOfServiceLevel.AtMostOnce).Result;
 
                 WriteToLog($"KpHiteMqttLogic:PublishData,发布数据,Content:{payload},Result:{result}");
@@ -244,7 +249,6 @@ namespace Scada.Comm.Devices
                 mqttClient.OnMqttDisConnected += MqttClient_OnMqttDisConnected;
                 mqttClient.OnMqttConnected += MqttClient_OnMqttConnected;
                 //初始化Mqtt Payload
-                mqttPayload = new HiteMqttPayload();
                 mqttContents = new List<MqttModelContent>();
                 deviceTemplate.Properties.ForEach(p =>
                 {
@@ -348,10 +352,10 @@ namespace Scada.Comm.Devices
                     InitMqttClient();
                 if (mqttClient != null)
                 {
-                    var result = mqttClient.ConnectServer();
-                    if (!result.IsSuccess)
+                    var result = mqttClient.ConnectServer().Result;
+                    if (!result)
                     {
-                        WriteToLog($"KpHiteMqttLogic:ConnectMqttServer,Mqtt连接失败,{result.Message}");
+                        WriteToLog($"KpHiteMqttLogic:ConnectMqttServer,Mqtt连接失败");
                     }
                 }
             }
@@ -366,12 +370,23 @@ namespace Scada.Comm.Devices
         private void MqttClient_OnMqttConnected(object sender, EventArgs e)
         {
             //订阅Topic
-            
+            var systemTopics = new List<string>()
+            {
+                ScadaSystemTopics.MqttCmdReply_Publish,
+                ScadaSystemTopics.MqttCmd_Subscribe,
+                ScadaSystemTopics.MqttTsModelDataReply_Subscribe,
+                ScadaSystemTopics.MqttTsModelData_Publish
+            };
             if (mqttClient.IsConnected && deviceTemplate.SubscribeTopics.Count > 0)
             {
                 foreach(var topic in deviceTemplate.SubscribeTopics)
                 {
-                    bool result = mqttClient.Subscribe(topic).Result;
+                    var subTopic = topic;
+                    if (systemTopics.Contains(topic))
+                    {
+                        subTopic = topic.Replace("{设备号}", deviceTemplate.ConnectionOptions.DeviceSn);
+                    }
+                    bool result = mqttClient.Subscribe(subTopic).Result;
                     WriteToLog($"KpHiteMqttLogic:MqttClient_OnMqttConnected,订阅Topic:{topic},订阅结果:{result}");
                 }
             }

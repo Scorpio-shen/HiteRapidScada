@@ -71,14 +71,14 @@ namespace KpHiteModbus.Modbus.View
             var bdsInCnls = new BindingSource();
             bdsInCnls.DataSource = _allInCnls;
             cbxInputChannels.DataSource = bdsInCnls;
-            cbxInputChannels.DisplayMember = "CnlNum";
+            cbxInputChannels.DisplayMember = "Name";
             cbxInputChannels.ValueMember = "CnlNum";
 
             var bdsOutCnls = new BindingSource();
             bdsOutCnls.DataSource = _allCtrlCnls;
 
             cbxOutputChannels.DataSource = bdsOutCnls;
-            cbxOutputChannels.DisplayMember = "CtrlCnlNum";
+            cbxOutputChannels.DisplayMember = "Name";
             cbxOutputChannels.ValueMember = "CtrlCnlNum";
             //绑定控件
             txtName.AddDataBindings(_dataSpecs, nameof(_dataSpecs.ParameterName));

@@ -1,31 +1,46 @@
 ﻿using HslCommunication;
-using HslCommunication.MQTT;
 using KpCommon.Helper;
 using KpHiteMqtt.Mqtt.Model;
+using MQTTnet;
+using MQTTnet.Client;
+using MQTTnet.Protocol;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Utils;
-using static HslCommunication.MQTT.MqttClient;
 
 namespace KpHiteMqtt.Mqtt
 {
     public delegate void MqttMessageReceived(string topic, string content);
     public class HiteMqttClient
     {
-        private MqttClient mqttClient;
+        //private MqttClient mqttClient;
+        private IMqttClient mqttClient;
         private Log.WriteLineDelegate _writeToLog;
-
+        private MqttConnectionOptions _connectionOptions;
+        private List<string> subscribeTopics;
+        private CancellationTokenSource tokenSourcePingServer;
+        private double KeepAliveSeconds;
+        private DateTime lastPingTime = DateTime.Now;
         public HiteMqttClient(MqttConnectionOptions mqttConnectionOptions,Log.WriteLineDelegate writeToLog)
         {
             _writeToLog = writeToLog;
-            mqttClient = new MqttClient(mqttConnectionOptions);
-            mqttClient.OnClientConnected += MqttClient_OnClientConnected;
-            mqttClient.OnNetworkError += MqttClient_OnNetworkError;
-            mqttClient.OnMqttMessageReceived += MqttClient_OnMqttMessageReceived;
+            _connectionOptions = mqttConnectionOptions;
+            KeepAliveSeconds = _connectionOptions.KeepAliveSendInterval.TotalSeconds;
+            subscribeTopics = new List<string>();
+            var factory = new MqttFactory();
+            mqttClient = factory.CreateMqttClient();
+            mqttClient.ConnectedAsync += MqttClient_ConnectedAsync;
+            mqttClient.DisconnectedAsync += MqttClient_DisconnectedAsync;
+            mqttClient.ApplicationMessageReceivedAsync += MqttClient_ApplicationMessageReceivedAsync;
         }
+
+        
 
         #region 事件
         public event MqttMessageReceived OnMqttMessageReceived;
@@ -42,33 +57,38 @@ namespace KpHiteMqtt.Mqtt
 
 
         #region 连接与断开
-        public OperateResult ConnectServer()
+        public async Task<bool> ConnectServer()
         {
-            var result = mqttClient.ConnectServer();
-            return result;
+            var mqttClientOptionBulider = new MqttClientOptionsBuilder()
+                    .WithTcpServer(_connectionOptions.IpAddress, _connectionOptions.Port)
+                    .WithCredentials(_connectionOptions.UserName, _connectionOptions.Password)
+                    .WithClientId(_connectionOptions.ClientId)
+                    .WithKeepAlivePeriod(_connectionOptions.KeepAliveSendInterval.Add(TimeSpan.FromSeconds(5)));
+            if (_connectionOptions.UseTsl)
+                mqttClientOptionBulider.WithTls();
+            var result = await mqttClient.ConnectAsync(mqttClientOptionBulider.Build());
+            return result.ResultCode == MqttClientConnectResultCode.Success;
         }
 
         public void DisConnect()
         {
-            if (mqttClient == null)
-                return;
+            if (tokenSourcePingServer != null && !tokenSourcePingServer.IsCancellationRequested)
+            {
+                tokenSourcePingServer.Cancel();
+                tokenSourcePingServer = null;
+            }
+                
             if (!IsConnected)
                 return;
-
-            mqttClient.ConnectClose();
+            mqttClient.DisconnectAsync();
         }
         #endregion
 
         #region Mqtt事件
-        /// <summary>
-        /// 消息接收
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="topic"></param>
-        /// <param name="payload"></param>
-        /// <exception cref="NotImplementedException"></exception>
-        private void MqttClient_OnMqttMessageReceived(MqttClient client, string topic, byte[] payload)
+        private Task MqttClient_ApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs arg)
         {
+            string topic = arg.ApplicationMessage.Topic;
+            byte[] payload = arg.ApplicationMessage.Payload;
             string content = string.Empty;
             bool isSuccess = true;
             try
@@ -81,20 +101,30 @@ namespace KpHiteMqtt.Mqtt
             }
             if (!isSuccess)
                 content = "Mqtt消息转换异常";
-            _writeToLog?.Invoke($"HiteMqttClient:MqttClient_OnMqttMessageReceived,Mqtt数据接收,Topic:{topic},{content}");
+            _writeToLog?.Invoke($"HiteMqttClient:MqttClient_ApplicationMessageReceivedAsync,Mqtt数据接收,Topic:{topic},{content}");
             OnMqttMessageReceived?.Invoke(topic, content);
+            return Task.CompletedTask;
         }
 
-        private void MqttClient_OnNetworkError(object sender, EventArgs e)
+        private Task MqttClient_DisconnectedAsync(MqttClientDisconnectedEventArgs arg)
         {
-            _writeToLog?.Invoke($"HiteMqttClient:MqttClient_OnNetworkError,Mqtt网络异常");
-            OnMqttDisConnected?.Invoke(sender, e);
+            _writeToLog?.Invoke($"HiteMqttClient:MqttClient_DisconnectedAsync,Mqtt断开连接，{arg.Reason}");
+            OnMqttDisConnected?.Invoke(this, new EventArgs());
+            if (tokenSourcePingServer != null && !tokenSourcePingServer.IsCancellationRequested)
+            {
+                tokenSourcePingServer.Cancel();
+                tokenSourcePingServer = null;
+            }
+            return Task.CompletedTask;
         }
 
-        private void MqttClient_OnClientConnected(MqttClient client)
+        private async Task MqttClient_ConnectedAsync(MqttClientConnectedEventArgs arg)
         {
-            _writeToLog?.Invoke($"HiteMqttClient:MqttClient_OnClientConnected,Mqtt成功连接,连接参数{client.ConnectionOptions.ToJsonString()}");
-            OnMqttConnected?.Invoke(client, new EventArgs());
+            _writeToLog?.Invoke($"HiteMqttClient:MqttClient_ConnectedAsync,Mqtt成功连接,连接参数{_connectionOptions.ToJsonString()}");
+            OnMqttConnected?.Invoke(mqttClient, new EventArgs());
+
+            //定时Ping服务器
+            await PingMqttServer();
         }
         #endregion
 
@@ -111,7 +141,7 @@ namespace KpHiteMqtt.Mqtt
         {
             if(!IsConnected)
                 return false;
-            var result = await mqttClient.PublishMessageAsync(new MqttApplicationMessage
+            var result = await mqttClient.PublishAsync(new MqttApplicationMessage
             {
                 Topic = topic,
                 Payload = payload,
@@ -126,7 +156,7 @@ namespace KpHiteMqtt.Mqtt
             if (!IsConnected)
                 return false;
             var payloadStr = JsonConvert.SerializeObject(payload);
-            var result = await mqttClient.PublishMessageAsync(new MqttApplicationMessage
+            var result = await mqttClient.PublishAsync(new MqttApplicationMessage
             {
                 Topic = topic,
                 Payload = Encoding.UTF8.GetBytes(EncryptionHelper.Base64Encode(payloadStr)),
@@ -140,12 +170,38 @@ namespace KpHiteMqtt.Mqtt
         #region 订阅Topic
         public async Task<bool> Subscribe(string topic)
         {
-            var topics = mqttClient.SubcribeTopics;
-            if (topics.Contains(topic))
+       
+            if (subscribeTopics.Contains(topic))
                 return true;
-            var result = await mqttClient.SubscribeMessageAsync(topic);
+            var result = await mqttClient.SubscribeAsync(topic);
+            subscribeTopics.Add(topic);
+            return true;
+        }
+        #endregion
 
-            return result.IsSuccess;
+        #region 定时ping服务器
+        private async Task PingMqttServer()
+        {
+            if (tokenSourcePingServer != null)
+                return;
+            tokenSourcePingServer = new CancellationTokenSource();
+            var pingToken = tokenSourcePingServer.Token;
+            await Task.Factory.StartNew(async () =>
+            {
+                while (!pingToken.IsCancellationRequested)
+                {
+                    if (IsConnected)
+                    {
+                        if (DateTime.Now - lastPingTime > _connectionOptions.KeepAliveSendInterval)
+                            await mqttClient.PingAsync(pingToken);
+                        else
+                            await Task.Delay(2 * 1000);
+
+                    }
+                    else
+                        break;
+                }
+            }, pingToken, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
         #endregion
     }

@@ -227,5 +227,33 @@ namespace KpHiteMqtt.Mqtt.View
         //}
         #endregion
 
+        private void txtArrayLength_TextChanged(object sender, EventArgs e)
+        {
+            //数组长度发生变化
+            if (!int.TryParse(txtArrayLength.Text, out int len))
+                return;
+            var oldLength = _arraySpecs.ArraySpecs.Count;
+            var arraylength = _arraySpecs.ArrayLength;
+            if (arraylength < oldLength)
+            {
+                do
+                {
+                    _arraySpecs.ArraySpecs.RemoveAt(_arraySpecs.ArraySpecs.Count - 1);
+
+                }
+                while (arraylength < _arraySpecs.ArraySpecs.Count && _arraySpecs.ArraySpecs.Count > 0);
+            }
+            else if (arraylength > oldLength)
+            {
+                var count = oldLength;
+                for (int i = 0; i < arraylength - count; i++)
+                {
+                    _arraySpecs.ArraySpecs.Add(new Model.ArraySpecs
+                    {
+                        DataSpecs = _arraySpecs.DataSpecs.Select(d => d.Clone() as DataSpecs).ToList(),
+                    });
+                }
+            }
+        }
     }
 }

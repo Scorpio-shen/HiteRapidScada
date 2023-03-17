@@ -11,13 +11,22 @@ namespace KpHiteMqtt.Mqtt.Model
     /// </summary>
     public static class ScadaSystemTopics
     {
-        public static string MqttTsModelData_Publish = "/HiteScada/service/property/post";
-
-        public static string MqttCmdReply_Publish = "/HiteScada/event/cmd_reply";
-
-        public static string MqttCmd_Subscribe = "/HiteScada/event/cmd";
-
-        public static string MqttTsModelDataReply_Subscribe = "/HiteScada/service/property/post_reply";
+        /// <summary>
+        /// 监控数据上报
+        /// </summary>
+        public static string MqttTsModelData_Publish = "HiteScada/service/{设备号}/system/MonitorData";
+        /// <summary>
+        /// 接收指令（回复）
+        /// </summary>
+        public static string MqttCmdReply_Publish = "HiteScada/event/{设备号}/system/WriteData_reply";
+        /// <summary>
+        /// 接收指令
+        /// </summary>
+        public static string MqttCmd_Subscribe = "HiteScada/event/{设备号}/system/WriteData";
+        /// <summary>
+        /// 监控数据上报回复
+        /// </summary>
+        public static string MqttTsModelDataReply_Subscribe = "HiteScada/service/{设备号}/system/MonitorData_reply";
 
 
     }

@@ -54,6 +54,7 @@
             this.txtArrayLength.Name = "txtArrayLength";
             this.txtArrayLength.Size = new System.Drawing.Size(99, 21);
             this.txtArrayLength.TabIndex = 1;
+            this.txtArrayLength.TextChanged += new System.EventHandler(this.txtArrayLength_TextChanged);
             // 
             // label1
             // 
@@ -77,6 +78,7 @@
             this.ctrlJsonPara._allctrlcnls = null;
             this.ctrlJsonPara.AutoScroll = true;
             this.ctrlJsonPara.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.ctrlJsonPara.DataSpecsList = null;
             this.ctrlJsonPara.Location = new System.Drawing.Point(11, 207);
             this.ctrlJsonPara.Name = "ctrlJsonPara";
             this.ctrlJsonPara.Size = new System.Drawing.Size(515, 195);
