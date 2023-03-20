@@ -129,6 +129,11 @@ namespace Scada.Comm.Devices
         {
             try
             {
+                if (!mqttClient.IsConnected)
+                {
+                    WriteToLog($"KpHiteMqttLogic:PublishData,Mqtt未连接到服务端");
+                    return;
+                }
                 //判断是否
                 foreach (MqttModelContent content in mqttContents)
                 {
