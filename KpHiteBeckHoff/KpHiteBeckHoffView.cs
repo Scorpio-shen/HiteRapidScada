@@ -9,7 +9,7 @@ namespace Scada.Comm.Devices
 {
     public class KpHiteBeckHoffView : KPView
     {
-        public override string KPDescr => "Hite Omron驱动v1.0";
+        public override string KPDescr => "Hite 倍福驱动v1.0";
 
 
         public KpHiteBeckHoffView() : base(0)
@@ -55,37 +55,88 @@ namespace Scada.Comm.Devices
                     bool isTS = tag.DataType == DataTypeEnum.Bool;
                     int typeID = isTS ? BaseValues.CnlTypes.TS : BaseValues.CnlTypes.TI;
 
-                    InCnlPrototype inCnl = new InCnlPrototype(tag.Name, typeID);
-                    inCnl.Signal = signal++;
-
-                    if (isTS)
+                    List<InCnlPrototype> addInCnls = new List<InCnlPrototype>();
+                    //判读是否是数组类型
+                    if(tag.IsArray)
                     {
-                        inCnl.ShowNumber = false;
-                        inCnl.UnitName = BaseValues.UnitNames.OffOn;
-                        inCnl.EvEnabled = true;
-                        inCnl.EvOnChange = true;
+                        //数组类型
+                        for(int i = 0;i < tag.Length; i++)
+                        {
+                            var tagName = tag.Name + $"[{i}]";
+                            InCnlPrototype inCnl = new InCnlPrototype(tagName, typeID);
+                            inCnl.Signal = signal++;
+
+                            if (isTS)
+                            {
+                                inCnl.ShowNumber = false;
+                                inCnl.UnitName = BaseValues.UnitNames.OffOn;
+                                inCnl.EvEnabled = true;
+                                inCnl.EvOnChange = true;
+
+                            }
+
+                            if (tag.DataType == DataTypeEnum.String)
+                            {
+                                //string类型设置格式类型
+                                inCnl.FormatID = BaseValues.Formats.AsciiText;
+                            }
+                            addInCnls.Add(inCnl);
+
+                        }
+                    }
+                    else
+                    {
+                        InCnlPrototype inCnl = new InCnlPrototype(tag.Name, typeID);
+                        inCnl.Signal = signal++;
+
+                        if (isTS)
+                        {
+                            inCnl.ShowNumber = false;
+                            inCnl.UnitName = BaseValues.UnitNames.OffOn;
+                            inCnl.EvEnabled = true;
+                            inCnl.EvOnChange = true;
+
+                        }
+
+                        if (tag.DataType == DataTypeEnum.String)
+                        {
+                            //string类型设置格式类型
+                            inCnl.FormatID = BaseValues.Formats.AsciiText;
+                        }
+                        addInCnls.Add(inCnl);
 
                     }
 
-                    if (tag.DataType == DataTypeEnum.String)
-                    {
-                        //string类型设置格式类型
-                        inCnl.FormatID = BaseValues.Formats.AsciiText;
-                    }
-
-                    inCnls.Add(inCnl);
+                    inCnls.AddRange(addInCnls);
                 }
             }
 
+            signal = 1;
             foreach (var tag in deviceTemplate.CmdTags)
             {
                 var cmdTypeID = tag.DataType == DataTypeEnum.String ? BaseValues.CmdTypes.Binary : BaseValues.CmdTypes.Standard;
-                CtrlCnlPrototype ctrlCnl = new CtrlCnlPrototype(tag.Name, cmdTypeID);
-                ctrlCnl.CmdNum = tag.TagID;
-                if (tag.DataType == DataTypeEnum.Bool)
-                    ctrlCnl.CmdValName = BaseValues.CmdValNames.OffOn;
+                if(tag.IsArray)
+                {
+                    //数组类型
+                    for(int i = 0;i < tag.Length; i++)
+                    {
+                        var tagName = tag.Name + $"[{i}]";
+                        CtrlCnlPrototype ctrlCnl = new CtrlCnlPrototype(tagName, cmdTypeID);
+                        ctrlCnl.CmdNum = signal++;
+                        if (tag.DataType == DataTypeEnum.Bool)
+                            ctrlCnl.CmdValName = BaseValues.CmdValNames.OffOn;
+                        ctrlCnls.Add(ctrlCnl);
+                    }
+                }
+                else
+                {
+                    CtrlCnlPrototype ctrlCnl = new CtrlCnlPrototype(tag.Name, cmdTypeID);
+                    ctrlCnl.CmdNum = tag.TagID;
+                    if (tag.DataType == DataTypeEnum.Bool)
+                        ctrlCnl.CmdValName = BaseValues.CmdValNames.OffOn;
 
-                ctrlCnls.Add(ctrlCnl);
+                    ctrlCnls.Add(ctrlCnl);
+                }
             }
 
             return prototypes;

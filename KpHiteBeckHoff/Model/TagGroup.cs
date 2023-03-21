@@ -119,7 +119,7 @@ namespace KpHiteBeckHoff.Model
                     tagElem.SetAttribute(tagProperty.Name, tagProperty.GetValue(tag));
                 }
                 //添加ParentTagId属性
-                tagElem.SetAttribute("ParentTagID", tag.ParentTag?.TagID ?? -1);
+                //tagElem.SetAttribute("ParentTagID", tag.ParentTag?.TagID ?? -1);
             }
         }
 
@@ -218,12 +218,12 @@ namespace KpHiteBeckHoff.Model
                 }
 
                 //获取父Tag
-                var parentId = tagElem.GetAttrAsInt("ParentTagID");
-                var parentTag = ParentTags.FirstOrDefault(p=>p.TagID == parentId);
-                if (parentTag != null)
-                {
-                    t.ParentTag = parentTag;
-                }
+                //var parentId = tagElem.GetAttrAsInt("ParentTagID");
+                //var parentTag = ParentTags.FirstOrDefault(p=>p.TagID == parentId);
+                //if (parentTag != null)
+                //{
+                //    t.ParentTag = parentTag;
+                //}
                 Tags.Add(t);
             }
         }
@@ -297,63 +297,40 @@ namespace KpHiteBeckHoff.Model
             var model = new RequestModel();
             List<string> addresses = new List<string>();
             List<ushort> lengths = new List<ushort>();
-            List<int> byteCounts = new List<int>();
+            //List<int> byteCounts = new List<int>();
 
 
             model.Addresses = addresses;
             model.Lengths = lengths;
-            model.BytesCount= byteCounts;
+            //model.BytesCount= byteCounts;
 
             foreach(var tag in Tags)
             {
                 if(tag.IsArray)
                 {
-                    var parentTag = tag.ParentTag;
-                    //获取tag的Parent
-                    if(parentTag != null && !addresses.Any(a=>a.Equals(parentTag.Name)))
+                    addresses.Add(tag.Name);
+                    var length = default(ushort);
+                    if(tag.DataType == DataTypeEnum.Bool)
                     {
-                        addresses.Add(parentTag.Name);
-                        lengths.Add((ushort)parentTag.Length);
-                        //获取对应字节数
-                        int byteCount = default;
-                        switch(parentTag.DataType)
-                        {
-                            case DataTypeEnum.Bool:
-                                {
-                                    byteCount += parentTag.Length / 8;
-                                    if ((parentTag.Length % 8) > 0)
-                                        byteCount++;
-                                }
-                                break;
-                            default:
-                                byteCount = parentTag.DataType.GetByteCount() * parentTag.Length;
-                                break;
-                        }
-
-                        byteCounts.Add(byteCount);
+                        length = (ushort)(tag.Length / 8 + (tag.Length % 8 > 0 ? 1 : 0));
                     }
+                    else
+                    {
+                        length = (ushort)(tag.DataType.GetByteCount() * tag.Length);
+                    }
+                    lengths.Add(length);
                 }
                 else
                 {
-                    if (!addresses.Any(a => a.Equals(tag.Name)))
+                    ushort length;
+                    if(tag.DataType == DataTypeEnum.String)
                     {
-                        addresses.Add(tag.Name);
-                        lengths.Add(1);
-                        int byteCount = default;    
-                        switch(tag.DataType)
-                        {
-                            case DataTypeEnum.String:
-                                {
-                                    byteCount = 2+ 4 + tag.Length;
-                                }
-                                break;
-                            default:
-                                byteCount = tag.DataType.GetByteCount();
-                                break;
-                        }
-
-                        byteCounts.Add(byteCount);
+                        length = (ushort)tag.Length;
                     }
+                    else
+                        length = (ushort)tag.DataType.GetByteCount();
+
+                    lengths.Add(length);
                 }
             }
 

@@ -8,6 +8,7 @@ using System.Collections;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Collections.Generic;
 
 namespace KpHiteBeckHoff.Model
 {
@@ -28,9 +29,8 @@ namespace KpHiteBeckHoff.Model
             string address = "", 
             bool canwrite = false,
             int length = default,
-            bool isArray = false,
-            int index = 0,
-            Tag parent = null)
+            int index = 0
+            /*Tag parent = null*/)
         {
             return new Tag()
             {
@@ -40,9 +40,8 @@ namespace KpHiteBeckHoff.Model
                 Address = address,
                 CanWrite = (byte)(canwrite ? 1 : 0),
                 Length = length,
-                IsArray= isArray,
                 Index= index,
-                ParentTag = parent  
+                //ParentTag = parent  
             };
         }
 
@@ -97,17 +96,37 @@ namespace KpHiteBeckHoff.Model
         /// <summary>
         /// 是否是数组类型
         /// </summary>
-        public bool IsArray { get; set; }
+        public bool IsArray
+        {
+            get
+            {
+                if (DataType == DataTypeEnum.String)
+                    return false;
+                else
+                {
+                    return Length > 0;
+                }
+            }
+        }
 
         /// <summary>
         /// 当类型为数组类型时，指向的数组Tag
         /// </summary>
-        public Tag ParentTag { get; set; }
+        //public Tag ParentTag { get; set; }
+        /// <summary>
+        /// 数组类型的子Tag
+        /// </summary>
+        //public List<Tag> ChildRenTags { get; set; }
 
         /// <summary>
         /// 读取数据
         /// </summary>
         public byte[] ReadData { get; set; }
+
+        /// <summary>
+        /// 对应通道标识号(数组类型时为集合，非数组类型则单个数据)
+        /// </summary>
+        public List<int> Signals { get; set; }
         #endregion
 
 
@@ -163,33 +182,7 @@ namespace KpHiteBeckHoff.Model
             double? result = null;
             try
             {
-                if (IsArray)
-                {
-                    var parentTag = ParentTag;
-                    if (parentTag == null)
-                        return result;
-
-                    if (parentTag.ReadData == null || parentTag.ReadData.Length == 0) return result;
-
-                    if (DataType == DataTypeEnum.Bool)
-                    {
-                        var bitArray = new BitArray(parentTag.ReadData);
-                        result = bitArray[Index] ? 1d : 0d;
-
-                        return result;
-                    }
-                    else
-                    {
-                        var byteCount = DataType.GetByteCount();
-                        var buffer = parentTag.ReadData.Skip(Index * byteCount).Take(byteCount).ToArray();
-                        result = GetTagVal(buffer);
-                    }
-                }
-                else
-                {
-                    result = GetTagVal(ReadData);
-                }
-
+                result = GetTagVal(ReadData);
             }
             catch 
             {

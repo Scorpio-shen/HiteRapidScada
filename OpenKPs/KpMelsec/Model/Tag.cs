@@ -74,6 +74,15 @@ namespace KpMelsec.Model
                 OnPropertyChanged(nameof(CanWriteBool));
             }
         }
+
+        public bool IsArray
+        {
+            get
+            {
+                if (DataType == DataTypeEnum.String) return false;
+                else return Length > 0;
+            }
+        }
         #endregion
 
 

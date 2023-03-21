@@ -23,6 +23,7 @@ using System.Threading;
 using System.Windows.Forms;
 using HslCommunication.Profinet.Beckhoff;
 using KpCommon.Extend;
+using static Scada.Comm.Devices.KPView;
 
 namespace Scada.Comm.Devices
 {
@@ -368,6 +369,25 @@ namespace Scada.Comm.Devices
                 foreach (var tagGroup in deviceTemplate.TagGroups)
                     tagGroup.RefreshTagIndex();
 
+                //初始化Tag点的signal号
+                int signal = 1;
+                foreach (var tagGroup in deviceTemplate.TagGroups)
+                {
+                    foreach (var tag in tagGroup.Tags)
+                    {
+                        //判读是否是数组类型
+                        if (tag.IsArray)
+                        {
+                            //数组类型
+                            for (int i = 0; i < tag.Length; i++)
+                                tag.Signals.Add(signal++);
+                        }
+                        else
+                        {
+                            tag.Signals.Add(signal++);
+                        }
+                    }
+                }
             }
         }
 
@@ -439,7 +459,6 @@ namespace Scada.Comm.Devices
             {
                 addresses.Add(model.Addresses[index]);
                 lengths.Add(model.Lengths[index]);
-                byteCounts.Add(model.BytesCount[index]);
                 var charCount = addresses.SelectMany(a => a).Count();
                 var byteCount = byteCounts.Sum();
 
@@ -503,40 +522,29 @@ namespace Scada.Comm.Devices
 
         private void SetTagsData(KpHiteBeckHoff.Model.TagGroup tagGroup)
         {
-            List<Tag> assignedTags = new List<Tag>(); //已经赋值过的Tag
             int byteIndex = default;
             var data = tagGroup.Data;
             for (int i = 0; i < tagGroup.Tags.Count; i++)
             {
                 var tag = tagGroup.Tags[i];
-                if (assignedTags.Any(a => a.TagID == tag.TagID))
-                    continue;
                 if (tag.IsArray)
                 {
                     //数组类型处理
-                    //获取到Tag父Tag,获取数组所有Tag
-                    var parentTag = tag.ParentTag;
-                    if (parentTag == null)
-                        continue;
-
-                    var childTags = tagGroup.Tags.Where(t => t.ParentTag == parentTag).ToList();
                     //获取Tag数组对应的字节数组
                     var byteCount = default(int);
-                    if (parentTag.DataType == DataTypeEnum.Bool)
+                    if (tag.DataType == DataTypeEnum.Bool)
                     {
-                        var iPart = childTags.Count / 8;
+                        var iPart = tag.Length / 8;
                         byteCount = iPart;
-                        if (childTags.Count % 8 > 0)
+                        if (tag.Length % 8 > 0)
                             byteCount += 1;
                     }
                     else
-                        byteCount = parentTag.DataType.GetByteCount() * parentTag.Length;
+                        byteCount = tag.DataType.GetByteCount() * tag.Length;
 
                     //赋值父Tag
-                    parentTag.ReadData = data.Skip(byteIndex).Take(byteCount).ToArray();
+                    tag.ReadData = data.Skip(byteIndex).Take(byteCount).ToArray();
                     byteIndex += byteCount;
-                    //添加已经赋值了的Tag
-                    assignedTags.AddRange(childTags);
                 }
                 else
                 {
@@ -548,17 +556,103 @@ namespace Scada.Comm.Devices
                     }
                     tag.ReadData = data.Skip(byteIndex).Take(byteCount).ToArray();
                     byteIndex += byteCount;
-                    assignedTags.Add(tag);
                 }
             }
 
+            int signal = 1;
             //赋值通道
             foreach(var tag in tagGroup.Tags)
             {
-                var tagData = tag.GetTagVal();
-                if (tagData != null)
-                    SetCurData(tag.TagID > 0 ? tag.TagID - 1 : tag.TagID, (double)tagData, BaseValues.CnlStatuses.Defined);
+                if (tag.IsArray)
+                {
+                    var tagData = tag.ReadData;
+                    if(tag.DataType == DataTypeEnum.Bool)
+                    {
+                        var bitArray = new BitArray(tagData);
+                        for(int i =  0; i < tag.Length; i++)
+                        {
+                            SetCurData(signal, bitArray[i] ? 1.0 : default, BaseValues.CnlStatuses.Defined);
+                            signal++;
+                        }
+                    }
+                    else
+                    {
+                        var byteCount = tag.DataType.GetByteCount();
+                        for (int i = 0; i < tag.Length; i++)
+                        {
+                            var buf = tagData.Skip(i * byteCount).Take(byteCount).ToArray();
+                            GetTagVal(buf, tag.DataType);
+                            signal++;
+                        }
+                    }
+                  
+                }
+                else
+                {
+                    var tagData = tag.GetTagVal();
+                    if (tagData != null)
+                        SetCurData(signal, (double)tagData, BaseValues.CnlStatuses.Defined);
+                    signal++;
+                }
+               
             }
+        }
+
+        private double? GetTagVal(byte[] buffer,DataTypeEnum datatype)
+        {
+            double? result = null;
+            try
+            {
+                if (buffer == null || buffer.Length == 0)
+                    return result;
+                switch (datatype)
+                {
+                    case DataTypeEnum.Bool:
+                        result = buffer[0] > 0 ? 1d : 0d;
+                        break;
+                    case DataTypeEnum.Byte:
+                        result = buffer[0];
+                        break;
+                    case DataTypeEnum.SByte:
+                        result = buffer[0];
+                        break;
+                    case DataTypeEnum.Short:
+                        result = BitConverter.ToInt16(buffer, 0);
+                        break;
+                    case DataTypeEnum.Int:
+                        result = BitConverter.ToInt32(buffer, 0);
+                        break;
+                    case DataTypeEnum.Long:
+                        result = BitConverter.ToInt64(buffer, 0);
+                        break;
+                    case DataTypeEnum.UShort:
+                        result = BitConverter.ToUInt16(buffer, 0);
+                        break;
+                    case DataTypeEnum.UInt:
+                        result = BitConverter.ToUInt32(buffer, 0);
+                        break;
+                    case DataTypeEnum.ULong:
+                        result = BitConverter.ToUInt64(buffer, 0);
+                        break;
+                    case DataTypeEnum.Float:
+                        result = BitConverter.ToSingle(buffer, 0);
+                        break;
+                    case DataTypeEnum.Double:
+                        result = BitConverter.ToDouble(buffer, 0);
+                        break;
+                    case DataTypeEnum.String:
+                        //跳过头两个字节,获取int类型有效长度,在读取字符串
+                        var length = BitConverter.ToInt32(buffer, 2);
+                        var buf = buffer.Skip(2 + 4).Take(length).ToArray();
+                        result = ScadaUtils.EncodeAscii(Encoding.ASCII.GetString(buf));
+                        break;
+                }
+            }
+            catch
+            {
+                result = null;
+            }
+            return result;
         }
 
         private bool RequestWriteData(Tag tag, KpHiteBeckHoff.Model.TagGroup tagGroup)

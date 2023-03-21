@@ -49,7 +49,7 @@
     <Compile Include="Extend\DataTypeEnumExtend.cs" />
     <Compile Include="KpHiteBeckHoffLogic.cs" />
     <Compile Include="KpHiteBeckHoffView.cs" />
-    <Compile Include="Model\ABRequestModel.cs" />
+    <Compile Include="Model\RequestModel.cs" />
     <Compile Include="Model\ConnectionOptions.cs" />
     <Compile Include="Model\DeviceTemplate.cs" />
     <Compile Include="Model\EnumType\ConnectionTypeEnum.cs" />

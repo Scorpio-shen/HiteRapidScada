@@ -74,8 +74,16 @@ namespace KpOmron.Model
                 OnPropertyChanged(nameof(CanWriteBool));
             }
         }
-        #endregion
 
+        public bool IsArray
+        {
+            get
+            {
+                if(DataType == DataTypeEnum.String) return false;
+                else return Length > 0;
+            }
+        }
+        #endregion
 
         #region 覆写或实现基类方法
 

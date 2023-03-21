@@ -4,9 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KpHiteBeckHoff.Model
+namespace KpCommon.Model
 {
-    public class RequestModel
+    /// <summary>
+    /// 基于CIP协议请求Model
+    /// </summary>
+    public class CIPRequestModel
     {
         /// <summary>
         /// 请求地址Tag数组
@@ -16,10 +19,5 @@ namespace KpHiteBeckHoff.Model
         /// 请求字节长度
         /// </summary>
         public List<ushort> Lengths { get; set; }
-
-        /// <summary>
-        /// 每个Tag占据字节数
-        /// </summary>
-        public List<int> BytesCount { get; set; }
     }
 }

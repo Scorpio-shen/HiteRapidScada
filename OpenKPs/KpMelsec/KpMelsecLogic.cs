@@ -1,6 +1,8 @@
 ﻿using HslCommunication;
 using HslCommunication.Core;
+using HslCommunication.Profinet.Beckhoff;
 using HslCommunication.Profinet.Melsec;
+using KpCommon.Hsl.Profinet.AllenBradley.InterFace;
 using KpCommon.Model;
 using KpMelsec.Model;
 using KpMelsec.Model.EnumType;
@@ -10,6 +12,7 @@ using Scada.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
@@ -18,6 +21,8 @@ namespace Scada.Comm.Devices
 {
     public class KpMelsecLogic : KPLogic
     {
+        readonly int MaxCharCount = 256;        //三菱CIP通讯方式一次最多256字符长度的Tag
+        readonly int MaxByteCount = 476;        //三菱CIP通讯方式一次最大读取字节数
         protected DeviceTemplate deviceTemplate;
         private HashSet<int> floatSignals;
         private List<KpMelsec.Model.TagGroup> tagGroupsActive;
@@ -373,7 +378,17 @@ namespace Scada.Comm.Devices
 
             try
             {
-                var result = readWriteDevice.Read(model.Address, model.Length);
+                //根据协议类型选择读取方式
+                OperateResult<byte[]> result;
+                if(deviceTemplate.ConnectionOptions.ProtocolType == ProtocolTypeEnum.MelsecCIP)
+                {
+                    var cipModel = tagGroup.GetCIPRequestModel();
+                    result = RequestUnit(readWriteDevice as MelsecCipNet, cipModel);
+                }
+                else
+                {
+                    result = readWriteDevice.Read(model.Address, model.Length);
+                }
                 WriteToLog($"Name:{Name},Number:{Number},数据请求结束,IsSuccess:{result.IsSuccess},Message:{result.Message},Data:{result.Content.ToJsonString()}");
                 if (result.IsSuccess && result.Content?.Length > 0)
                 {
@@ -389,6 +404,79 @@ namespace Scada.Comm.Devices
             }
         }
 
+        private OperateResult<byte[]> RequestUnit(MelsecCipNet melsecCipNet, CIPRequestModel model)
+        {
+            //判断字符串长度是否超过256
+            OperateResult<byte[]> result = new OperateResult<byte[]>() { IsSuccess = false };
+            int index = 0;
+            List<string> addresses = new List<string>();
+            List<int> lengths = new List<int>();
+            List<int> byteCounts = new List<int>();
+            List<byte> buffer = new List<byte>();
+            do
+            {
+                addresses.Add(model.Addresses[index]);
+                lengths.Add(model.Lengths[index]);
+                var charCount = addresses.SelectMany(a => a).Count();
+                var byteCount = byteCounts.Sum();
+
+                if (charCount > MaxCharCount || byteCount > MaxByteCount)
+                {
+                    //判断是否是单个数组类型超出限制范围
+                    if (byteCount > MaxByteCount && addresses.Count == 1)
+                    {
+
+                    }
+
+                    addresses.RemoveAt(addresses.Count - 1);
+                    lengths.RemoveAt(lengths.Count - 1);
+                    byteCounts.RemoveAt(byteCounts.Count - 1);
+                    index--;
+                    //进行一次数据请求
+                    result = melsecCipNet.Read(addresses.ToArray(), lengths.ToArray());
+                    if (!result.IsSuccess)
+                    {
+                        WriteToLog($"Name:{Name},Number:{Number},读取数据失败,Message:{result.Message}");
+                        //读取失败,添加空字节数组
+                        var temp = new byte[byteCount];
+                        buffer.AddRange(temp);
+                    }
+                    else
+                        //读取成功
+                        buffer.AddRange(result.Content);
+                    addresses.Clear();
+                    lengths.Clear();
+                    byteCounts.Clear();
+                }
+                else
+                {
+                    //判断是否到最后的数组
+                    if (index + 1 >= model.Addresses.Count)
+                    {
+                        //直接请求
+                        result = melsecCipNet.Read(addresses.ToArray(), lengths.ToArray());
+                        if (!result.IsSuccess)
+                        {
+                            WriteToLog($"Name:{Name},Number:{Number},读取数据失败,Message:{result.Message}");
+                            var temp = new byte[byteCount];
+                            buffer.AddRange(temp);
+                        }
+                        else
+                            //读取成功
+                            buffer.AddRange(result.Content);
+                        addresses.Clear();
+                        lengths.Clear();
+                        byteCounts.Clear();
+                    }
+                }
+                index++;
+            }
+            while (index < model.Addresses.Count);
+
+            result.IsSuccess = true;
+            result.Content = buffer.ToArray();
+            return result;
+        }
         private void SetTagsData(KpMelsec.Model.TagGroup tagGroup)
         {
             for(int i = 0; i < tagGroup.Tags.Count; i++)

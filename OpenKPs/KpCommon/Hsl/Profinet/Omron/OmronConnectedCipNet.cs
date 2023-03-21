@@ -12,6 +12,7 @@ using System.Text;
 using HslCommunication.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
+using KpCommon.Hsl.Profinet.AllenBradley.InterFace;
 #if !NET35 && !NET20
 using System.Threading.Tasks;
 #endif
@@ -193,8 +194,8 @@ namespace HslCommunication.Profinet.Omron
 	/// 定义好后，我们再来读取就很简单了。
 	/// <code lang="cs" source="HslCommunication_Net45.Test\Documentation\Samples\Profinet\OmronConnectedCipNetSample.cs" region="Usage9" title="读写示例" />
 	/// </example>
-	public class OmronConnectedCipNet : NetworkConnectedCip, IReadWriteCip
-	{
+	public class OmronConnectedCipNet : NetworkConnectedCip, IReadWriteCip, IAbReadWriteCip
+    {
 		#region Contructor
 
 		/// <summary>
@@ -1011,7 +1012,19 @@ cc 07 00 42 80 84 1e 00 cc 07 00 42 a3 03 20 02
 
 		/// <inheritdoc/>
 		public override string ToString( ) => $"OmronConnectedCipNet[{IpAddress}:{Port}]";
+        #endregion
 
-		#endregion
-	}
+        #region 实现IAbReadWriteCip接口
+        public OperateResult<byte[]> Read(string[] address, int[] length)
+        {
+            return Read(address, length);
+        }
+
+        public OperateResult<byte[]> ReadSegment(string address, int startIndex, int length)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+    }
 }

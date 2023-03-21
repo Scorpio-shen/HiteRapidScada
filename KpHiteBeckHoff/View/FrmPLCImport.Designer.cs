@@ -178,7 +178,6 @@
             this.btnConfirm.TabIndex = 55;
             this.btnConfirm.Text = "确认";
             this.btnConfirm.UseVisualStyleBackColor = true;
-            this.btnConfirm.Click += new System.EventHandler(this.btnConfirm_Click);
             // 
             // FrmPLCImport
             // 

@@ -112,98 +112,98 @@ namespace KpHiteBeckHoff.View
             }
         }
 
-        private void btnConfirm_Click(object sender, EventArgs e)
-        {
-            //将选中AbTagItem转内部TagItem
-            var abTagItems = ctrlTreeView.GetAllTagItems();
-            _viewModel.Tags = new List<Model.Tag>();
-            var tags = _viewModel.Tags;
-            foreach(var abTag in abTagItems)
-            {
-                DataTypeEnum dataType = DataTypeEnum.UShort;
-                try
-                {
-                    dataType = ConvertToDataType(abTag.TagItem.SymbolType);
-                }
-                catch(Exception ex)
-                {
-                    Console.WriteLine($"Name:{abTag.Name},SymbolType:{abTag.TagItem.SymbolType}不支持转内部数据类型");
-                    continue;
-                }
-                //判断是否是数组
-                var tag = new Model.Tag
-                {
-                    Name = abTag.Name,
-                    DataType = dataType,
-                    CanWrite = 1
-                };
-                //判断是否是String类型
-                if (dataType == DataTypeEnum.String)
-                {
-                    tag.IsArray = false;
-                    tag.ParentTag = null;
-                    if (abTag.TagItem.Members?.Count() >= 2)
-                    {
-                        var dataMember = abTag.TagItem.Members.FirstOrDefault(m => m.SymbolType == 0xC2);//存储字符串的SByte数组
-                        if(dataMember != null && dataMember.ArrayLength.Length > 0)
-                        {
-                            tag.Length= dataMember.ArrayLength[0];
-                            tags.Add(tag);
-                        }
-                    }                   
-                    continue;
-                }
+        //private void btnConfirm_Click(object sender, EventArgs e)
+        //{
+        //    //将选中AbTagItem转内部TagItem
+        //    var abTagItems = ctrlTreeView.GetAllTagItems();
+        //    _viewModel.Tags = new List<Model.Tag>();
+        //    var tags = _viewModel.Tags;
+        //    foreach(var abTag in abTagItems)
+        //    {
+        //        DataTypeEnum dataType = DataTypeEnum.UShort;
+        //        try
+        //        {
+        //            dataType = ConvertToDataType(abTag.TagItem.SymbolType);
+        //        }
+        //        catch(Exception ex)
+        //        {
+        //            Console.WriteLine($"Name:{abTag.Name},SymbolType:{abTag.TagItem.SymbolType}不支持转内部数据类型");
+        //            continue;
+        //        }
+        //        //判断是否是数组
+        //        var tag = new Model.Tag
+        //        {
+        //            Name = abTag.Name,
+        //            DataType = dataType,
+        //            CanWrite = 1
+        //        };
+        //        //判断是否是String类型
+        //        if (dataType == DataTypeEnum.String)
+        //        {
+        //            tag.IsArray = false;
+        //            tag.ParentTag = null;
+        //            if (abTag.TagItem.Members?.Count() >= 2)
+        //            {
+        //                var dataMember = abTag.TagItem.Members.FirstOrDefault(m => m.SymbolType == 0xC2);//存储字符串的SByte数组
+        //                if(dataMember != null && dataMember.ArrayLength.Length > 0)
+        //                {
+        //                    tag.Length= dataMember.ArrayLength[0];
+        //                    tags.Add(tag);
+        //                }
+        //            }                   
+        //            continue;
+        //        }
 
-                //判断是否是struct
-                if (abTag.TagItem.IsStruct)
-                    continue;
-                //判断是否是数组
-                if (abTag.TagItem.ArrayDimension == 0)
-                {
-                    tag.Length = 0;
-                    tag.IsArray = false;
-                    tag.Index= 0;
-                    tag.ParentTag = null;
-                    tags.Add(tag);
-                }
-                else if (abTag.TagItem.ArrayDimension == 1)
-                {
+        //        //判断是否是struct
+        //        if (abTag.TagItem.IsStruct)
+        //            continue;
+        //        //判断是否是数组
+        //        if (abTag.TagItem.ArrayDimension == 0)
+        //        {
+        //            tag.Length = 0;
+        //            tag.IsArray = false;
+        //            tag.Index= 0;
+        //            tag.ParentTag = null;
+        //            tags.Add(tag);
+        //        }
+        //        else if (abTag.TagItem.ArrayDimension == 1)
+        //        {
                     
-                    //数组类型
-                    var arrayLength = abTag.TagItem.ArrayLength[0];//要生成数组的长度
-                    if(abTag.TagItem.SymbolType == AllenBradleyHelper.CIP_Type_D3)
-                    {
-                        //Bit string, 32 bits, DWORD 由32 Bool组成数组
-                        arrayLength = 32;
-                    }
-                    //生成ParentTag
-                    tag.Length = arrayLength;
-                    tag.IsArray = false;
-                    tag.Index= 0;
-                    tag.ParentTag = null;
+        //            //数组类型
+        //            var arrayLength = abTag.TagItem.ArrayLength[0];//要生成数组的长度
+        //            if(abTag.TagItem.SymbolType == AllenBradleyHelper.CIP_Type_D3)
+        //            {
+        //                //Bit string, 32 bits, DWORD 由32 Bool组成数组
+        //                arrayLength = 32;
+        //            }
+        //            //生成ParentTag
+        //            tag.Length = arrayLength;
+        //            tag.IsArray = false;
+        //            tag.Index= 0;
+        //            tag.ParentTag = null;
 
-                    _viewModel.ParentTags.Add(tag);
-                    //子Tag集合
-                    for (int i = 0;i < arrayLength; i++)
-                    {
-                        var arrayTag = new Model.Tag
-                        {
-                            Name = abTag.Name + $"[{i}]",
-                            DataType = dataType,
-                            CanWrite = 1,
-                            Length = default,
-                            IsArray = true,
-                            Index = i,
-                            ParentTag = tag
-                        };
-                        tags.Add(arrayTag);
-                    }
-                }
-                else
-                    continue;
-            }
-            DialogResult = DialogResult.OK;
-        }
+        //            _viewModel.ParentTags.Add(tag);
+        //            //子Tag集合
+        //            for (int i = 0;i < arrayLength; i++)
+        //            {
+        //                var arrayTag = new Model.Tag
+        //                {
+        //                    Name = abTag.Name + $"[{i}]",
+        //                    DataType = dataType,
+        //                    CanWrite = 1,
+        //                    Length = default,
+        //                    IsArray = true,
+        //                    Index = i,
+        //                    ParentTag = tag
+        //                };
+        //                tags.Add(arrayTag);
+        //            }
+        //        }
+        //        else
+        //            continue;
+        //    }
+        //    DialogResult = DialogResult.OK;
+        //}
 
         private void btnCancle_Click(object sender, EventArgs e)
         {

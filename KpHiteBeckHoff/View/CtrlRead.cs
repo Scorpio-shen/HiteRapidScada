@@ -442,37 +442,37 @@ namespace KpHiteBeckHoff.View
                     return;
                 }
 
-                List<Tag> RemoveParentTags = new List<Tag>();
-                //绑定父Tag
-                foreach(var parentTag in TagGroup.ParentTags)
-                {
-                    bool existChildTag = false;
-                    for(int i = 0;i < parentTag.Length;i++)
-                    {
-                        var name = parentTag.Name + $"[{i}]";
-                        var childTag = TagGroup.Tags.FirstOrDefault(t=>t.Name.Equals(name));    
-                        if(childTag != null)
-                        {
-                            existChildTag = true;
-                            childTag.ParentTag= parentTag;
-                            childTag.IsArray= true;
-                            childTag.Index= i;
-                        }
-                    }
+                //List<Tag> RemoveParentTags = new List<Tag>();
+                ////绑定父Tag
+                //foreach(var parentTag in TagGroup.ParentTags)
+                //{
+                //    bool existChildTag = false;
+                //    for(int i = 0;i < parentTag.Length;i++)
+                //    {
+                //        var name = parentTag.Name + $"[{i}]";
+                //        var childTag = TagGroup.Tags.FirstOrDefault(t=>t.Name.Equals(name));    
+                //        if(childTag != null)
+                //        {
+                //            existChildTag = true;
+                //            childTag.ParentTag= parentTag;
+                //            childTag.IsArray= true;
+                //            childTag.Index= i;
+                //        }
+                //    }
 
-                    if (!existChildTag)
-                    {
-                        //不存在移除该父节点
-                        RemoveParentTags.Add(parentTag);
-                    }
-                }
+                //    if (!existChildTag)
+                //    {
+                //        //不存在移除该父节点
+                //        RemoveParentTags.Add(parentTag);
+                //    }
+                //}
 
-                if(RemoveParentTags.Count > 0)
-                {
-                    TagGroup.ParentTags.RemoveAll(t => RemoveParentTags.Any(r => r.TagID == t.TagID));
-                    //刷新父Tag索引
-                    TagGroup.RefreshParentTagId();
-                }
+                //if(RemoveParentTags.Count > 0)
+                //{
+                //    TagGroup.ParentTags.RemoveAll(t => RemoveParentTags.Any(r => r.TagID == t.TagID));
+                //    //刷新父Tag索引
+                //    TagGroup.RefreshParentTagId();
+                //}
                 //界面显示刷新
                 RefreshDataGridView();
             }

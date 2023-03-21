@@ -717,6 +717,7 @@
     <Compile Include="InterFace\IDataUnit.cs" />
     <Compile Include="InterFace\IGroupUnit.cs" />
     <Compile Include="InterFace\ITemplateUnit.cs" />
+    <Compile Include="Model\CIPRequestModel.cs" />
     <Compile Include="Model\ConfigChangedEventArgs.cs" />
     <Compile Include="Model\ConnectionUnit.cs" />
     <Compile Include="Model\DataUnit.cs" />

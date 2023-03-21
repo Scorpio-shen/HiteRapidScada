@@ -149,8 +149,50 @@ namespace KpOmron.Model
 
             return model;
         }
+        public CIPRequestModel GetCIPRequestModel()
+        {
+            var model = new CIPRequestModel();
+            List<string> addresses = new List<string>();
+            List<ushort> lengths = new List<ushort>();
+            //List<int> byteCounts = new List<int>();
 
 
+            model.Addresses = addresses;
+            model.Lengths = lengths;
+            //model.BytesCount= byteCounts;
+
+            foreach (var tag in Tags)
+            {
+                if (tag.IsArray)
+                {
+                    addresses.Add(tag.Name);
+                    ushort length;
+                    if (tag.DataType == DataTypeEnum.Bool)
+                    {
+                        length = (ushort)(tag.Length / 8 + (tag.Length % 8 > 0 ? 1 : 0));
+                    }
+                    else
+                    {
+                        length = (ushort)(tag.DataType.GetByteCount() * tag.Length);
+                    }
+                    lengths.Add(length);
+                }
+                else
+                {
+                    ushort length;
+                    if (tag.DataType == DataTypeEnum.String)
+                    {
+                        length = (ushort)tag.Length;
+                    }
+                    else
+                        length = (ushort)tag.DataType.GetByteCount();
+
+                    lengths.Add(length);
+                }
+            }
+
+            return model;
+        }
         #endregion
 
         #region 设置Tag是否支持写入
