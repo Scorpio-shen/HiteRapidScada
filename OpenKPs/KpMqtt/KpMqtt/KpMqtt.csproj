@@ -1,0 +1,176 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{DCE0A39F-172B-4EBC-965A-8B858F80B165}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Scada.Comm.Devices</RootNamespace>
+    <AssemblyName>KpMqtt</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Jint, Version=0.0.0.0, Culture=neutral, PublicKeyToken=2e92ba9c8d81157f, processorArchitecture=MSIL">
+      <HintPath>..\packages\Jint.2.11.58\lib\net451\Jint.dll</HintPath>
+    </Reference>
+    <Reference Include="Log">
+      <HintPath>..\..\..\..\scada\Log\Log\bin\Release\Log.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="ScadaCommCommon">
+      <HintPath>..\..\..\..\scada\ScadaComm\ScadaComm\ScadaCommCommon\bin\Release\ScadaCommCommon.dll</HintPath>
+    </Reference>
+    <Reference Include="ScadaData, Version=5.1.5.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\123\ScadaData\ScadaData\bin\Release\ScadaData.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Windows.Forms.DataVisualization" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="KpMqttLogic.cs" />
+    <Compile Include="KpMqttView.cs" />
+    <Compile Include="Mqtt\Config\CmdType.cs" />
+    <Compile Include="Mqtt\Config\DeviceConfig.cs" />
+    <Compile Include="Mqtt\Config\MqttPubCmd.cs" />
+    <Compile Include="Mqtt\Config\MqttPubParam.cs" />
+    <Compile Include="Mqtt\Config\MqttPubTopic.cs" />
+    <Compile Include="Mqtt\Config\MqttSubCmd.cs" />
+    <Compile Include="Mqtt\Config\MqttSubJS.cs" />
+    <Compile Include="Mqtt\Config\MqttSubTopic.cs" />
+    <Compile Include="Mqtt\Config\MqttTopic.cs" />
+    <Compile Include="Mqtt\Config\PubBehavior.cs" />
+    <Compile Include="Mqtt\UI\CtrlCnl.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttDevTemplate.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttDevTemplate.Designer.cs">
+      <DependentUpon>FrmMqttDevTemplate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\UI\FrmMqttPubCmds.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttPubCmds.Designer.cs">
+      <DependentUpon>FrmMqttPubCmds.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\UI\FrmMqttServerConfig.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttServerConfig.Designer.cs">
+      <DependentUpon>FrmMqttServerConfig.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\UI\FrmMqttSubTopics.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttSubTopics.Designer.cs">
+      <DependentUpon>FrmMqttSubTopics.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\UI\FrmMqttSubCmds.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttSubCmds.Designer.cs">
+      <DependentUpon>FrmMqttSubCmds.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\UI\FrmMqttSubJSs.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttSubJSs.Designer.cs">
+      <DependentUpon>FrmMqttSubJSs.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\UI\FrmMqttPubTopic.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttPubTopic.Designer.cs">
+      <DependentUpon>FrmMqttPubTopic.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Mqtt\UI\KpPhrases.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="StriderMqtt\ConnectionPackets.cs" />
+    <Compile Include="StriderMqtt\Constants.cs" />
+    <Compile Include="StriderMqtt\EventArgs.cs" />
+    <Compile Include="StriderMqtt\Exceptions.cs" />
+    <Compile Include="StriderMqtt\MqttConnection.cs" />
+    <Compile Include="StriderMqtt\PacketBase.cs" />
+    <Compile Include="StriderMqtt\PacketFactory.cs" />
+    <Compile Include="StriderMqtt\PacketReader.cs" />
+    <Compile Include="StriderMqtt\PacketWriter.cs" />
+    <Compile Include="StriderMqtt\Persistence.cs" />
+    <Compile Include="StriderMqtt\PublishPackets.cs" />
+    <Compile Include="StriderMqtt\SubscriptionPackets.cs" />
+    <Compile Include="StriderMqtt\Transport.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\.editorconfig">
+      <Link>.editorconfig</Link>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Config\KpMqtt_Job.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Jint.dll" />
+    <Content Include="Log.dll" />
+    <Content Include="Mqtt\Lang\KpMqtt.zh-CN.xml" />
+    <Content Include="Mqtt\Lang\KpMqtt.zh.en-GB.xml" />
+    <Content Include="Mqtt\Lang\KpMqtt.zh.ru-RU.xml" />
+    <Content Include="ScadaCommCommon.dll" />
+    <Content Include="ScadaData.dll" />
+    <EmbeddedResource Include="Config\KpMqtt_001.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\UI\FrmMqttDevTemplate.resx">
+      <DependentUpon>FrmMqttDevTemplate.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\UI\FrmMqttPubCmds.resx">
+      <DependentUpon>FrmMqttPubCmds.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\UI\FrmMqttServerConfig.resx">
+      <DependentUpon>FrmMqttServerConfig.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\UI\FrmMqttSubTopics.resx">
+      <DependentUpon>FrmMqttSubTopics.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\UI\FrmMqttSubCmds.resx">
+      <DependentUpon>FrmMqttSubCmds.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\UI\FrmMqttSubJSs.resx">
+      <DependentUpon>FrmMqttSubJSs.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Mqtt\UI\FrmMqttPubTopic.resx">
+      <DependentUpon>FrmMqttPubTopic.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy "$(TargetPath)"  "C:\scada\ScadaComm\KP\"</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+  </PropertyGroup>
+</Project>
