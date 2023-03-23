@@ -24,6 +24,9 @@ using System.Windows.Forms;
 using HslCommunication.Profinet.Beckhoff;
 using KpCommon.Extend;
 using static Scada.Comm.Devices.KPView;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
+using KpHiteBeckHoff.Service;
 
 namespace Scada.Comm.Devices
 {
@@ -34,7 +37,7 @@ namespace Scada.Comm.Devices
         protected DeviceTemplate deviceTemplate;
         private HashSet<int> floatSignals;
         private List<KpHiteBeckHoff.Model.TagGroup> tagGroupsActive;
-
+        RouterService routerService;
         BeckhoffAdsNet beckhoffAdsNet;
         string templateName;
         bool IsConnected = false;
@@ -170,9 +173,78 @@ namespace Scada.Comm.Devices
             InitKPTags(tagGroups);
             tagGroupsActive = deviceTemplate.GetActiveTagGroups();
             CanSendCmd = deviceTemplate != null && deviceTemplate.CmdTagCount > 0;
+
+            InitRouterService();
+        }
+
+        private void InitRouterService()
+        {
+            try
+            {
+                //初始化AmsRouter配置
+                var jsonPath = AppDirs.ExeDir + "appsettings.json";
+                AmsRouterSettings setting = null;
+                using (StreamReader sr = new StreamReader(jsonPath))
+                {
+                    using (JsonTextReader jsonReader = new JsonTextReader(sr))
+                    {
+                        JObject obj = (JObject)JToken.ReadFrom(jsonReader);
+                        var str = obj.ToString();
+                        setting = JsonConvert.DeserializeObject<AmsRouterSettings>(str);
+                    }
+                }
+                setting.AmsRouter.NetId = new TwinCAT.Ads.AmsNetId("192.168.0.111.1.1");
+                setting.AmsRouter.TcpPort = 48898;
+
+                List<RouteConfig> routeConfigs = new List<RouteConfig>();
+                routeConfigs.Add(new RouteConfig()
+                {
+                    Name = "RemoteSystem",
+                    Address = "192.168.0.100",
+                    NetId = new TwinCAT.Ads.AmsNetId("169.254.1.1.1.1"),
+                    Type = "TCP_IP"
+                });
+                setting.AmsRouter.RemoteConnections = routeConfigs.ToArray();
+
+                JObject save = JObject.FromObject(setting);
+                using (StreamWriter sw = new StreamWriter(jsonPath))
+                {
+                    using (JsonTextWriter jsonWrite = new JsonTextWriter(sw))
+                    {
+                        save.WriteTo(jsonWrite);
+                    }
+                }
+
+                IConfigurationBuilder cfgBuilder = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json")
+                    .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")}.json", optional: true, reloadOnChange: false);
+                //加载router
+                routerService = new RouterService(cfgBuilder.Build());
+            }
+            catch (Exception ex)
+            {
+                WriteToLog($"KpHiteBeckHoffLogic:OnAddedToCommLine,初始化AmsRouter异常,{ex.Message}");
+                routerService = null;
+            }
         }
 
         public override void OnCommLineStart()
+        {
+            if(routerService == null)
+            {
+                InitRouterService();
+            }
+
+            if(routerService == null)
+            {
+                WriteToLog($"KpHiteBeckHoffLogic:OnCommLineStart,routerService为null,无法连接PLC");
+                return;
+            }
+            ConnectPLC();
+        }
+
+        private void ConnectPLC()
         {
             try
             {
@@ -184,144 +256,6 @@ namespace Scada.Comm.Devices
                 var timeOut = ReqParams.Timeout;
                 if (timeOut <= 0)
                     timeOut = DefineReadOnlyValues.DefaultRequestTimeOut;
-
-                #region 多种协议类型时根据协议选择实例化对象
-                //switch (option.ProtocolType)
-                //{
-                //    case ProtocolTypeEnum.EtherNetIP:
-                //        {
-                //            var abNet = new AllenBradleyNet(ipaddress, port) { Slot = option.Slot};
-                //            abNet.ReceiveTimeOut= timeOut;
-                //            initResult = abNet.ConnectServer();
-                //            readWriteDevice = abNet;
-                //        }
-                //        break;
-                //    case ProtocolTypeEnum.MicroCip:
-                //        {
-                //            var abNet = new AllenBradleyMicroCip(ipaddress, port) { Slot = option.Slot};
-                //            abNet.ReceiveTimeOut= timeOut;
-                //            initResult = abNet.ConnectServer();
-                //            readWriteDevice = abNet;
-                //        }
-                //        break;
-                //    case ProtocolTypeEnum.ConnectedCIP:
-                //        {
-                //            var abNet = new AllenBradleyConnectedCipNet(ipaddress, port);
-                //            abNet.ReceiveTimeOut = timeOut;
-                //            initResult = abNet.ConnectServer();
-                //            readWriteDevice = abNet;
-                //        }
-                //        break;
-                //    //case ProtocolTypeEnum.SLCNet:
-                //    //    {
-                //    //        var abNet = new AllenBradleySLCNet(ipaddress,port);
-                //    //        abNet.ReceiveTimeOut= timeOut;
-                //    //        initResult = abNet.ConnectServer();
-                //    //        readWriteDevice = abNet;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.McQna3EBinary:
-                //    //    {
-                //    //        var mc = new MelsecMcNet(ipaddress,port);
-                //    //        mc.ReceiveTimeOut= timeOut;
-                //    //        initResult = mc.ConnectServer();
-                //    //        readWriteDevice = mc;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.MCQna3EBinaryUdp:
-                //    //    {
-                //    //        var mc = new MelsecMcUdp(ipaddress,port);
-                //    //        initResult = new OperateResult { IsSuccess = false };
-                //    //        var status = mc.IpAddressPing();
-                //    //        mc.ReceiveTimeout= timeOut;
-                //    //        initResult.IsSuccess = status == IPStatus.Success;
-                //    //        initResult.Message = status.ToString();
-                //    //        readWriteDevice= mc;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.McQna3EASCII:
-                //    //    {
-                //    //        var mc = new MelsecMcAsciiNet(ipaddress,port);
-                //    //        mc.ReceiveTimeOut= timeOut;
-                //    //        initResult = mc.ConnectServer();
-                //    //        readWriteDevice = mc;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.MCQna3EASCIIUdp:
-                //    //    {
-                //    //        var mc = new MelsecMcAsciiUdp(ipaddress, port);
-                //    //        initResult = new OperateResult { IsSuccess = false };
-                //    //        var status = mc.IpAddressPing();
-                //    //        mc.ReceiveTimeout = timeOut;
-                //    //        initResult.IsSuccess = status == IPStatus.Success;
-                //    //        initResult.Message = status.ToString();
-                //    //        readWriteDevice = mc;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.MCRSerialQna3EBinary:
-                //    //    {
-                //    //        var mc = new MelsecMcRNet(ipaddress, port);
-                //    //        mc.ReceiveTimeOut = timeOut;
-                //    //        initResult = mc.ConnectServer();
-                //    //        readWriteDevice = mc;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.FxSerial:
-                //    //    {
-                //    //        var mc = new MelsecFxSerial() { IsNewVersion = option.NewVersionMessage };
-                //    //        mc.ReceiveTimeout= timeOut;
-                //    //        mc.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
-                //    //        initResult = mc.Open();
-                //    //        readWriteDevice= mc;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.FxSerialOverTcp:
-                //    //    {
-                //    //        var mc = new MelsecFxSerialOverTcp(ipaddress, port) { IsNewVersion = option.NewVersionMessage };
-                //    //        mc.ReceiveTimeOut= timeOut;
-                //    //        initResult = mc.ConnectServer();
-                //    //        readWriteDevice = mc;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.FxLinks485:
-                //    //    {
-                //    //        var mc = new MelsecFxLinks() { Station = option.Station, SumCheck = option.SumCheck };
-                //    //        mc.ReceiveTimeout= timeOut;
-                //    //        mc.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
-                //    //        initResult = mc.Open();
-                //    //        readWriteDevice= mc;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.FxLinksOverTcp:
-                //    //    {
-                //    //        var mc = new MelsecFxLinksOverTcp(ipaddress, port) { Station = option.Station, SumCheck = option.SumCheck };
-                //    //        mc.ReceiveTimeOut= timeOut;
-                //    //        initResult = mc.ConnectServer();
-                //    //        readWriteDevice = mc;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.Qna3c:
-                //    //    {
-                //    //        var mc = new MelsecA3CNet() { Station = option.Station, SumCheck = option.SumCheck, Format = option.Format };
-                //    //        mc.ReceiveTimeout = timeOut;
-                //    //        mc.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
-                //    //        initResult = mc.Open();
-                //    //        readWriteDevice = mc;
-                //    //    }
-                //    //    break;
-                //    //case ProtocolTypeEnum.Qna3cOverTcp:
-                //    //    {
-                //    //        var mc = new MelsecA3CNetOverTcp(ipaddress, port) { Station = option.Station, SumCheck = option.SumCheck, Format = option.Format };
-                //    //        mc.ReceiveTimeOut = timeOut;
-                //    //        initResult = mc.ConnectServer();
-                //    //        readWriteDevice = mc;
-                //    //    }
-                //    //    break;
-                //    default:
-                //        initResult = new OperateResult() { IsSuccess = false,Message = "未知协议类型!"};
-                //        break;
-                //}
-                #endregion
 
                 beckhoffAdsNet = new BeckhoffAdsNet(ipaddress, port);
                 if (option.AutoAmsNetId)
@@ -340,11 +274,12 @@ namespace Scada.Comm.Devices
                 if (!initResult.IsSuccess)
                     WriteToLog($"Name:{Name},Number:{Number},初始化连接失败,{initResult.Message}");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 IsConnected = false;
                 WriteToLog($"KpHiteModbusLogic_OnCommLineStart,Name:{Name},Number:{Number},连接PLC异常,{ex.Message}");
             }
+            
         }
 
         private void InitDeviceTemplate(string fileName)
@@ -423,8 +358,13 @@ namespace Scada.Comm.Devices
             WriteToLog($"Name:{Name},Number:{Number},开始请求数据,GroupName:{tagGroup.Name},起始地址:{model.Addresses.FirstOrDefault() ?? string.Empty},请求长度:{model.Lengths.FirstOrDefault()}");
             if (!IsConnected)
             {
-                WriteToLog($"Name:{Name},Number:{Number},读取数据失败,未连接到设备,连接参数,{JsonConvert.SerializeObject(deviceTemplate.ConnectionOptions)}");
-                return false;
+                //连接PLC
+                ConnectPLC();
+                if (!IsConnected)
+                {
+                    WriteToLog($"Name:{Name},Number:{Number},读取数据失败,未连接到设备,连接参数,{JsonConvert.SerializeObject(deviceTemplate.ConnectionOptions)}");
+                    return false;
+                }
             }
             
             try
