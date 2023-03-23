@@ -101,19 +101,27 @@
     <Compile Include="Hsl\Algorithms\PID\PIDHelper.cs" />
     <Compile Include="Hsl\Algorithms\PID\PidMode.cs" />
     <Compile Include="Hsl\Authorization.cs" />
-    <Compile Include="Hsl\BasicFramework\FormAuthorize.cs" />
+    <Compile Include="Hsl\BasicFramework\FormAuthorize.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Hsl\BasicFramework\FormAuthorize.designer.cs">
       <DependentUpon>FormAuthorize.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\BasicFramework\FormPopup.cs" />
+    <Compile Include="Hsl\BasicFramework\FormPopup.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Hsl\BasicFramework\FormPopup.designer.cs">
       <DependentUpon>FormPopup.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\BasicFramework\FormPortraitSelect.cs" />
+    <Compile Include="Hsl\BasicFramework\FormPortraitSelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Hsl\BasicFramework\FormPortraitSelect.Designer.cs">
       <DependentUpon>FormPortraitSelect.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\BasicFramework\FormSupport.cs" />
+    <Compile Include="Hsl\BasicFramework\FormSupport.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Hsl\BasicFramework\FormSupport.Designer.cs">
       <DependentUpon>FormSupport.cs</DependentUpon>
     </Compile>
@@ -141,47 +149,69 @@
     <Compile Include="Hsl\CNC\Fanuc\SysAlarm.cs" />
     <Compile Include="Hsl\CNC\Fanuc\SysAllCoors.cs" />
     <Compile Include="Hsl\CNC\Fanuc\SysStatusInfo.cs" />
-    <Compile Include="Hsl\Controls\UserBottle.cs" />
+    <Compile Include="Hsl\Controls\UserBottle.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserBottle.Designer.cs">
       <DependentUpon>UserBottle.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\Controls\UserButton.cs" />
+    <Compile Include="Hsl\Controls\UserButton.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserButton.designer.cs">
       <DependentUpon>UserButton.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\Controls\UserClock.cs" />
+    <Compile Include="Hsl\Controls\UserClock.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserClock.designer.cs">
       <DependentUpon>UserClock.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\Controls\UserCurve.cs" />
+    <Compile Include="Hsl\Controls\UserCurve.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserCurve.Designer.cs">
       <DependentUpon>UserCurve.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\Controls\UserDrum.cs" />
+    <Compile Include="Hsl\Controls\UserDrum.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserDrum.Designer.cs">
       <DependentUpon>UserDrum.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\Controls\UserGaugeChart.cs" />
+    <Compile Include="Hsl\Controls\UserGaugeChart.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserGaugeChart.Designer.cs">
       <DependentUpon>UserGaugeChart.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\Controls\UserLantern.cs" />
+    <Compile Include="Hsl\Controls\UserLantern.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserLantern.Designer.cs">
       <DependentUpon>UserLantern.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\Controls\UserPieChart.cs" />
+    <Compile Include="Hsl\Controls\UserPieChart.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserPieChart.Designer.cs">
       <DependentUpon>UserPieChart.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\Controls\UserPipe.cs" />
+    <Compile Include="Hsl\Controls\UserPipe.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserPipe.Designer.cs">
       <DependentUpon>UserPipe.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\Controls\UserSwitch.cs" />
+    <Compile Include="Hsl\Controls\UserSwitch.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserSwitch.Designer.cs">
       <DependentUpon>UserSwitch.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\Controls\UserVerticalProgress.cs" />
+    <Compile Include="Hsl\Controls\UserVerticalProgress.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\Controls\UserVerticalProgress.Designer.cs">
       <DependentUpon>UserVerticalProgress.cs</DependentUpon>
     </Compile>
@@ -391,11 +421,15 @@
     <Compile Include="Hsl\LogNet\Logs\LogStatisticsDict.cs" />
     <Compile Include="Hsl\LogNet\Logs\LogValueLimit.cs" />
     <Compile Include="Hsl\LogNet\Logs\LogValueLimitDict.cs" />
-    <Compile Include="Hsl\LogNet\View\FormLogNetView.cs" />
+    <Compile Include="Hsl\LogNet\View\FormLogNetView.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Hsl\LogNet\View\FormLogNetView.Designer.cs">
       <DependentUpon>FormLogNetView.cs</DependentUpon>
     </Compile>
-    <Compile Include="Hsl\LogNet\View\LogNetAnalysisControl.cs" />
+    <Compile Include="Hsl\LogNet\View\LogNetAnalysisControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Hsl\LogNet\View\LogNetAnalysisControl.Designer.cs">
       <DependentUpon>LogNetAnalysisControl.cs</DependentUpon>
     </Compile>

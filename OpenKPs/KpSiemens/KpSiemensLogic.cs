@@ -8,9 +8,8 @@ using Scada.Data.Configuration;
 using Scada.Data.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 
@@ -178,6 +177,9 @@ namespace Scada.Comm.Devices
                     siemensS7Net.ReceiveTimeOut = ReqParams.Timeout;
                 else
                     siemensS7Net.ReceiveTimeOut = DefineReadOnlyValues.DefaultRequestTimeOut;
+
+
+
                 var result = siemensS7Net.ConnectServer();
                 if (!result.IsSuccess)
                     WriteToLog($"Name:{Name},Number:{Number},连接PLC失败,{result.Message}");
@@ -245,9 +247,18 @@ namespace Scada.Comm.Devices
             WriteToLog($"Name:{Name},Number:{Number},开始请求数据,GroupName:{tagGroup.Name},寄存器类型:{tagGroup.MemoryType},起始地址:{model.Address},请求长度:{model.Length}");
             if (!IsConnected)
             {
-                WriteToLog($"Name:{Name},Number:{Number},读取数据失败,未连接到设备,连接参数,{JsonConvert.SerializeObject(deviceTemplate.ConnectionOptions)}");
-                return false;
+                //WriteToLog($"Name:{Name},Number:{Number},读取数据失败,未连接到设备,连接参数,{JsonConvert.SerializeObject(deviceTemplate.ConnectionOptions)}");
+                //return false;
+                //进行重连
+                ConnectServer();
+
+                if (!IsConnected)
+                {
+                    WriteToLog($"Name:{Name},Number:{Number},读取数据失败,未连接到设备,连接参数,{JsonConvert.SerializeObject(deviceTemplate.ConnectionOptions)}");
+                    return false;
+                }
             }
+
 
             try
             {

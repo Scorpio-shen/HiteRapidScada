@@ -35,13 +35,6 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HslCommunication, Version=11.2.2.0, Culture=neutral, PublicKeyToken=3d72ad3b6b5ec0e3, processorArchitecture=MSIL">
-      <HintPath>..\packages\HslCommunication.11.2.2\lib\net451\HslCommunication.dll</HintPath>
-    </Reference>
-    <Reference Include="Log, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Log\Log\bin\Debug\Log.dll</HintPath>
-    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -63,11 +56,9 @@
     <Compile Include="Modbus\Extend\DataTypeEnumExtend.cs" />
     <Compile Include="Modbus\Extend\RegisterTypeEnumExtend.cs" />
     <Compile Include="Modbus\Model\FunctionCode.cs" />
-    <Compile Include="Modbus\Model\ModbusConfigChangedEventHandler.cs" />
     <Compile Include="Modbus\Model\ConnectionOptions.cs" />
     <Compile Include="Modbus\Model\DeviceTemplate.cs" />
     <Compile Include="Modbus\Model\EnumType\DataTypeEnum.cs" />
-    <Compile Include="Modbus\Model\EnumType\ModbusChangeTypeEnum.cs" />
     <Compile Include="Modbus\Model\EnumType\ModbusConnectionTypeEnum.cs" />
     <Compile Include="Modbus\Model\EnumType\ModbusModeEnum.cs" />
     <Compile Include="Modbus\Model\EnumType\ReadWriteTypeEnum.cs" />
@@ -77,7 +68,6 @@
     <Compile Include="Modbus\Model\TagGroup.cs" />
     <Compile Include="Modbus\Model\TagGroupDefaultValues.cs" />
     <Compile Include="Modbus\Model\TagGroupRequestModel.cs" />
-    <Compile Include="Modbus\Model\EnumType\TempleteKeyString.cs" />
     <Compile Include="Modbus\ViewModel\FrmDevAddRangeViewModel.cs" />
     <Compile Include="Modbus\View\CtrlPLCConfig.cs">
       <SubType>UserControl</SubType>
@@ -118,6 +108,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Log\Log\Log.csproj">
+      <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
+      <Name>Log</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\ScadaComm\ScadaComm\ScadaCommCommon\ScadaCommCommon.csproj">
       <Project>{7baeae0e-4694-41d7-bc29-f205aef69741}</Project>
       <Name>ScadaCommCommon</Name>

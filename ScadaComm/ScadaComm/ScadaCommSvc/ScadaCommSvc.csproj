@@ -6,7 +6,7 @@
     <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{004F8580-2350-4137-872E-8B0BE6D9FE40}</ProjectGuid>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Scada.Comm.Svc</RootNamespace>
     <AssemblyName>ScadaCommSvc</AssemblyName>
@@ -103,6 +103,10 @@
     <Content Include="Script\svc_config.xml" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\KpHiteBeckHoff\KpHiteBeckHoff.csproj">
+      <Project>{bf6feb50-9ef6-4be5-8924-9d674368745c}</Project>
+      <Name>KpHiteBeckHoff</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\Log\Log\Log.csproj">
       <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
       <Name>Log</Name>

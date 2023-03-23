@@ -1,5 +1,8 @@
-﻿using KpHiteModbus.Modbus.Model;
-using KpHiteModbus.Modbus.Model.EnumType;
+﻿using KpCommon.Model;
+using KpCommon.Model.EnumType;
+using KpHiteModbus.Modbus.Model;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Scada;
 using Scada.Comm;
 using Scada.UI;
@@ -246,14 +249,14 @@ namespace KpHiteModbus.Modbus.View
         #endregion
 
         #region TagGroup、Cmd事件
-        private void ctrlRead_TagGroupChanged(object sender, ModbusConfigChangedEventArgs e)
+        private void ctrlRead_TagGroupChanged(object sender, ConfigChangedEventArgs<Tag> e)
         {
             Modified = true;
             if(tagGroup != null)
             {
                 if(currentNode != null)
                 {
-                    switch (e.ChangeType)
+                    switch (e.ModifyType)
                     {
                         case ModifyType.TagCount:
                             RefreshTagGroupIndex();
@@ -264,7 +267,7 @@ namespace KpHiteModbus.Modbus.View
                         case ModifyType.IsActive:
                             currentNode.ImageKey = currentNode.SelectedImageKey = tagGroup.Active ? "group.png" : "group_inactive.png";
                             break;
-                        case ModifyType.RegisterType:
+                        case ModifyType.MemoryType:
                             currentNode.Text = GetTagGroupDesc(tagGroup);
                             break;
                         case ModifyType.Tags:
@@ -313,7 +316,7 @@ namespace KpHiteModbus.Modbus.View
             if (string.IsNullOrEmpty(newFileName))
                 return false;
 
-            string errMsg = string.Empty;
+            string errMsg;
             if (deviceTemplate.Save(newFileName, out errMsg))
             {
                 _fileName = newFileName;

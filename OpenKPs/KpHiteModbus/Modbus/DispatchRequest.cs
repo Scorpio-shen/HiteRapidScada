@@ -1,6 +1,7 @@
 ﻿using KpHiteModbus.Modbus.Model;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace KpHiteModbus.Modbus
@@ -13,9 +14,9 @@ namespace KpHiteModbus.Modbus
         List<RequestUnit> listUnits;
         TagGroupRequestModel _request;
         ushort _maxlength;
-        Action<RequestUnit> _requestMethod;
+        Func<RequestUnit,bool> _requestMethod;
 
-        public DispatchRequest(Action<RequestUnit> requestMethod)
+        public DispatchRequest(Func<RequestUnit,bool> requestMethod)
         {
             listUnits = new List<RequestUnit>();
             _requestMethod= requestMethod;
@@ -80,14 +81,20 @@ namespace KpHiteModbus.Modbus
 
 
                 //开始请求
+                bool result = true;
                 for(int j = 0;j < listUnits.Count; j++)
                 {
-                    _requestMethod?.Invoke(listUnits[j]);
-                    //Thread.Sleep(1);
+                    var reqResult = _requestMethod?.Invoke(listUnits[j]);
+                    Thread.Sleep(1);
+                    if(reqResult != true)
+                    {
+                        result = false; 
+                        break;  
+                    }
                 }
                     
 
-                return true;
+                return result;
             }
             catch(Exception ex)
             {

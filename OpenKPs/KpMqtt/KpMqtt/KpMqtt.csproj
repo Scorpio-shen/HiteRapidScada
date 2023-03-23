@@ -68,31 +68,45 @@
     <Compile Include="Mqtt\Config\MqttTopic.cs" />
     <Compile Include="Mqtt\Config\PubBehavior.cs" />
     <Compile Include="Mqtt\UI\CtrlCnl.cs" />
-    <Compile Include="Mqtt\UI\FrmMqttDevTemplate.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttDevTemplate.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\UI\FrmMqttDevTemplate.Designer.cs">
       <DependentUpon>FrmMqttDevTemplate.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\UI\FrmMqttPubCmds.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttPubCmds.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\UI\FrmMqttPubCmds.Designer.cs">
       <DependentUpon>FrmMqttPubCmds.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\UI\FrmMqttServerConfig.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttServerConfig.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\UI\FrmMqttServerConfig.Designer.cs">
       <DependentUpon>FrmMqttServerConfig.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\UI\FrmMqttSubTopics.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttSubTopics.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\UI\FrmMqttSubTopics.Designer.cs">
       <DependentUpon>FrmMqttSubTopics.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\UI\FrmMqttSubCmds.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttSubCmds.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\UI\FrmMqttSubCmds.Designer.cs">
       <DependentUpon>FrmMqttSubCmds.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\UI\FrmMqttSubJSs.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttSubJSs.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\UI\FrmMqttSubJSs.Designer.cs">
       <DependentUpon>FrmMqttSubJSs.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\UI\FrmMqttPubTopic.cs" />
+    <Compile Include="Mqtt\UI\FrmMqttPubTopic.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\UI\FrmMqttPubTopic.Designer.cs">
       <DependentUpon>FrmMqttPubTopic.cs</DependentUpon>
     </Compile>

@@ -53,9 +53,16 @@ namespace KpHiteModbus.Modbus.Model
             get => DataType.ToString();
             set
             {
-                if (Enum.TryParse(value, out DataTypeEnum valueEnum))
-                    DataType = valueEnum;
-
+                //if (Enum.TryParse(value, out DataTypeEnum valueEnum))
+                //    DataType = valueEnum;
+                foreach (DataTypeEnum dataType in Enum.GetValues(typeof(DataTypeEnum)))
+                {
+                    if (value.Equals(dataType.ToString(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        DataType = dataType;
+                        break;
+                    }
+                }
             }
         }
 

@@ -53,7 +53,6 @@ namespace KpCommon.Helper
             ISheet sheet;
             using (var file = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
-                MemoryStream ms = new MemoryStream();
                 if (Path.GetExtension(path) == ".xls")
                 {
                     HSSFWorkbook workbook = new HSSFWorkbook(file);
@@ -286,12 +285,24 @@ namespace KpCommon.Helper
                                 sortTemp.Sort = new KeyValuePair<string, string>(displayName.DisplayName, item.Name);
 
                             sortTemps.Add(sortTemp);
+                            var sortList = sortTemps.OrderBy(s => s.SortIndex);
+                            dict = sortList.Select(s => s.Sort).ToDictionary(s => s.Key, s => s.Value);
+                        }
+                        else
+                        {
+                            if (isToExcel)
+                            {
+                                dict.Add(item.Name, displayName.DisplayName);
+                            }
+                            else
+                            {
+                                dict.Add(displayName.DisplayName, item.Name);
+                            }
                         }
                     }
 
                 }
-                var sortList = sortTemps.OrderBy(s => s.SortIndex);
-                dict = sortList.Select(s => s.Sort).ToDictionary(s => s.Key, s => s.Value);
+                
             }
             catch (Exception e)
             {
@@ -426,9 +437,12 @@ namespace KpCommon.Helper
                         T t = Activator.CreateInstance<T>();
                         for (int j = 0; j < row.Cells.Count; j++)
                         {
-                            ICell cell = row.GetCell(j);
+                            var columnIndex = row.Cells[j]?.ColumnIndex;
+                            if (columnIndex == null)
+                                continue;
+                            ICell cell = row.GetCell(columnIndex.Value);
                             string name = "";
-                            dict.TryGetValue(j, out name);
+                            dict.TryGetValue(columnIndex.Value, out name);
                             if (cell != null)
                             {
                                 if (cell.CellType == CellType.Blank)//空值
@@ -557,9 +571,10 @@ namespace KpCommon.Helper
         /// <typeparam name="T">数据模型</typeparam>
         /// <param name="excelType">excel扩展名类型</param>
         /// <param name="data">数据集</param>
+        /// <param name="ignoreHeaders">不需要导出的字段</param>
         /// <param name="sheetSize">Excel的单个Sheet的行数，不能超过65535，否则会抛出异常</param>
         /// <returns></returns>
-        public static MemoryStream ToExcel<T>(List<T> data, string excelType = "xls", int sheetSize = 50000)
+        public static MemoryStream ToExcel<T>(List<T> data, string excelType = "xls", int sheetSize = 50000, List<string> ignoreHeaders = null)
         {
 
             IWorkbook wk;
@@ -577,6 +592,14 @@ namespace KpCommon.Helper
             if (data.Count <= 0 || data == null)
             {
                 var headers = GetPropertyByType<T>(true);
+                if(ignoreHeaders?.Count > 0)
+                {
+                    foreach(var ignore in ignoreHeaders)
+                    {
+                        if(headers.ContainsKey(ignore))
+                            headers.Remove(ignore);
+                    }
+                }
                 CreateHeaders(wk, headers, "sheet");
             }
             else
@@ -592,9 +615,11 @@ namespace KpCommon.Helper
                 }
             }
 
-            MemoryStream m = new MemoryStream();
-            wk.Write(m);
-            return m;
+            using (MemoryStream m = new MemoryStream())
+            {
+                wk.Write(m);
+                return m;
+            }
         }
 
         /// <summary>

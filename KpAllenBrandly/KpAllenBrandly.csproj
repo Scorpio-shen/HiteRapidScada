@@ -70,35 +70,51 @@
     </Compile>
     <Compile Include="ViewModel\FrmDevAddRangeViewModel.cs" />
     <Compile Include="ViewModel\FrmPLCImportViewModel.cs" />
-    <Compile Include="View\CtrlPLCConfig.cs" />
+    <Compile Include="View\CtrlPLCConfig.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="View\CtrlPLCConfig.Designer.cs">
       <DependentUpon>CtrlPLCConfig.cs</DependentUpon>
     </Compile>
-    <Compile Include="View\CtrlRead.cs" />
+    <Compile Include="View\CtrlRead.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="View\CtrlRead.Designer.cs">
       <DependentUpon>CtrlRead.cs</DependentUpon>
     </Compile>
-    <Compile Include="View\CtrlTreeView.cs" />
+    <Compile Include="View\CtrlTreeView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="View\CtrlTreeView.Designer.cs">
       <DependentUpon>CtrlTreeView.cs</DependentUpon>
     </Compile>
-    <Compile Include="View\FrmDevAddRange.cs" />
+    <Compile Include="View\FrmDevAddRange.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="View\FrmDevAddRange.Designer.cs">
       <DependentUpon>FrmDevAddRange.cs</DependentUpon>
     </Compile>
-    <Compile Include="View\FrmDevProps.cs" />
+    <Compile Include="View\FrmDevProps.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="View\FrmDevProps.Designer.cs">
       <DependentUpon>FrmDevProps.cs</DependentUpon>
     </Compile>
-    <Compile Include="View\FrmDevTemplate.cs" />
+    <Compile Include="View\FrmDevTemplate.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="View\FrmDevTemplate.Designer.cs">
       <DependentUpon>FrmDevTemplate.cs</DependentUpon>
     </Compile>
-    <Compile Include="View\FrmParaSet.cs" />
+    <Compile Include="View\FrmParaSet.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="View\FrmParaSet.Designer.cs">
       <DependentUpon>FrmParaSet.cs</DependentUpon>
     </Compile>
-    <Compile Include="View\FrmPLCImport.cs" />
+    <Compile Include="View\FrmPLCImport.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="View\FrmPLCImport.Designer.cs">
       <DependentUpon>FrmPLCImport.cs</DependentUpon>
     </Compile>

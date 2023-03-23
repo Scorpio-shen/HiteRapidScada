@@ -11,11 +11,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using static System.Collections.Specialized.BitVector32;
 
 namespace Scada.Comm.Devices
 {
@@ -97,6 +95,17 @@ namespace Scada.Comm.Devices
 
             // 状态刷新
             CalcSessStats();
+            //判断当前KP驱动状态是否是连接成功状态
+            if(WorkState == WorkStates.Error)
+            {
+                if (!modbus.IsConnected)
+                {
+                    WriteToLog($"KpHiteModbusLogic:Session,驱动连接状态为断开状态,进行重连");
+                    modbus.DisConnect();
+                    //重连
+                    ConnectPLC();
+                }
+            }
         }
 
 
@@ -147,6 +156,9 @@ namespace Scada.Comm.Devices
         }
         #endregion
 
+        #region 断线重连
+        #endregion
+
         #region 对象创建初始化
         public override void OnAddedToCommLine()
         {
@@ -165,6 +177,11 @@ namespace Scada.Comm.Devices
 
         public override void OnCommLineStart()
         {
+            ConnectPLC();
+        }
+
+        public void ConnectPLC()
+        {
             try
             {
                 var option = deviceTemplate.ConnectionOptions;
@@ -182,12 +199,12 @@ namespace Scada.Comm.Devices
                             modbusAscii.ReceiveTimeout = timeOut;
                             modbusAscii.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
                             initResult = modbusAscii.Open();
-                            if(initResult.IsSuccess)
+                            if (initResult.IsSuccess)
                                 modbus = modbusAscii;
                         }
                         else
                         {
-                            var modbusRtu= new ModbusRtu(station);
+                            var modbusRtu = new ModbusRtu(station);
                             modbusRtu.ReceiveTimeout = timeOut;
                             modbusRtu.SerialPortInni(option.PortName, option.BaudRate, option.DataBits, option.StopBits, option.Parity);
                             initResult = modbusRtu.Open();
@@ -196,14 +213,14 @@ namespace Scada.Comm.Devices
                         }
                         break;
                     case KpHiteModbus.Modbus.Model.EnumType.ModbusConnectionTypeEnum.TcpIP:
-                        var modbusTcp = new ModbusTcpNet(option.IPAddress,option.Port,station);
+                        var modbusTcp = new ModbusTcpNet(option.IPAddress, option.Port, station);
                         modbusTcp.ReceiveTimeOut = timeOut;
                         initResult = modbusTcp.ConnectServer();
                         if (initResult.IsSuccess)
                             modbus = modbusTcp;
-                            break;
+                        break;
                     case KpHiteModbus.Modbus.Model.EnumType.ModbusConnectionTypeEnum.Udp:
-                        var modbusUdp = new ModbusUdpNet(option.IPAddress,option.Port,station);
+                        var modbusUdp = new ModbusUdpNet(option.IPAddress, option.Port, station);
                         modbusUdp.ReceiveTimeout = timeOut;
                         initResult = new OperateResult();
                         var pingResult = modbusUdp.IpAddressPing();
@@ -219,12 +236,12 @@ namespace Scada.Comm.Devices
                         }
                         break;
                     case KpHiteModbus.Modbus.Model.EnumType.ModbusConnectionTypeEnum.RTUASCIIOverTcp:
-                        if(option.ModbusMode == KpHiteModbus.Modbus.Model.EnumType.ModbusModeEnum.Ascii)
+                        if (option.ModbusMode == KpHiteModbus.Modbus.Model.EnumType.ModbusModeEnum.Ascii)
                         {
                             var modbusAsciiOverTcp = new ModbusAsciiOverTcp(option.IPAddress, option.Port, station);
                             modbusAsciiOverTcp.ReceiveTimeOut = timeOut;
                             initResult = modbusAsciiOverTcp.ConnectServer();
-                            if(initResult.IsSuccess)
+                            if (initResult.IsSuccess)
                                 modbus = modbusAsciiOverTcp;
                         }
                         else
@@ -236,23 +253,23 @@ namespace Scada.Comm.Devices
                                 modbus = modbusRtuOverTcp;
                         }
                         break;
-                    //case KpHiteModbus.Modbus.Model.EnumType.ModbusConnectionTypeEnum.RTUASCIIOverUdp:
-                    //    if(option.ModbusMode == KpHiteModbus.Modbus.Model.EnumType.ModbusModeEnum.Ascii)
-                    //    {
-                    //        var modbusAsciiOverUdp = new ModbusA
-                    //    }
-                    //    else
-                    //    {
+                        //case KpHiteModbus.Modbus.Model.EnumType.ModbusConnectionTypeEnum.RTUASCIIOverUdp:
+                        //    if(option.ModbusMode == KpHiteModbus.Modbus.Model.EnumType.ModbusModeEnum.Ascii)
+                        //    {
+                        //        var modbusAsciiOverUdp = new ModbusA
+                        //    }
+                        //    else
+                        //    {
 
-                    //    }
-                    //    break;
+                        //    }
+                        //    break;
 
                 }
 
                 if (!initResult.IsSuccess)
                     WriteToLog($"Name:{Name},Number:{Number},初始化连接失败,{initResult.Message}");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 WriteToLog($"KpHiteModbusLogic_OnCommLineStart,Name:{Name},Number:{Number},连接PLC异常,{ex.Message}");
             }
@@ -339,7 +356,7 @@ namespace Scada.Comm.Devices
             }
         }
 
-        private void RequestUnitMethod(RequestUnit requestUnit)
+        private bool RequestUnitMethod(RequestUnit requestUnit)
         {
             try
             {
@@ -366,10 +383,12 @@ namespace Scada.Comm.Devices
                     requestUnit.Buffer = buffer;
                 }
                 WriteToLog($"Name:{Name},Number:{Number},请求结束,结果:{JsonConvert.SerializeObject(result)}");
+                return result.IsSuccess;
             }
             catch(Exception ex )
             {
                 WriteToLog($"KpHiteModbusLogic_RequestUnitMethod,Name:{Name},Number:{Number},数据请求异常,{ex.Message},StackTrace:{ex.StackTrace}");
+                return false;
             }
         }
 
@@ -377,6 +396,7 @@ namespace Scada.Comm.Devices
 
         private void SetTagsData(ModbusTagGroup tagGroup)
         {
+            
             for(int i = 0; i < tagGroup.Tags.Count; i++)
             {
                 var tag = tagGroup.Tags[i]; 

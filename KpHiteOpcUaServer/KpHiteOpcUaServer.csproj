@@ -268,11 +268,15 @@
     <Compile Include="OPCUaServer\Model\TempleteKeyString.cs" />
     <Compile Include="OPCUaServer\Namespaces.cs" />
     <Compile Include="OPCUaServer\ReferenceServerConfiguration.cs" />
-    <Compile Include="OPCUaServer\View\FrmDevProps.cs" />
+    <Compile Include="OPCUaServer\View\FrmDevProps.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="OPCUaServer\View\FrmDevProps.Designer.cs">
       <DependentUpon>FrmDevProps.cs</DependentUpon>
     </Compile>
-    <Compile Include="OPCUaServer\View\FrmDevTemplate.cs" />
+    <Compile Include="OPCUaServer\View\FrmDevTemplate.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="OPCUaServer\View\FrmDevTemplate.Designer.cs">
       <DependentUpon>FrmDevTemplate.cs</DependentUpon>
     </Compile>

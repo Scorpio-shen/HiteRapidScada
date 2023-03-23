@@ -1,4 +1,7 @@
-﻿namespace KpHiteModbus.Modbus.View
+﻿using KpCommon.Model;
+using KpHiteModbus.Modbus.Model;
+
+namespace KpHiteModbus.Modbus.View
 {
     partial class FrmDevTemplate
     {
@@ -269,7 +272,7 @@
             this.ctrlConfig.Name = "ctrlConfig";
             this.ctrlConfig.Size = new System.Drawing.Size(665, 185);
             this.ctrlConfig.TabIndex = 4;
-            this.ctrlConfig.ConfigChanged += new KpHiteModbus.Modbus.Model.ModbusConfigChangedEventHandler(this.ctrlRead_TagGroupChanged);
+            this.ctrlConfig.ConfigChanged += new ConfigChangedEventHandler<Tag>(this.ctrlRead_TagGroupChanged);
             // 
             // ctrlRead
             // 
@@ -279,7 +282,7 @@
             this.ctrlRead.Name = "ctrlRead";
             this.ctrlRead.Size = new System.Drawing.Size(665, 433);
             this.ctrlRead.TabIndex = 3;
-            this.ctrlRead.TagGroupChanged += new KpHiteModbus.Modbus.Model.ModbusConfigChangedEventHandler(this.ctrlRead_TagGroupChanged);
+            this.ctrlRead.TagGroupChanged += new ConfigChangedEventHandler<Tag>(this.ctrlRead_TagGroupChanged);
             // 
             // FrmDevTemplate
             // 

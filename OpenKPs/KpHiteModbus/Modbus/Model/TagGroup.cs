@@ -95,17 +95,17 @@ namespace KpHiteModbus.Modbus.Model
                 });
             }
         }
-        private double maxrequestbytelength;
+        private int maxrequestbytelength;
 
         /// <summary>
         /// 限制一组Tag最大请求数据字节长度
         /// </summary>
-        public override double MaxRequestByteLength
+        public override int MaxRequestByteLength
         {
             get
             {
                 if(maxrequestbytelength <= 0)
-                    maxrequestbytelength = TagGroupDefaultValues.MaxAddressLength;
+                    maxrequestbytelength = TagGroupDefaultValues.MaxAddressRequestLength;
                 return maxrequestbytelength;
             }
             set => maxrequestbytelength = value;
@@ -132,10 +132,10 @@ namespace KpHiteModbus.Modbus.Model
             StartKpTagIndex = tagElem.GetAttrAsInt("StartKpTagIndex");
             Active = tagElem.GetAttrAsBool("Active",true);
             RegisterType = tagElem.GetAttrAsEnum("RegisterType", RegisterTypeEnum.HoldingRegisters);
-            MaxRequestByteLength = tagElem.GetAttrAsDouble("MaxRequestByteLength");
+            MaxRequestByteLength = tagElem.GetAttrAsInt("MaxRequestByteLength");
             //RequestLength = tagElem.GetAttrAsInt("RequestLength");
             if(MaxRequestByteLength == 0)
-                MaxRequestByteLength = TagGroupDefaultValues.MaxAddressLength;
+                MaxRequestByteLength = TagGroupDefaultValues.MaxAddressRequestLength;
 
             XmlNodeList nodes = tagElem.SelectNodes("Tag");
             int maxTagCount = MaxTagCount;
@@ -231,6 +231,7 @@ namespace KpHiteModbus.Modbus.Model
                 result = false;
             }
             RefreshTagIndex();
+            OnPropertyChanged(nameof(TagCount));
             return result;
         }
 
@@ -261,7 +262,7 @@ namespace KpHiteModbus.Modbus.Model
                         if (tagLast.DataType == DataTypeEnum.String)
                             lastByteCount += tagLast.Length;
 
-                        //获取总请求字节长度
+                        //计算需要请求的字的个数
                         var length = address - StartAddress;
                         //除以2看需要几个寄存器
                         var regCount = (ushort)(lastByteCount / 2 + lastByteCount % 2);

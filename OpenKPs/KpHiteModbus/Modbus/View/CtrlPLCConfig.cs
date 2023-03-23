@@ -1,4 +1,5 @@
 ﻿using KpCommon.Extend;
+using KpCommon.Model;
 using KpHiteModbus.Modbus.Model;
 using KpHiteModbus.Modbus.Model.EnumType;
 using System;
@@ -9,7 +10,7 @@ namespace KpHiteModbus.Modbus.View
 {
     public partial class CtrlPLCConfig : UserControl
     {
-        public event ModbusConfigChangedEventHandler ConfigChanged;
+        public event ConfigChangedEventHandler<Tag> ConfigChanged;
         private ConnectionOptions connectionOptions;
         public ConnectionOptions ConnectionOptions
         {
@@ -71,7 +72,7 @@ namespace KpHiteModbus.Modbus.View
 
         private void OnConfigChanged(object sender)
         {
-            ConfigChanged?.Invoke(sender, new  ModbusConfigChangedEventArgs
+            ConfigChanged?.Invoke(sender, new  ConfigChangedEventArgs<Tag>
             {
                 ConnectionOptions = ConnectionOptions
             });

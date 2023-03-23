@@ -76,39 +76,57 @@
     <Compile Include="Mqtt\MqttHandle\MqttHandle_post_reply.cs" />
     <Compile Include="Mqtt\ViewModel\FrmDevModelViewModel.cs" />
     <Compile Include="Mqtt\ViewModel\FrmDevTemplateViewModel.cs" />
-    <Compile Include="Mqtt\View\CtrlArrayInCtrlChannel.cs" />
+    <Compile Include="Mqtt\View\CtrlArrayInCtrlChannel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Mqtt\View\CtrlArrayInCtrlChannel.Designer.cs">
       <DependentUpon>CtrlArrayInCtrlChannel.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\View\CtrlArrayPara.cs" />
+    <Compile Include="Mqtt\View\CtrlArrayPara.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Mqtt\View\CtrlArrayPara.Designer.cs">
       <DependentUpon>CtrlArrayPara.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\View\CtrlJsonPara.cs" />
+    <Compile Include="Mqtt\View\CtrlJsonPara.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Mqtt\View\CtrlJsonPara.Designer.cs">
       <DependentUpon>CtrlJsonPara.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\View\CtrlJsonParaSpec.cs" />
+    <Compile Include="Mqtt\View\CtrlJsonParaSpec.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Mqtt\View\CtrlJsonParaSpec.Designer.cs">
       <DependentUpon>CtrlJsonParaSpec.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\View\FrmDevJsonPara.cs" />
+    <Compile Include="Mqtt\View\FrmDevJsonPara.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\View\FrmDevJsonPara.Designer.cs">
       <DependentUpon>FrmDevJsonPara.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\View\FrmDevModel.cs" />
+    <Compile Include="Mqtt\View\FrmDevModel.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\View\FrmDevModel.Designer.cs">
       <DependentUpon>FrmDevModel.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\View\FrmDevProps.cs" />
+    <Compile Include="Mqtt\View\FrmDevProps.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\View\FrmDevProps.Designer.cs">
       <DependentUpon>FrmDevProps.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\View\FrmDevTemplate.cs" />
+    <Compile Include="Mqtt\View\FrmDevTemplate.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\View\FrmDevTemplate.Designer.cs">
       <DependentUpon>FrmDevTemplate.cs</DependentUpon>
     </Compile>
-    <Compile Include="Mqtt\View\FrmTopics.cs" />
+    <Compile Include="Mqtt\View\FrmTopics.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Mqtt\View\FrmTopics.Designer.cs">
       <DependentUpon>FrmTopics.cs</DependentUpon>
     </Compile>

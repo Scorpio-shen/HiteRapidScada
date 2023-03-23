@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+﻿using System.Windows.Forms;
 
 namespace KpCommon.Extend
 {
@@ -36,6 +31,57 @@ namespace KpCommon.Extend
             }
 
             control.DataBindings.Add(propertyName,dataSource,dataMember,false,DataSourceUpdateMode.OnPropertyChanged);
+        }
+        /// <summary>
+        /// RadioButton绑定
+        /// </summary>
+        /// <param name="radio"></param>
+        /// <param name="dataSource">数据源</param>
+        /// <param name="dataMember">要绑定的属性</param>
+        /// <param name="needNegation">是否需要取反(绑定的属性bool值与控件Check)</param>
+        /// <param name="propertyName">绑定控件的属性名</param>
+        /// <param name="needClear"></param>
+        public static void AddDataBindings(this RadioButton radio, object dataSource, string dataMember,bool needNegation = false, string propertyName = "", bool needClear = true)
+        {
+            if (needClear)
+                radio.DataBindings.Clear();
+            if (string.IsNullOrEmpty(propertyName))
+            {
+                propertyName = nameof(radio.Checked);
+            }
+
+            var binding = new Binding(propertyName, dataSource, dataMember, false, DataSourceUpdateMode.OnPropertyChanged);
+            binding.Format += (sender, e) =>
+            {
+                //需要取反
+                if (needNegation)
+                {
+                    e.Value = !(bool)e.Value;
+                }
+            };
+            radio.DataBindings.Add(binding);
+        }
+
+        public static void AddVisableDataBindings(this Control control,object dataSource,string dataMember, bool needNegation = false, string propertyName = "", bool needClear = true)
+        {
+            if(needClear)
+                control.DataBindings.Clear();
+            if (string.IsNullOrEmpty(propertyName))
+            {
+                propertyName = nameof(control.Visible);
+            }
+
+            var binding = new Binding(propertyName, dataSource, dataMember, false, DataSourceUpdateMode.OnPropertyChanged);
+            binding.Format += (sender, e) =>
+            {
+                //需要取反
+                if (needNegation)
+                {
+                    e.Value = !(bool)e.Value;
+                }
+            };
+
+            control.DataBindings.Add(binding);
         }
     }
 }

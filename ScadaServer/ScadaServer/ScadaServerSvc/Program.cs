@@ -28,7 +28,18 @@ using System.ServiceProcess;
 
 namespace Scada.Server.Svc
 {
-    static class Program
+
+#if DEBUG
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            var temp = new SvcMain();
+            temp.StartService();
+        }
+    }
+#else
+static class Program
     {
         /// <summary>
         /// The main entry point for the application.
@@ -43,14 +54,5 @@ namespace Scada.Server.Svc
             ServiceBase.Run(ServicesToRun);
         }
     }
-
-
-    //internal class Program
-    //{
-    //    static void Main(string[] args)
-    //    {
-    //        var temp = new SvcMain();
-    //        temp.StartService();
-    //    }
-    //}
+#endif
 }

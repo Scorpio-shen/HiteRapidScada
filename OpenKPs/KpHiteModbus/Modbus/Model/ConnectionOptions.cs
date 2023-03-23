@@ -161,40 +161,74 @@ namespace KpHiteModbus.Modbus.Model
         }
         #endregion
 
-        public virtual void LoadFromXml(XmlElement optionElement)
-        {
-            if (optionElement == null)
-                throw new ArgumentNullException("OptionElement");
-            Station = optionElement.GetAttrAsString("Station").ToByte();
-            ConnectionType = optionElement.GetAttrAsEnum("ConnectionType", ModbusConnectionTypeEnum.TcpIP);
-            ModbusMode = optionElement.GetAttrAsEnum("ModbusMode", ModbusModeEnum.Rtu);
+        //public override void LoadFromXml(XmlElement optionElement)
+        //{
+        //    if (optionElement == null)
+        //        throw new ArgumentNullException("OptionElement");
 
-            IPAddress = optionElement.GetAttrAsString("IPAddress");
-            Port = optionElement.GetAttrAsInt("Port");
+        //    foreach(var p in GetType().GetProperties())
+        //    {
+        //        if (!p.CanWrite)
+        //            return;
+        //        if(p.PropertyType == typeof(bool))
+        //        {
+        //            p.SetValue(this, optionElement.GetAttrAsBool(p.Name));
+        //        }
+        //        else if(p.PropertyType == typeof(byte))
+        //        {
+        //            p.SetValue(this, optionElement.GetAttrAsByte(p.Name));
+        //        }
+        //        else if(p.PropertyType == typeof(string))
+        //        {
+        //            p.SetValue(this, optionElement.GetAttrAsString(p.Name));
+        //        }
+        //        else if(p.PropertyType == typeof(int))
+        //        {
+        //            p.SetValue(this, optionElement.GetAttrAsInt(p.Name));
+        //        }
+        //        else if (p.PropertyType.IsEnum)
+        //        {
+        //            try
+        //            {
+        //                var enumValue = Enum.Parse(p.PropertyType, optionElement.GetAttrAsString(p.Name), true);
+        //                p.SetValue(this, enumValue);
+        //            }
+        //            catch
+        //            {
+                        
+        //            }
+        //        }
+        //    }
+        //    Station = optionElement.GetAttrAsString("Station").ToByte();
+        //    ConnectionType = optionElement.GetAttrAsEnum("ConnectionType", ModbusConnectionTypeEnum.TcpIP);
+        //    ModbusMode = optionElement.GetAttrAsEnum("ModbusMode", ModbusModeEnum.Rtu);
 
-            PortName = optionElement.GetAttrAsString("PortName");
-            BaudRate = optionElement.GetAttrAsInt("BaudRate");
-            DataBits = optionElement.GetAttrAsInt("DataBits");
-            StopBits = optionElement.GetAttrAsEnum("StopBits", StopBits.None);
-            Parity = optionElement.GetAttrAsEnum("Parity", Parity.None);
-        }
-        public virtual void SaveToXml(XmlElement optionElement)
-        {
-            if (optionElement == null)
-                throw new ArgumentNullException("OptionElement");
+        //    IPAddress = optionElement.GetAttrAsString("IPAddress");
+        //    Port = optionElement.GetAttrAsInt("Port");
 
-            optionElement.SetAttribute("Station", Station);
-            optionElement.SetAttribute("ConnectionType", ConnectionType);
-            optionElement.SetAttribute("ModbusMode", ModbusMode);
+        //    PortName = optionElement.GetAttrAsString("PortName");
+        //    BaudRate = optionElement.GetAttrAsInt("BaudRate");
+        //    DataBits = optionElement.GetAttrAsInt("DataBits");
+        //    StopBits = optionElement.GetAttrAsEnum("StopBits", StopBits.None);
+        //    Parity = optionElement.GetAttrAsEnum("Parity", Parity.None);
+        //}
+        //public override void SaveToXml(XmlElement optionElement)
+        //{
+        //    if (optionElement == null)
+        //        throw new ArgumentNullException("OptionElement");
 
-            optionElement.SetAttribute("IPAddress", IPAddress);
-            optionElement.SetAttribute("Port", Port);
+        //    optionElement.SetAttribute("Station", Station);
+        //    optionElement.SetAttribute("ConnectionType", ConnectionType);
+        //    optionElement.SetAttribute("ModbusMode", ModbusMode);
 
-            optionElement.SetAttribute("PortName", PortName);
-            optionElement.SetAttribute("BaudRate", BaudRate);
-            optionElement.SetAttribute("DataBits", DataBits);
-            optionElement.SetAttribute("StopBits", StopBits);
-            optionElement.SetAttribute("Parity", Parity);
-        }
+        //    optionElement.SetAttribute("IPAddress", IPAddress);
+        //    optionElement.SetAttribute("Port", Port);
+
+        //    optionElement.SetAttribute("PortName", PortName);
+        //    optionElement.SetAttribute("BaudRate", BaudRate);
+        //    optionElement.SetAttribute("DataBits", DataBits);
+        //    optionElement.SetAttribute("StopBits", StopBits);
+        //    optionElement.SetAttribute("Parity", Parity);
+        //}
     }
 }

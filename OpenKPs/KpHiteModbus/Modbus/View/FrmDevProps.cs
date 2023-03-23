@@ -1,4 +1,5 @@
-﻿using KpHiteModbus.Modbus.Model;
+﻿using KpCommon.Model;
+using KpHiteModbus.Modbus.Model;
 using Scada.Comm;
 using Scada.UI;
 using System;

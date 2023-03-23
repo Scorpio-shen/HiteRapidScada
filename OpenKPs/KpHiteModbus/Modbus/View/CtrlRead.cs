@@ -1,5 +1,7 @@
 ﻿using KpCommon.Extend;
 using KpCommon.Helper;
+using KpCommon.Model;
+using KpCommon.Model.EnumType;
 using KpHiteModbus.Modbus.Extend;
 using KpHiteModbus.Modbus.Model;
 using KpHiteModbus.Modbus.Model.EnumType;
@@ -18,7 +20,7 @@ namespace KpHiteModbus.Modbus.View
 
     public partial class CtrlRead : UserControl
     {
-        public event ModbusConfigChangedEventHandler TagGroupChanged;
+        public event ConfigChangedEventHandler<Tag> TagGroupChanged;
         private ModbusTagGroup tagGroup;
         private ComboBox comboBox;
 
@@ -139,6 +141,25 @@ namespace KpHiteModbus.Modbus.View
                 tag.PropertyChanged -= Tag_PropertyChanged;
                 tag.PropertyChanged += Tag_PropertyChanged;
             }
+
+            //tags数目变化通知
+            group.PropertyChanged -= TagGroup_PropertyChanged;
+            group.PropertyChanged += TagGroup_PropertyChanged;
+        }
+
+        private void TagGroup_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (IsShowTagGroup)
+                return;
+
+            if (e.PropertyName != nameof(ModbusTagGroup.TagCount))
+                return;
+
+            TagGroupChanged?.Invoke(sender, new ConfigChangedEventArgs<Tag>
+            {
+                ModifyType = ModifyType.Tags,
+                TagGroup = ModbusTagGroup,
+            });
         }
         /// <summary>
         /// 修改datagridview中tag内容通知父窗体修改按钮使能
@@ -155,9 +176,9 @@ namespace KpHiteModbus.Modbus.View
                 //地址变化需要对当前数组进行重新排序
                 ModbusTagGroup.RefreshTagIndex();
             }
-            TagGroupChanged?.Invoke(sender,new ModbusConfigChangedEventArgs
+            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs<Tag>
             {
-                ChangeType = ModifyType.Tags,
+                ModifyType = ModifyType.Tags,
                 TagGroup = ModbusTagGroup,
             });
         }
@@ -171,12 +192,17 @@ namespace KpHiteModbus.Modbus.View
         /// </summary>
         public void RefreshDataGridView(bool needResetBindTags = true)
         {
-            var index = dgvTags.FirstDisplayedScrollingRowIndex;
-            if (needResetBindTags)
-                bdsTags.ResetBindings(false);
-            dgvTags.Invalidate();
-            if(index >= 0)
-                dgvTags.FirstDisplayedScrollingRowIndex = index;
+            try
+            {
+                var index = dgvTags.FirstDisplayedScrollingRowIndex;
+                if (needResetBindTags)
+                    bdsTags.ResetBindings(false);
+                dgvTags.Invalidate();
+                if (index >= 0)
+                    dgvTags.FirstDisplayedScrollingRowIndex = index;
+            }
+            catch { }
+            
         }
 
         #region 控件事件
@@ -212,6 +238,20 @@ namespace KpHiteModbus.Modbus.View
         //    OnTagGroupChanged(sender, ModifyType.TagCount);
         //}
 
+        private void chkActive_CheckedChanged(object sender, EventArgs e)
+        {
+            if (ModbusTagGroup == null)
+                return;
+            if (IsShowTagGroup)
+                return;
+
+            TagGroupChanged?.Invoke(sender, new ConfigChangedEventArgs<Tag>
+            {
+                ModifyType = ModifyType.IsActive,
+                TagGroup = ModbusTagGroup
+            });
+        }
+
         private void chkAllCanWrite_CheckedChanged(object sender, EventArgs e)
         {
             if (ModbusTagGroup == null)
@@ -222,6 +262,7 @@ namespace KpHiteModbus.Modbus.View
             bool canwrite = chkAllCanWrite.Checked;
             ModbusTagGroup.SetTagCanWrite(canwrite);
             RefreshDataGridView(false);
+
         }
 
         private void TxtGroupName_TextChanged(object sender, EventArgs e)
@@ -232,9 +273,9 @@ namespace KpHiteModbus.Modbus.View
                 return;
             ModbusTagGroup.Name =txtGroupName.Text;
             //CtrlReadViewModel.GroupName = txtGroupName.Text; //Winform 虽然绑定了，但是得在焦点移开当前控件，Model里面的值才能变成textbox控件里的值,所以这里手动赋值
-            TagGroupChanged?.Invoke(sender,new ModbusConfigChangedEventArgs
+            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs<Tag>
             {
-                ChangeType = Model.EnumType.ModifyType.GroupName,
+                ModifyType = ModifyType.GroupName,
                 TagGroup = ModbusTagGroup
             });
         }
@@ -273,7 +314,7 @@ namespace KpHiteModbus.Modbus.View
             RefreshDataGridView();
             if (IsShowTagGroup)
                 return;
-            OnTagGroupChanged(sender, ModifyType.RegisterType);
+            OnTagGroupChanged(sender, ModifyType.MemoryType);
         }
 
         private void btnAddRange_Click(object sender, EventArgs e)
@@ -373,9 +414,9 @@ namespace KpHiteModbus.Modbus.View
         #endregion
         public void OnTagGroupChanged(object sender,ModifyType changeType)
         {
-            TagGroupChanged?.Invoke(sender,new ModbusConfigChangedEventArgs
+            TagGroupChanged?.Invoke(sender,new ConfigChangedEventArgs<Tag>
             {
-                ChangeType = changeType,
+                ModifyType = changeType,
                 TagGroup = ModbusTagGroup
             });
         }
@@ -466,6 +507,7 @@ namespace KpHiteModbus.Modbus.View
                 ScadaUiUtils.ShowError($"导出异常,{ex.Message}");
             }
         }
+
 
 
         #endregion

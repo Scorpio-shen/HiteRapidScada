@@ -140,11 +140,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AmsRouterSettings.cs" />
-    <Compile Include="Form1.cs" />
+    <Compile Include="Form1.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <Compile Include="FrmJson.cs" />
+    <Compile Include="FrmJson.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="FrmJson.Designer.cs">
       <DependentUpon>FrmJson.cs</DependentUpon>
     </Compile>
