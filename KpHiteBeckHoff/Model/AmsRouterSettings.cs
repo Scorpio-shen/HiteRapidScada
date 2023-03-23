@@ -18,7 +18,7 @@ namespace KpHiteBeckHoff.Model
 
         private string _localName = string.Empty;
 
-        private AmsNetId _localNetId = AmsNetId.Empty;
+        private string _localNetId = string.Empty;
 
         private string _loopbackIP = "";
 
@@ -54,7 +54,7 @@ namespace KpHiteBeckHoff.Model
         //
         // 值:
         //     The net identifier.
-        public AmsNetId NetId
+        public string NetId
         {
             get
             {
@@ -206,7 +206,7 @@ namespace KpHiteBeckHoff.Model
 
         private string _address = string.Empty;
 
-        private AmsNetId _netId = AmsNetId.Empty;
+        private string _netId = string.Empty;
 
         private string _type = string.Empty;
 
@@ -252,7 +252,7 @@ namespace KpHiteBeckHoff.Model
         //
         // 值:
         //     The net identifier.
-        public AmsNetId NetId
+        public string NetId
         {
             get
             {

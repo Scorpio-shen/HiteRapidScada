@@ -1,4 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <RememberMe>
   <Username>admin</Username>
+  <Credentials>
+    <BrowserID>aec923bd-55fd-4561-a31a-09d8d08a8f1a</BrowserID>
+    <OneTimePassword>4630ad64-273f-493b-af4c-2df2d3610ed9</OneTimePassword>
+    <CreateDT>03/23/2023 15:45:27</CreateDT>
+  </Credentials>
+  <Credentials>
+    <BrowserID>2122287f-4641-4558-b040-a8f1302179fd</BrowserID>
+    <OneTimePassword>b750ade1-cb28-4b89-95ac-3a9be120250c</OneTimePassword>
+    <CreateDT>03/23/2023 15:54:12</CreateDT>
+  </Credentials>
+  <Credentials>
+    <BrowserID>3eb2902f-b3e9-4352-a09b-e37d61f3c7e0</BrowserID>
+    <OneTimePassword>aa7f52f0-59d9-4732-b612-9e03dd7437cf</OneTimePassword>
+    <CreateDT>03/23/2023 16:45:20</CreateDT>
+  </Credentials>
 </RememberMe>

@@ -16,6 +16,8 @@ namespace KpHiteBeckHoff.Service
     public class RouterService
     {
         private readonly IConfiguration _configuration;
+        private AmsTcpIpRouter router;
+        public RouterStatus Status { get => router.RouterStatus; }
         public RouterService(IConfiguration configuration)
         {
             _configuration = configuration;
@@ -23,13 +25,7 @@ namespace KpHiteBeckHoff.Service
 
         public async Task ExecuteAsync(CancellationToken cancel)
         {
-            IConfigurationBuilder cfgBuilder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
-                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")}.json", optional: true, reloadOnChange: false)
-                ;
-            IConfiguration configuration = cfgBuilder.Build();
-            AmsTcpIpRouter router = new AmsTcpIpRouter(configuration);
+            router = new AmsTcpIpRouter(_configuration);
             router.RouterStatusChanged += Router_RouterStatusChanged;
             Task routerTask = router.StartAsync(cancel);
             await routerTask;

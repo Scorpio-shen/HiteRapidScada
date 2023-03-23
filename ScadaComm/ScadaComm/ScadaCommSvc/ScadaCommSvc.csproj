@@ -103,9 +103,9 @@
     <Content Include="Script\svc_config.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\KpHiteMqtt\KpHiteMqtt.csproj">
-      <Project>{e4fa7d11-0bc5-4bf0-98eb-3ddb681a8060}</Project>
-      <Name>KpHiteMqtt</Name>
+    <ProjectReference Include="..\..\..\KpHiteBeckHoff\KpHiteBeckHoff.csproj">
+      <Project>{bf6feb50-9ef6-4be5-8924-9d674368745c}</Project>
+      <Name>KpHiteBeckHoff</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\Log\Log\Log.csproj">
       <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>

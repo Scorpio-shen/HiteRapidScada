@@ -27,6 +27,7 @@ using static Scada.Comm.Devices.KPView;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using KpHiteBeckHoff.Service;
+using System.Threading.Tasks;
 
 namespace Scada.Comm.Devices
 {
@@ -182,7 +183,8 @@ namespace Scada.Comm.Devices
             try
             {
                 //初始化AmsRouter配置
-                var jsonPath = AppDirs.ExeDir + "appsettings.json";
+                
+                var jsonPath = AppDomain.CurrentDomain.BaseDirectory + "appsettings.json";
                 AmsRouterSettings setting = null;
                 using (StreamReader sr = new StreamReader(jsonPath))
                 {
@@ -193,15 +195,15 @@ namespace Scada.Comm.Devices
                         setting = JsonConvert.DeserializeObject<AmsRouterSettings>(str);
                     }
                 }
-                setting.AmsRouter.NetId = new TwinCAT.Ads.AmsNetId("192.168.0.111.1.1");
-                setting.AmsRouter.TcpPort = 48898;
+                setting.AmsRouter.NetId = deviceTemplate.ConnectionOptions.SenderNetId;
+                setting.AmsRouter.TcpPort = deviceTemplate.ConnectionOptions.Port;
 
                 List<RouteConfig> routeConfigs = new List<RouteConfig>();
                 routeConfigs.Add(new RouteConfig()
                 {
                     Name = "RemoteSystem",
-                    Address = "192.168.0.100",
-                    NetId = new TwinCAT.Ads.AmsNetId("169.254.1.1.1.1"),
+                    Address = deviceTemplate.ConnectionOptions.IPAddress,
+                    NetId = deviceTemplate.ConnectionOptions.TaggetNetId,
                     Type = "TCP_IP"
                 });
                 setting.AmsRouter.RemoteConnections = routeConfigs.ToArray();
@@ -229,7 +231,7 @@ namespace Scada.Comm.Devices
             }
         }
 
-        public override void OnCommLineStart()
+        public override async void OnCommLineStart()
         {
             if(routerService == null)
             {
@@ -241,6 +243,10 @@ namespace Scada.Comm.Devices
                 WriteToLog($"KpHiteBeckHoffLogic:OnCommLineStart,routerService为null,无法连接PLC");
                 return;
             }
+            //启动RouterService
+            await routerService.ExecuteAsync(CancellationToken.None);
+            Thread.Sleep(1500);
+            //连接PLC
             ConnectPLC();
         }
 
@@ -269,6 +275,7 @@ namespace Scada.Comm.Devices
                     beckhoffAdsNet.SetTargetAMSNetId(option.TaggetNetId);
                     beckhoffAdsNet.SetSenderAMSNetId(option.SenderNetId);
                 }
+                initResult = beckhoffAdsNet.ConnectServer();
                 IsConnected = initResult.IsSuccess;
 
                 if (!initResult.IsSuccess)
@@ -310,6 +317,7 @@ namespace Scada.Comm.Devices
                 {
                     foreach (var tag in tagGroup.Tags)
                     {
+                        tag.Signals = new List<int>();
                         //判读是否是数组类型
                         if (tag.IsArray)
                         {
@@ -499,7 +507,7 @@ namespace Scada.Comm.Devices
                 }
             }
 
-            int signal = 1;
+            int signal = 0;
             //赋值通道
             foreach(var tag in tagGroup.Tags)
             {
@@ -600,7 +608,7 @@ namespace Scada.Comm.Devices
             if (tag.Data == null)
                 return false;
             //var memoryType = tagGroup.MemoryType;
-            var address = $"{tag.Name}";
+            var address = $"s={tag.Name}";
             WriteToLog($"Name:{Name},Number:{Number},开始写入数据,Name:{tag.Name},地址:{tag.Name},写入值:{JsonConvert.SerializeObject(tag.Data)}");
             try
             {

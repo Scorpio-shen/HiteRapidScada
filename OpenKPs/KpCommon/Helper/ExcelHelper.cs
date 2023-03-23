@@ -437,9 +437,12 @@ namespace KpCommon.Helper
                         T t = Activator.CreateInstance<T>();
                         for (int j = 0; j < row.Cells.Count; j++)
                         {
-                            ICell cell = row.GetCell(j);
+                            var columnIndex = row.Cells[j]?.ColumnIndex;
+                            if (columnIndex == null)
+                                continue;
+                            ICell cell = row.GetCell(columnIndex.Value);
                             string name = "";
-                            dict.TryGetValue(j, out name);
+                            dict.TryGetValue(columnIndex.Value, out name);
                             if (cell != null)
                             {
                                 if (cell.CellType == CellType.Blank)//空值

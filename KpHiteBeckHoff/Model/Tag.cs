@@ -68,9 +68,33 @@ namespace KpHiteBeckHoff.Model
             get => DataType.ToString();
             set
             {
-                if (Enum.TryParse(value, out DataTypeEnum valueEnum))
-                    DataType = valueEnum;
+                //if (Enum.TryParse(value, out DataTypeEnum valueEnum))
+                //    DataType = valueEnum;
+                //else
+                //{
+                //    if (value.Equals(DataTypeEnum.Bool.ToString(),StringComparison.OrdinalIgnoreCase))
+                //    {
+                //        DataType = DataTypeEnum.Bool;
+                //    }
+                //    else if(value.Equals(DataTypeEnum.Byte.ToString(), StringComparison.OrdinalIgnoreCase))
+                //    {
+                //        DataType = DataTypeEnum.Byte;
+                //    }
+                //    else if (value.Equals(DataTypeEnum.Double.ToString(), StringComparison.OrdinalIgnoreCase))
+                //    {
+                //        DataType = DataTypeEnum.Double;
+                //    }
+                //    else if(value.Equals(DataTypeEnum.Float.ToString()))
+                //}
 
+                foreach(DataTypeEnum dataType in Enum.GetValues(typeof(DataTypeEnum)))
+                {
+                    if (value.Equals(dataType.ToString(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        DataType = dataType;
+                        break;
+                    }
+                }
             }
         }
 

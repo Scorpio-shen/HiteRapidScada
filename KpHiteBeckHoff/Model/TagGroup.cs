@@ -308,7 +308,7 @@ namespace KpHiteBeckHoff.Model
             {
                 if(tag.IsArray)
                 {
-                    addresses.Add(tag.Name);
+                    addresses.Add($"s={tag.Name}");
                     var length = default(ushort);
                     if(tag.DataType == DataTypeEnum.Bool)
                     {
@@ -323,6 +323,7 @@ namespace KpHiteBeckHoff.Model
                 else
                 {
                     ushort length;
+                    addresses.Add($"s={tag.Name}");
                     if(tag.DataType == DataTypeEnum.String)
                     {
                         length = (ushort)tag.Length;
