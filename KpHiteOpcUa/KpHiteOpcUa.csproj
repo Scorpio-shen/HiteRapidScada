@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{9F9E6190-0473-414F-BF15-99E21FAA4C68}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>KpHiteOpcUa</RootNamespace>
+    <AssemblyName>KpHiteOpcUa</AssemblyName>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="KpOpcUaLogic.cs" />
+    <Compile Include="KpOpcUaView.cs" />
+    <Compile Include="OpcUa\Config\AuthenticationMode.cs" />
+    <Compile Include="OpcUa\Config\CommandConfig.cs" />
+    <Compile Include="OpcUa\Config\ConnectionOptions.cs" />
+    <Compile Include="OpcUa\Config\DeviceConfig.cs" />
+    <Compile Include="OpcUa\Config\ItemConfig.cs" />
+    <Compile Include="OpcUa\Config\SecurityPolicy.cs" />
+    <Compile Include="OpcUa\Config\SubscriptionConfig.cs" />
+    <Compile Include="OpcUa\OpcUaHelper.cs" />
+    <Compile Include="OpcUa\UI\CtrlCommand.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="OpcUa\UI\CtrlCommand.Designer.cs">
+      <DependentUpon>CtrlCommand.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OpcUa\UI\CtrlItem.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="OpcUa\UI\CtrlItem.Designer.cs">
+      <DependentUpon>CtrlItem.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OpcUa\UI\CtrlSubscription.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="OpcUa\UI\CtrlSubscription.Designer.cs">
+      <DependentUpon>CtrlSubscription.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OpcUa\UI\FrmConfig.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="OpcUa\UI\FrmConfig.Designer.cs">
+      <DependentUpon>FrmConfig.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OpcUa\UI\FrmNodeAttr.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="OpcUa\UI\FrmNodeAttr.Designer.cs">
+      <DependentUpon>FrmNodeAttr.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OpcUa\UI\FrmSecurityOptions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="OpcUa\UI\FrmSecurityOptions.Designer.cs">
+      <DependentUpon>FrmSecurityOptions.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OpcUa\UI\KpPhrases.cs" />
+    <Compile Include="OpcUa\UI\TreeUpdateTypes.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Config\KpOpcUa.Linux.xml" />
+    <EmbeddedResource Include="OpcUa\UI\CtrlCommand.resx">
+      <DependentUpon>CtrlCommand.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OpcUa\UI\CtrlItem.resx">
+      <DependentUpon>CtrlItem.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OpcUa\UI\CtrlSubscription.resx">
+      <DependentUpon>CtrlSubscription.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OpcUa\UI\FrmConfig.resx">
+      <DependentUpon>FrmConfig.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OpcUa\UI\FrmNodeAttr.resx">
+      <DependentUpon>FrmNodeAttr.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OpcUa\UI\FrmSecurityOptions.resx">
+      <DependentUpon>FrmSecurityOptions.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Config\KpOpcUa.Win.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Config\KpOpcUa_001.xml">
+      <SubType>Designer</SubType>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Lang\KpOpcUa.en-GB.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Lang\KpOpcUa.ru-RU.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

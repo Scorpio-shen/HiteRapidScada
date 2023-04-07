@@ -117,7 +117,17 @@ namespace Scada.Comm.Devices
                             {
                                 string tagName = isArray ? tagNamePrefix + "[" + k + "]" : tagNamePrefix;
                                 inCnls.Add(new InCnlPrototype(tagName, BaseValues.CnlTypes.TI) { Signal = signal });
+                                if (itemConfig.CanWrite)
+                                {
+                                    ctrlCnls.Add(new CtrlCnlPrototype(tagName, BaseValues.CmdTypes.Standard)
+                                    {
+                                        CmdNum = signal
+                                    });
+                                }
+
                             }
+
+                           
                             signal++;
                         }
 
@@ -125,13 +135,13 @@ namespace Scada.Comm.Devices
                 }
 
                 // output channels
-                foreach (CommandConfig commandConfig in deviceConfig.Commands)
-                {
-                    ctrlCnls.Add(new CtrlCnlPrototype(commandConfig.DisplayName, BaseValues.CmdTypes.Standard)
-                    {
-                        CmdNum = commandConfig.CmdNum
-                    });
-                }
+                //foreach (CommandConfig commandConfig in deviceConfig.Commands)
+                //{
+                //    ctrlCnls.Add(new CtrlCnlPrototype(commandConfig.DisplayName, BaseValues.CmdTypes.Standard)
+                //    {
+                //        CmdNum = commandConfig.CmdNum
+                //    });
+                //}
 
                 return prototypes;
             }

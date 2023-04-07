@@ -11,6 +11,7 @@
  * Modified : 2019
  */
 
+using Newtonsoft.Json;
 using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Configuration;
@@ -146,6 +147,8 @@ namespace Scada.Comm.Devices
                     throw new InvalidOperationException("OPC session must not be null.");
 
                 subscrByID = new Dictionary<uint, SubscriptionTag>();
+                if (cmdByNum == null)
+                    cmdByNum = new Dictionary<int, CommandConfig>();
 
                 foreach (SubscriptionConfig subscriptionConfig in deviceConfig.Subscriptions)
                 {
@@ -171,6 +174,8 @@ namespace Scada.Comm.Devices
                             DisplayName = itemConfig.DisplayName
                         });
 
+                        
+
                         if (itemConfig.Tag is KPTag kpTag)
                         {
                             subscriptionTag.ItemsByNodeID[itemConfig.NodeID] = new ItemTag
@@ -178,6 +183,18 @@ namespace Scada.Comm.Devices
                                 ItemConfig = itemConfig,
                                 KPTag = kpTag
                             };
+
+                            //添加相应的cmd
+                            if (itemConfig.CanWrite)
+                            {
+                                cmdByNum.Add(kpTag.Signal, new CommandConfig
+                                {
+                                    DataTypeName = itemConfig.CommandConfig.DataTypeName,
+                                    DisplayName = itemConfig.DisplayName,
+                                    CmdNum = kpTag.Signal,
+                                    NodeID = itemConfig.NodeID,
+                                });
+                            }
                         }
                     }
 
@@ -595,6 +612,7 @@ namespace Scada.Comm.Devices
                 base.SendCmd(cmd);
                 lastCommSucc = false;
 
+                WriteToLog($"KpOpcUaLogic:SendCmd,接收指令:{JsonConvert.SerializeObject(cmd)}");
                 if (connected)
                 {
                     if (cmdByNum.TryGetValue(cmd.CmdNum, out CommandConfig commandConfig) &&
@@ -686,8 +704,8 @@ namespace Scada.Comm.Devices
                 InitDeviceTags();
 
                 // fill the command dictionary
-                cmdByNum = new Dictionary<int, CommandConfig>();
-                deviceConfig.Commands.ForEach((CommandConfig c) => cmdByNum[c.CmdNum] = c);
+                //cmdByNum = new Dictionary<int, CommandConfig>();
+                //deviceConfig.Commands.ForEach((CommandConfig c) => cmdByNum[c.CmdNum] = c);
             }
             else
             {

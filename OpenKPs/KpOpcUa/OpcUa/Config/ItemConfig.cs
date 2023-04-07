@@ -34,6 +34,9 @@ namespace Scada.Comm.Devices.OpcUa.Config
             ArrayLen = 1;
             CnlNum = 0;
             Tag = null;
+
+            CanWrite = true; //默认可以写入
+            CommandConfig = new CommandConfig();
         }
 
         
@@ -42,6 +45,10 @@ namespace Scada.Comm.Devices.OpcUa.Config
         /// </summary>
         public bool Active { get; set; }
 
+        /// <summary>
+        /// 是否支持写入
+        /// </summary>
+        public bool CanWrite { get;set; }
         /// <summary>
         /// Gets or sets the OPC UA node ID.
         /// </summary>
@@ -72,6 +79,7 @@ namespace Scada.Comm.Devices.OpcUa.Config
         /// </summary>
         public object Tag { get; set; }
 
+        public CommandConfig CommandConfig { get; set; }
 
         /// <summary>
         /// Loads the configuration from the XML node.
@@ -87,6 +95,15 @@ namespace Scada.Comm.Devices.OpcUa.Config
             IsArray = xmlElem.GetAttrAsBool("isArray");
             ArrayLen = xmlElem.GetAttrAsInt("arrayLen");
             CnlNum = xmlElem.GetAttrAsInt("cnlNum");
+
+            CanWrite = xmlElem.GetAttrAsBool("canwrite");
+
+            XmlElement commandElem = xmlElem.SelectSingleNode("CommandConfig") as XmlElement;
+            CommandConfig = new CommandConfig();
+            CommandConfig.NodeID = commandElem.GetAttrAsString("nodeID");
+            CommandConfig.DisplayName = commandElem.GetAttrAsString("displayName");
+            CommandConfig.CmdNum = commandElem.GetAttrAsInt("cmdNum");
+            CommandConfig.DataTypeName = commandElem.GetAttrAsString("datatypeName");
         }
 
         /// <summary>
@@ -103,6 +120,15 @@ namespace Scada.Comm.Devices.OpcUa.Config
             xmlElem.SetAttribute("isArray", IsArray);
             xmlElem.SetAttribute("arrayLen", ArrayLen);
             xmlElem.SetAttribute("cnlNum", CnlNum);
+
+            xmlElem.SetAttribute("canwrite", CanWrite);
+
+            var cmdElem = xmlElem.AppendElem("CommandConfig");
+
+            cmdElem.SetAttribute("nodeID", CommandConfig.NodeID);
+            cmdElem.SetAttribute("displayName", CommandConfig.DisplayName);
+            cmdElem.SetAttribute("cmdNum", CommandConfig.CmdNum);
+            cmdElem.SetAttribute("datatypeName", CommandConfig.DataTypeName);
         }
     }
 }

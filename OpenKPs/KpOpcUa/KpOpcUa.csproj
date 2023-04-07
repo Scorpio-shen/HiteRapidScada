@@ -415,4 +415,9 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>if exist "C:\SCADA\ScadaComm\KP"  (
+copy "$(TargetFileName)" "C:\SCADA\ScadaComm\KP\"
+)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

@@ -96,16 +96,29 @@ namespace Scada.Comm.Devices.OpcUa.UI
 
                     if (dataValue.StatusCode != StatusCodes.BadAttributeIdInvalid)
                     {
-                        listView.Items.Add(new ListViewItem(new string[] {
-                        Attributes.GetBrowseName(readValueId.AttributeId),
-                        FormatAttribute(readValueId.AttributeId, dataValue.Value)
-                    }));
-                    }
+                        var str1 = Attributes.GetBrowseName(readValueId.AttributeId);
+                        var str2 = FormatAttribute(readValueId.AttributeId, dataValue.Value);
+
+                        AddListViewItem(new string[] { str1, str2 });
+                    };
+                    
                 }
             }
             catch (Exception ex)
             {
                 ScadaUiUtils.ShowError(KpPhrases.ReadAttrError + ":" + Environment.NewLine + ex.Message);
+            }
+        }
+
+        private void AddListViewItem(string[] items)
+        {
+            if(listView.InvokeRequired)
+            {
+                listView.Invoke(new Action<string[]>(AddListViewItem),items);
+            }
+            else
+            {
+                listView.Items.Add(new ListViewItem(items));
             }
         }
 

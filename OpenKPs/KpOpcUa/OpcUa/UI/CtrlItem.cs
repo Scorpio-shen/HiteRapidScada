@@ -80,8 +80,9 @@ namespace Scada.Comm.Devices.OpcUa.UI
                 chkIsArray.Checked = itemConfig.IsArray;
                 numArrayLen.Enabled = itemConfig.IsArray;
                 numArrayLen.SetValue(itemConfig.ArrayLen);
-                numCnlNum.SetValue(itemConfig.CnlNum);
+                //numCnlNum.SetValue(itemConfig.CnlNum);
 
+                chkCanWrite.Checked = itemConfig.CanWrite;
                 if (itemConfig.Tag is FrmConfig.ItemConfigTag tag)
                     txtSignal.Text = tag.GetSignalStr();
             }
@@ -185,7 +186,16 @@ namespace Scada.Comm.Devices.OpcUa.UI
         {
             if (itemConfig != null)
             {
-                itemConfig.CnlNum = Convert.ToInt32(numCnlNum.Value);
+                //itemConfig.CnlNum = Convert.ToInt32(numCnlNum.Value);
+                OnObjectChanged(TreeUpdateTypes.None);
+            }
+        }
+
+        private void chkCanWrite_CheckedChanged(object sender, EventArgs e)
+        {
+            if (itemConfig != null)
+            {
+                itemConfig.CanWrite = chkCanWrite.Checked;
                 OnObjectChanged(TreeUpdateTypes.None);
             }
         }

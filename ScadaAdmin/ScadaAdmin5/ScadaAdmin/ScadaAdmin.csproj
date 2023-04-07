@@ -543,6 +543,10 @@
       <Project>{2ba0bc26-8c82-4466-a0d1-92f0889c8a94}</Project>
       <Name>KpCommon</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\OpenKPs\KpOpcUa\KpOpcUa.csproj">
+      <Project>{205c7dab-c3ed-4d4f-8f2f-cfe65d6c4044}</Project>
+      <Name>KpOpcUa</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\ScadaAgent\ScadaAgentCommon\ScadaAgentCommon.csproj">
       <Project>{b2f7cdb0-e692-40f3-ae8b-8bc366ec52cb}</Project>
       <Name>ScadaAgentCommon</Name>

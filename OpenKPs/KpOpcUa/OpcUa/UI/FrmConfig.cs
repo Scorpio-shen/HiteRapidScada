@@ -29,6 +29,7 @@ using Scada.Comm.Devices.OpcUa.Config;
 using Scada.UI;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -116,8 +117,9 @@ namespace Scada.Comm.Devices.OpcUa.UI
         private int? maxCmdNum;                     // the maximum command number
         private Session opcSession;                 // the OPC session
         private TreeNode subscriptionsNode;         // the tree node of the subscriptions
-        private TreeNode commandsNode;              // the tree node of the commands
+        //private TreeNode commandsNode;              // the tree node of the commands
 
+        Dictionary<string, ItemConfig> deviceItemConfigDics;
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -145,7 +147,8 @@ namespace Scada.Comm.Devices.OpcUa.UI
             maxCmdNum = null;
             opcSession = null;
             subscriptionsNode = null;
-            commandsNode = null;
+            deviceItemConfigDics = new Dictionary<string, ItemConfig>();
+            //commandsNode = null;
         }
 
 
@@ -188,7 +191,7 @@ namespace Scada.Comm.Devices.OpcUa.UI
                 tvDevice.Nodes.Clear();
 
                 subscriptionsNode = TreeViewUtils.CreateNode(KpPhrases.SubscriptionsNode, FolderClosedImageKey);
-                commandsNode = TreeViewUtils.CreateNode(KpPhrases.CommandsNode, FolderClosedImageKey);
+                //commandsNode = TreeViewUtils.CreateNode(KpPhrases.CommandsNode, FolderClosedImageKey);
                 int signal = 1;
 
                 foreach (SubscriptionConfig subscriptionConfig in deviceConfig.Subscriptions)
@@ -203,18 +206,22 @@ namespace Scada.Comm.Devices.OpcUa.UI
                         ItemConfigTag tag = new ItemConfigTag(signal, itemConfig.IsArray, itemConfig.ArrayLen);
                         signal += tag.Length;
                         itemConfig.Tag = tag;
+
+                        //写入键值对
+                        if(!deviceItemConfigDics.ContainsKey(itemConfig.NodeID))
+                            deviceItemConfigDics.Add(itemConfig.NodeID, itemConfig);    
                     }
                 }
 
-                foreach (CommandConfig commandConfig in deviceConfig.Commands)
-                {
-                    commandsNode.Nodes.Add(CreateCommandNode(commandConfig));
-                }
+                //foreach (CommandConfig commandConfig in deviceConfig.Commands)
+                //{
+                //    commandsNode.Nodes.Add(CreateCommandNode(commandConfig));
+                //}
 
                 tvDevice.Nodes.Add(subscriptionsNode);
-                tvDevice.Nodes.Add(commandsNode);
+                //tvDevice.Nodes.Add(commandsNode);
                 subscriptionsNode.Expand();
-                commandsNode.Expand();
+                //commandsNode.Expand();
             }
             finally
             {
@@ -311,7 +318,7 @@ namespace Scada.Comm.Devices.OpcUa.UI
                 btnViewAttrs.Enabled = false;
                 btnAddItem.Enabled = false;
                 subscriptionsNode = null;
-                commandsNode = null;
+                //commandsNode = null;
 
                 if (opcSession != null)
                 {
@@ -413,39 +420,55 @@ namespace Scada.Comm.Devices.OpcUa.UI
         /// </summary>
         private bool AddItem(TreeNode serverNode)
         {
-            if (serverNode?.Tag is ServerNodeTag serverNodeTag &&
-                serverNodeTag.NodeClass == NodeClass.Variable)
+            if(serverNode?.Tag?.GetType().Equals(typeof(ServerNodeTag)) != true)
             {
-                TreeNode deviceNode = tvDevice.SelectedNode;
-                object deviceNodeTag = deviceNode?.Tag;
+                return false;
+            }
 
-                if (GetTopParentNode(tvDevice.SelectedNode) == commandsNode)
-                {
-                    // add a new command
-                    if (GetDataTypeName(serverNodeTag.OpcNodeId, out string dataTypeName))
-                    {
-                        CommandConfig commandConfig = new CommandConfig
-                        {
-                            NodeID = serverNodeTag.OpcNodeId.ToString(),
-                            DisplayName = serverNodeTag.DisplayName,
-                            DataTypeName = dataTypeName,
-                            CmdNum = GetNextCmdNum()
-                        };
+            var serverNodeTag = serverNode?.Tag as ServerNodeTag;
+            TreeNode deviceNode = tvDevice.SelectedNode;
+            object deviceNodeTag = deviceNode?.Tag;
+            if (serverNodeTag.NodeClass == NodeClass.Variable)
+            {
+               
 
-                        tvDevice.Insert(commandsNode, CreateCommandNode(commandConfig),
-                            deviceConfig.Commands, commandConfig);
+                //if (GetTopParentNode(tvDevice.SelectedNode) == commandsNode)
+                //{
+                //    // add a new command
+                //    if (GetDataTypeName(serverNodeTag.OpcNodeId, out string dataTypeName))
+                //    {
+                //        CommandConfig commandConfig = new CommandConfig
+                //        {
+                //            NodeID = serverNodeTag.OpcNodeId.ToString(),
+                //            DisplayName = serverNodeTag.DisplayName,
+                //            DataTypeName = dataTypeName,
+                //            CmdNum = GetNextCmdNum()
+                //        };
 
-                        Modified = true;
-                        return true;
-                    }
-                }
-                else
+                //        tvDevice.Insert(commandsNode, CreateCommandNode(commandConfig),
+                //            deviceConfig.Commands, commandConfig);
+
+                //        Modified = true;
+                //        return true;
+                //    }
+                //}
+                //else
                 {
                     // create a new monitored item
                     ItemConfig itemConfig = new ItemConfig
                     {
                         NodeID = serverNodeTag.OpcNodeId.ToString(),
                         DisplayName = serverNodeTag.DisplayName,
+                    };
+
+                    //添加一条相关的Cmd属性
+                    GetDataTypeName(serverNodeTag.OpcNodeId, out string dataTypeName);
+                    itemConfig.CommandConfig = new CommandConfig
+                    {
+                        DisplayName = serverNodeTag.DisplayName,
+                        NodeID = serverNodeTag.OpcNodeId.ToString(),
+                        DataTypeName = dataTypeName,
+                        //CmdNum = GetNextCmdNum()
                     };
 
                     itemConfig.Tag = new ItemConfigTag(0, itemConfig.IsArray, itemConfig.ArrayLen);
@@ -462,6 +485,7 @@ namespace Scada.Comm.Devices.OpcUa.UI
                         subscriptionNode = CreateSubscriptionNode(subscriptionConfig);
                         tvDevice.Insert(subscriptionsNode, subscriptionNode,
                             deviceConfig.Subscriptions, subscriptionConfig);
+
                     }
                     else
                     {
@@ -469,6 +493,12 @@ namespace Scada.Comm.Devices.OpcUa.UI
                     }
 
                     // add the monitored item
+
+                    if (deviceItemConfigDics.ContainsKey(itemConfig.NodeID))
+                    {
+                        //此nodeId节点已存在不添加
+                        return false;
+                    }
                     TreeNode itemNode = CreateItemNode(itemConfig);
                     tvDevice.Insert(subscriptionNode, itemNode, subscriptionConfig.Items, itemConfig);
                     UpdateSignals(itemNode);
@@ -476,8 +506,95 @@ namespace Scada.Comm.Devices.OpcUa.UI
                     return true;
                 }
             }
+            else
+            {
+                //获取子节点
+                var itemConfigs = GetCheckedVariableNode(serverNode);
+                if (itemConfigs.Count == 0)
+                    return false;
+                foreach(var itemConfig in itemConfigs)
+                {
+                    TreeNode subscriptionNode = deviceNode?.FindClosest(typeof(SubscriptionConfig)) ??
+                       subscriptionsNode.LastNode;
+                    SubscriptionConfig subscriptionConfig;
 
-            return false;
+                    // add a new subscription
+                    if (subscriptionNode == null)
+                    {
+                        subscriptionConfig = new SubscriptionConfig();
+                        subscriptionNode = CreateSubscriptionNode(subscriptionConfig);
+                        tvDevice.Insert(subscriptionsNode, subscriptionNode,
+                            deviceConfig.Subscriptions, subscriptionConfig);
+                    }
+                    else
+                    {
+                        subscriptionConfig = (SubscriptionConfig)subscriptionNode.Tag;
+                    }
+
+                    // add the monitored item
+
+                    if (deviceItemConfigDics.ContainsKey(itemConfig.NodeID))
+                    {
+                        //此nodeId节点已存在不添加
+                        return false;
+                    }
+                    TreeNode itemNode = CreateItemNode(itemConfig);
+                    tvDevice.Insert(subscriptionNode, itemNode, subscriptionConfig.Items, itemConfig);
+                    UpdateSignals(itemNode);
+                   
+                }
+                Modified = true;
+                return true;
+            }
+        }
+
+        private List<ItemConfig> GetCheckedVariableNode(TreeNode parentNode)
+        {
+            List<ItemConfig> result = new List<ItemConfig>();
+            foreach(TreeNode node in parentNode.Nodes)
+            {
+                if(node.Nodes.Count > 1)
+                {
+                    result.AddRange(GetCheckedVariableNode(node));
+                }
+                else
+                {
+                    if (node?.Tag?.GetType().Equals(typeof(ServerNodeTag)) != true)
+                    {
+                        continue;
+                    }
+
+                    var serverNodeTag = node?.Tag as ServerNodeTag;
+                    if (serverNodeTag.NodeClass != NodeClass.Variable)
+                    {
+                        continue;
+                    }
+                    if (!node.Checked)
+                        continue;
+
+                    ItemConfig itemConfig = new ItemConfig
+                    {
+                        NodeID = serverNodeTag.OpcNodeId.ToString(),
+                        DisplayName = serverNodeTag.DisplayName,
+                    };
+
+                    //添加一条相关的Cmd属性
+                    GetDataTypeName(serverNodeTag.OpcNodeId, out string dataTypeName);
+                    itemConfig.CommandConfig = new CommandConfig
+                    {
+                        DisplayName = serverNodeTag.DisplayName,
+                        NodeID = serverNodeTag.OpcNodeId.ToString(),
+                        DataTypeName = dataTypeName,
+                        //CmdNum = GetNextCmdNum()
+                    };
+
+                    itemConfig.Tag = new ItemConfigTag(0, itemConfig.IsArray, itemConfig.ArrayLen);
+
+                    result.Add(itemConfig);
+                }
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -584,7 +701,7 @@ namespace Scada.Comm.Devices.OpcUa.UI
             ServerNodeTag serverNodeTag = tvServer.SelectedNode?.Tag as ServerNodeTag;
             bool deviceNodeTagDefined = tvDevice.SelectedNode?.Tag != null;
 
-            btnAddItem.Enabled = serverNodeTag != null && serverNodeTag.NodeClass == NodeClass.Variable;
+            btnAddItem.Enabled = serverNodeTag != null /*&& serverNodeTag.NodeClass == NodeClass.Variable*/;
             btnMoveUpItem.Enabled = deviceNodeTagDefined && tvDevice.SelectedNode.PrevNode != null;
             btnMoveDownItem.Enabled = deviceNodeTagDefined && tvDevice.SelectedNode.NextNode != null;
             btnDeleteItem.Enabled = deviceNodeTagDefined;
@@ -893,16 +1010,34 @@ namespace Scada.Comm.Devices.OpcUa.UI
 
             if (deviceNodeTag is SubscriptionConfig)
             {
+                //移除键值对
+                foreach (var sub in deviceConfig.Subscriptions)
+                {
+                    foreach (var item in sub.Items)
+                    {
+                        if (deviceItemConfigDics.ContainsKey(item.NodeID))
+                        {
+                            deviceItemConfigDics.Remove(item.NodeID);
+                        }
+                    }
+                }
                 TreeNode nextSubscrNode = selectedNode.NextNode;
                 tvDevice.RemoveNode(selectedNode, deviceConfig.Subscriptions);
+                
                 UpdateSignals(nextSubscrNode);
             }
-            else if (deviceNodeTag is ItemConfig)
+            else if (deviceNodeTag is ItemConfig itemConfig)
             {
                 if (selectedNode.Parent.Tag is SubscriptionConfig subscriptionConfig)
                 {
+                    //移除键值对
+                    if (deviceItemConfigDics.ContainsKey(itemConfig.NodeID))
+                    {
+                        deviceItemConfigDics.Remove(itemConfig.NodeID);
+                    }
                     TreeNode subscrNode = selectedNode.Parent;
                     tvDevice.RemoveNode(selectedNode, subscriptionConfig.Items);
+                   
                     UpdateSignals(subscrNode);
                 }
             }
@@ -990,5 +1125,85 @@ namespace Scada.Comm.Devices.OpcUa.UI
             else
                 ScadaUiUtils.ShowError(errMsg);
         }
+
+        #region tvDevice CheckBox勾选
+        private void tvServer_AfterCheck(object sender, TreeViewEventArgs e)
+        {
+            if (e.Action == TreeViewAction.ByMouse)
+            //当该事件是由鼠标点击触发时才发生，否则设置该结点的Checked为true也会导致该事件发生
+            {
+                if (e.Node.Checked)//勾选结点时
+                {
+                    setParentNodeChecked(e.Node);//勾选所有祖先结点
+                    setChildNodeChecked(e.Node);//勾选所有子节点
+                }
+                else//取消勾选时
+                {
+                    setChildNodeCancel(e.Node);//取消所有子节点
+                    setParentNodeCancel(e.Node);//处理祖先结点，需判断
+
+                }
+            }
+        }
+
+        private void setChildNodeCancel(TreeNode node)//取消所有子节点的选择
+        {
+            foreach (TreeNode a in node.Nodes)
+            {
+                if (a != null)
+                {
+                    a.Checked = false;
+                    setChildNodeCancel(a);
+                }
+            }
+        }
+
+        private void setParentNodeCancel(TreeNode node)//取消祖先结点选择
+        {
+            if (node.Parent != null && judegChildChecked(node.Parent))
+            {
+                TreeNode parent;
+                node.Parent.Checked = false;
+                parent = node.Parent;
+                setParentNodeCancel(parent);
+            }
+        }
+
+        private void setParentNodeChecked(TreeNode t)//选择所有祖先结点
+        {
+            TreeNode parent = t.Parent;
+            while (parent != null && parent.Checked == false)
+            {
+                parent.Checked = true;
+                parent = parent.Parent;
+            }
+        }
+        private void setChildNodeChecked(TreeNode t)//勾选所有子节点
+        {
+
+            foreach (TreeNode a in t.Nodes)
+            {
+                if (a != null)
+                {
+                    a.Checked = true;
+                    setChildNodeChecked(a);
+                }
+            }
+
+        }
+        private bool judegChildChecked(TreeNode t)//判断其子节点是否有勾选状态
+        {
+            foreach (TreeNode a in t.Nodes)
+            {
+                if (a != null && a.Checked == true)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        #endregion
+
+
     }
 }

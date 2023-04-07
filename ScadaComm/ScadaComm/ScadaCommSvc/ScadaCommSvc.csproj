@@ -103,10 +103,6 @@
     <Content Include="Script\svc_config.xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\KpHiteBeckHoff\KpHiteBeckHoff.csproj">
-      <Project>{bf6feb50-9ef6-4be5-8924-9d674368745c}</Project>
-      <Name>KpHiteBeckHoff</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\Log\Log\Log.csproj">
       <Project>{a05ea084-e509-4025-9241-6a5be5c2b328}</Project>
       <Name>Log</Name>
@@ -114,6 +110,10 @@
     <ProjectReference Include="..\..\..\OpenKPs\KpCommon\KpCommon.csproj">
       <Project>{2ba0bc26-8c82-4466-a0d1-92f0889c8a94}</Project>
       <Name>KpCommon</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\OpenKPs\KpOpcUa\KpOpcUa.csproj">
+      <Project>{205c7dab-c3ed-4d4f-8f2f-cfe65d6c4044}</Project>
+      <Name>KpOpcUa</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\ScadaData\ScadaData.Svc\ScadaData.Svc.csproj">
       <Project>{827ccedc-f418-4261-9448-ea28f9033a4d}</Project>

@@ -11,6 +11,7 @@
  * Modified : 2019
  */
 
+using Opc.Ua;
 using System;
 using System.Collections.Generic;
 using System.IO;
