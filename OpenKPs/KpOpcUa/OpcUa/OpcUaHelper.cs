@@ -14,10 +14,12 @@
 using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Configuration;
+using Opc.Ua.Security.Certificates;
 using Scada.Comm.Devices.OpcUa.Config;
 using System;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Utils;
@@ -143,7 +145,7 @@ namespace Scada.Comm.Devices.OpcUa
 
             if (haveAppCertificate)
             {
-                config.ApplicationUri = Opc.Ua.Utils.GetApplicationUriFromCertificate(
+                config.ApplicationUri = GetApplicationUriFromCertificate(
                     config.SecurityConfiguration.ApplicationCertificate.Certificate);
 
                 if (config.SecurityConfiguration.AutoAcceptUntrustedCertificates)
@@ -180,6 +182,29 @@ namespace Scada.Comm.Devices.OpcUa
                 "OPC сессия успешно создана: {0}" :
                 "OPC session created successfully: {0}", connectionOptions.ServerUrl));
             return true;
+        }
+
+        private string GetApplicationUriFromCertificate(X509Certificate2 certificate)
+        {
+            // extract the alternate domains from the subject alternate name extension.
+            X509SubjectAltNameExtension alternateName = null;
+
+            foreach (X509Extension extension in certificate.Extensions)
+            {
+                if (extension.Oid.Value == X509SubjectAltNameExtension.SubjectAltNameOid || extension.Oid.Value == X509SubjectAltNameExtension.SubjectAltName2Oid)
+                {
+                    alternateName = new X509SubjectAltNameExtension(extension, extension.Critical);
+                    break;
+                }
+            }
+
+            // get the application uri.
+            if (alternateName != null && alternateName.Uris.Count > 0)
+            {
+                return alternateName.Uris[0];
+            }
+
+            return string.Empty;
         }
     }
 }

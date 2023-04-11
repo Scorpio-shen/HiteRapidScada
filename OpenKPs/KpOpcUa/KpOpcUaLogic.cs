@@ -79,7 +79,7 @@ namespace Scada.Comm.Devices
         private bool autoAccept;                              // auto accept OPC server certificate
         private bool connected;                               // connection with OPC server is established
         private DateTime connAttemptDT;                       // the time stamp of a connection attempt
-        private Session opcSession;                           // the OPC session
+        private ISession opcSession;                           // the OPC session
         private SessionReconnectHandler reconnectHandler;     // the object needed to reconnect
         private Dictionary<int, KPTag> tagsByCnlNum;          // the device tags accessed by channel number
         private Dictionary<uint, SubscriptionTag> subscrByID; // the subscription tags accessed by IDs
@@ -260,7 +260,7 @@ namespace Scada.Comm.Devices
         /// <summary>
         /// Reconnects if needed.
         /// </summary>
-        private void OpcSession_KeepAlive(Session sender, KeepAliveEventArgs e)
+        private void OpcSession_KeepAlive(ISession sender, KeepAliveEventArgs e)
         {
             if (e.Status != null && ServiceResult.IsNotGood(e.Status))
             {
@@ -307,7 +307,7 @@ namespace Scada.Comm.Devices
         /// <summary>
         /// Processes new data received from OPC server.
         /// </summary>
-        private void OpcSession_Notification(Session session, NotificationEventArgs e)
+        private void OpcSession_Notification(ISession session, NotificationEventArgs e)
         {
             try
             {

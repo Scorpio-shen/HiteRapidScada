@@ -83,8 +83,8 @@ namespace Scada.Comm.Devices
                     throw new Exception("Application instance certificate invalid!");
                 }
 
-                applicationInstance.ApplicationConfiguration.ServerConfiguration.BaseAddresses.Clear();
-                applicationInstance.ApplicationConfiguration.ServerConfiguration.BaseAddresses.Add(deviceTemplate.OPCServerIP);
+                //applicationInstance.ApplicationConfiguration.ServerConfiguration.BaseAddresses.Clear();
+                //applicationInstance.ApplicationConfiguration.ServerConfiguration.BaseAddresses.Add(deviceTemplate.OPCServerIP);
             }
             catch (Exception ex) 
             {
@@ -97,8 +97,18 @@ namespace Scada.Comm.Devices
             //启动OPC UA Server
             if (applicationInstance == null)
                 return;
-            var sharpNodeSettingsServer = new SharpNodeSettingsServer(deviceTemplate);
-            applicationInstance.Start(sharpNodeSettingsServer).Wait();
+
+            try
+            {
+                WriteToLog($"KpHiteOpcUaServerLogic:OnCommLineStart,启动OPC服务器");
+                var sharpNodeSettingsServer = new SharpNodeSettingsServer(deviceTemplate, WriteToLog);
+                applicationInstance.Start(sharpNodeSettingsServer).Wait();
+
+            }
+            catch(Exception ex)
+            {
+                WriteToLog($"KpHiteOpcUaServerLogic:OnCommLineStart,OPC启动异常,{ex.Message}");
+            }
         }
         #endregion
 

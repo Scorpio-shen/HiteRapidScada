@@ -1,18 +1,22 @@
 ﻿using KpHiteOpcUaServer.OPCUaServer.Model;
+using Newtonsoft.Json;
 using Opc.Ua;
 using Opc.Ua.Server;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
+using Utils;
 
 namespace KpHiteOpcUaServer.Server
 {
     public partial class SharpNodeSettingsServer : StandardServer
     {
         private DeviceTemplate _deviceTemplate;
-        public SharpNodeSettingsServer(DeviceTemplate deviceTemplate) 
+        private Log.WriteLineDelegate _writetoLog; 
+        public SharpNodeSettingsServer(DeviceTemplate deviceTemplate, Log.WriteLineDelegate writetoLog) 
         {
             _deviceTemplate = deviceTemplate;
+            _writetoLog = writetoLog;
         }
         #region Overridden Methods
         /// <summary>
@@ -88,10 +92,14 @@ namespace KpHiteOpcUaServer.Server
         {
             base.OnServerStarted(server);
 
+            _writetoLog($"SharpNodeSettingsServer:OnServerStarted,OPC服务器启动成功,server状态:{server.CurrentState}!");
+            foreach(var url in server.EndpointAddresses)
+            {
+                _writetoLog($"{JsonConvert.SerializeObject(url)}");
+            }
             // request notifications when the user identity is changed. all valid users are accepted by default.
             server.SessionManager.ImpersonateUser += new ImpersonateEventHandler(SessionManager_ImpersonateUser);
         }
-
         #endregion
 
         #region User Validation Functions
