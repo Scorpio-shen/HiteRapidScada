@@ -128,14 +128,18 @@ namespace Scada.Comm.Devices
             else
             {
                 //获取通道数据值
-                GetValues();
+                lastCommSucc = GetValues();
+
             }
+            //刷新状态
+            CalcSessStats();
         }
         /// <summary>
         /// 读取当前通道值
         /// </summary>
-        private void GetValues()
+        private bool GetValues()
         {
+            bool result = false;
             try
             {
                 if (CommLineSvc.ServerComm != null)
@@ -189,12 +193,18 @@ namespace Scada.Comm.Devices
                             }
                         }
                     }
+
+                    result = true;
+                    
                 }
             }
             catch(Exception ex) 
             {
                 WriteToLog($"KpHiteOpcUaServerLogic:GetValues,刷新OPC节点值异常,{ex.Message}");
+                result = false;
             }
+
+            return result;
         }
         #endregion
 

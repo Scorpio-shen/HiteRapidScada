@@ -103,6 +103,7 @@ namespace Scada.Comm.Devices
         #region 数据轮询及推送Mqtt服务器
         public override void Session()
         {
+            base.Session();
             if (deviceTemplate == null)
             {
                 WriteToLog(Localization.UseRussian ?
@@ -114,25 +115,30 @@ namespace Scada.Comm.Devices
             }
             else
             {
+                lastCommSucc = false;
                 if (!mqttClient.IsConnected)
                 {
                     ConnectMqttServer();
                 }
                 //获取通道数据值
-                GetValues();
+                lastCommSucc = GetValues();
                 //Mqtt Publish
-                PublishData();
+                lastCommSucc = PublishData();
+
+                //刷新状态
+                CalcSessStats();
             }
         }
 
-        private void PublishData()
+        private bool PublishData()
         {
+            bool operateResult = false;
             try
             {
                 if (!mqttClient.IsConnected)
                 {
                     WriteToLog($"KpHiteMqttLogic:PublishData,Mqtt未连接到服务端");
-                    return;
+                    return operateResult;
                 }
                 //判断是否
                 foreach (MqttModelContent content in mqttContents)
@@ -172,14 +178,20 @@ namespace Scada.Comm.Devices
                     mqttQuality: MqttQualityOfServiceLevel.AtMostOnce).Result;
 
                 WriteToLog($"KpHiteMqttLogic:PublishData,发布数据,Content:{payload},Result:{result}");
+                operateResult = result;
+
             }
             catch(Exception ex)
             {
                 WriteToLog($"KpHiteMqttLogic:PublishData,发布数据异常,{ex.Message}");
+                operateResult = false;
             }
+
+            return operateResult;
         }
-        private void GetValues()
+        private bool GetValues()
         {
+            bool result = false;
             try
             {
                 if (CommLineSvc.ServerComm != null)
@@ -233,12 +245,17 @@ namespace Scada.Comm.Devices
                             }
                         }
                     }
+
+                    result = true;
                 }
             }
             catch (Exception ex)
             {
+                result = false;
                 WriteToLog($"KpHiteOpcUaServerLogic:GetValues,刷新OPC节点值异常,{ex.Message}");
             }
+
+            return result;
         }
         #endregion
 
