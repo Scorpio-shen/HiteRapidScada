@@ -69,7 +69,7 @@ namespace KpHiteMqtt.Mqtt.Model
                 ConnectionOptions = new MqttConnectionOptions()
                 {
                     ClientId = connectionElement.GetAttrAsString("ClientId"),
-                    IpAddress = connectionElement.GetAttrAsString("IpAddress"),
+                    ServerIpAddress = connectionElement.GetAttrAsString("IpAddress"),
                     Port = connectionElement.GetAttrAsInt("Port"),
                     UserName = connectionElement.GetAttrAsString("UserName"),
                     Password = connectionElement.GetAttrAsString("Password"),
@@ -327,7 +327,7 @@ namespace KpHiteMqtt.Mqtt.Model
             var connectElement = rootElement.AppendElem("ConnectionOptions");
 
             connectElement.SetAttribute("ClientId", ConnectionOptions.ClientId);
-            connectElement.SetAttribute("IpAddress", ConnectionOptions.IpAddress);
+            connectElement.SetAttribute("IpAddress", ConnectionOptions.ServerIpAddress);
             connectElement.SetAttribute("Port", ConnectionOptions.Port.ToString());
             connectElement.SetAttribute("UserName", ConnectionOptions.UserName);
             connectElement.SetAttribute("Password", ConnectionOptions.Password);

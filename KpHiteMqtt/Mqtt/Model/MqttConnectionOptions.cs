@@ -9,7 +9,19 @@ namespace KpHiteMqtt.Mqtt.Model
     public class MqttConnectionOptions
     {
         public string ClientId { get;set; }
-        public string IpAddress { get;set; }    
+        /// <summary>
+        /// 目标服务器IP
+        /// </summary>
+        public string ServerIpAddress { get;set; }    
+
+        /// <summary>
+        /// 本机连接的IPAddress
+        /// </summary>
+        public string LocalIpAddress { get; set; }
+        /// <summary>
+        /// 本机连接端口
+        /// </summary>
+        public int LocalPort { get; set; }
         /// <summary>
         /// 设备号
         /// </summary>

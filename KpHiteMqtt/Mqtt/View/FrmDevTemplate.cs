@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Windows.Forms;
 
@@ -112,11 +113,19 @@ namespace KpHiteMqtt.Mqtt.View
             //载入所有输入、输出通道
             LoadConfigInCtrlCnls();
 
+            //获取所有可用的网卡信息
+            var netinterfaces = GetAllNetWorkInterfaces();
+            BindingSource bindNet = new BindingSource();
+            bindNet.DataSource = netinterfaces;
+            cbxLocalNetInterface.DataSource = bindNet;
+            cbxLocalNetInterface.DisplayMember = "Key";
+            cbxLocalNetInterface.ValueMember = "Value";
+
             //绑定控件
             var connectionOption = deviceTemplate.ConnectionOptions;
 
             txtClientId.AddDataBindings(connectionOption, nameof(connectionOption.ClientId));
-            txtServerIp.AddDataBindings(connectionOption, nameof(connectionOption.IpAddress));
+            txtServerIp.AddDataBindings(connectionOption, nameof(connectionOption.ServerIpAddress));
             txtPort.AddDataBindings(connectionOption, nameof(connectionOption.Port));
             txtDeviceSn.AddDataBindings(connectionOption,nameof(connectionOption.DeviceSn));
             txtUserName.AddDataBindings(connectionOption, nameof(connectionOption.UserName));
@@ -135,10 +144,14 @@ namespace KpHiteMqtt.Mqtt.View
                     binding_e.Value = default(double);
             };
             txtAliveInterval.DataBindings.Add(binding);
+
+            cbxLocalNetInterface.AddDataBindings(connectionOption, nameof(connectionOption.LocalIpAddress));
+            txtLocalPort.AddDataBindings(connectionOption, nameof(connectionOption.LocalPort));
             //绑定属性集合
             dgvProperty.AutoGenerateColumns = false;
             bdsProperty.DataSource = deviceTemplate.Properties;
             dgvProperty.DataSource = bdsProperty;
+
 
             //控件事件
             txtClientId.TextChanged += ControlProperty_Changed;
@@ -174,6 +187,33 @@ namespace KpHiteMqtt.Mqtt.View
         {
             e.Cancel = !CheckChange();
         }
+
+        #region 获取当前设备所有网卡
+        /// <summary>
+        /// 获取所有状态是up且ip4地址不为空的网卡信息
+        /// </summary>
+        /// <returns></returns>
+        private Dictionary<string,string> GetAllNetWorkInterfaces()
+        {
+            return NetworkInterface.GetAllNetworkInterfaces().Where(n => n.OperationalStatus == OperationalStatus.Up && !string.IsNullOrEmpty(GetIPv4Address(n)))
+                .ToDictionary(n=>n.Name,n=>GetIPv4Address(n));
+        }
+
+        private string GetIPv4Address(NetworkInterface netInterface)
+        {
+            IPInterfaceProperties ipProperties = netInterface.GetIPProperties();
+
+            foreach (UnicastIPAddressInformation address in ipProperties.UnicastAddresses)
+            {
+                if (address.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    return address.Address.ToString();
+                }
+            }
+
+            return "";
+        }
+        #endregion
 
         #region tool栏事件
         private void btnNew_Click(object sender, EventArgs e)

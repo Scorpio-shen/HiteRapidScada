@@ -44,7 +44,7 @@ namespace HiteMqttTest
                 mqttClient = new MqttClient(new HslCommunication.MQTT.MqttConnectionOptions
                 {
                     ClientId = deviceTemplate.ConnectionOptions.ClientId,
-                    IpAddress = deviceTemplate.ConnectionOptions.IpAddress,
+                    IpAddress = deviceTemplate.ConnectionOptions.ServerIpAddress,
                     Credentials = new MqttCredential
                     {
                         UserName = deviceTemplate.ConnectionOptions.UserName,

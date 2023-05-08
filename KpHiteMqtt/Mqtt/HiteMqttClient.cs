@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
@@ -59,8 +60,15 @@ namespace KpHiteMqtt.Mqtt
         #region 连接与断开
         public async Task<bool> ConnectServer()
         {
+            
             var mqttClientOptionBulider = new MqttClientOptionsBuilder()
-                    .WithTcpServer(_connectionOptions.IpAddress, _connectionOptions.Port)
+                .WithTcpServer(option =>
+                {
+                    option.Server = _connectionOptions.ServerIpAddress;
+                    option.Port = _connectionOptions.Port;
+                    option.LocalEndpoint = new IPEndPoint(IPAddress.Parse(_connectionOptions.LocalIpAddress), _connectionOptions.LocalPort);
+                })
+                    .WithTcpServer(_connectionOptions.ServerIpAddress, _connectionOptions.Port)
                     .WithCredentials(_connectionOptions.UserName, _connectionOptions.Password)
                     .WithClientId(_connectionOptions.ClientId)
                     .WithKeepAlivePeriod(_connectionOptions.KeepAliveSendInterval.Add(TimeSpan.FromSeconds(5)));

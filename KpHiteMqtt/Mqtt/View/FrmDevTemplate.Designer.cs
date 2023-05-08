@@ -54,6 +54,10 @@
             this.btnAddModel = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.cbxLocalNetInterface = new System.Windows.Forms.ComboBox();
+            this.txtLocalPort = new System.Windows.Forms.TextBox();
+            this.label6 = new System.Windows.Forms.Label();
+            this.label7 = new System.Windows.Forms.Label();
             this.txtDeviceSn = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
@@ -275,6 +279,10 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.cbxLocalNetInterface);
+            this.groupBox2.Controls.Add(this.txtLocalPort);
+            this.groupBox2.Controls.Add(this.label6);
+            this.groupBox2.Controls.Add(this.label7);
             this.groupBox2.Controls.Add(this.txtDeviceSn);
             this.groupBox2.Controls.Add(this.label5);
             this.groupBox2.Controls.Add(this.label3);
@@ -299,9 +307,42 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Mqtt服务器连接参数";
             // 
+            // cbxLocalNetInterface
+            // 
+            this.cbxLocalNetInterface.FormattingEnabled = true;
+            this.cbxLocalNetInterface.Location = new System.Drawing.Point(383, 77);
+            this.cbxLocalNetInterface.Name = "cbxLocalNetInterface";
+            this.cbxLocalNetInterface.Size = new System.Drawing.Size(184, 20);
+            this.cbxLocalNetInterface.TabIndex = 22;
+            // 
+            // txtLocalPort
+            // 
+            this.txtLocalPort.Location = new System.Drawing.Point(383, 113);
+            this.txtLocalPort.Name = "txtLocalPort";
+            this.txtLocalPort.Size = new System.Drawing.Size(184, 21);
+            this.txtLocalPort.TabIndex = 21;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(306, 121);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(71, 12);
+            this.label6.TabIndex = 20;
+            this.label6.Text = "本机端口号:";
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(318, 82);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(59, 12);
+            this.label7.TabIndex = 18;
+            this.label7.Text = "本机网卡:";
+            // 
             // txtDeviceSn
             // 
-            this.txtDeviceSn.Location = new System.Drawing.Point(576, 25);
+            this.txtDeviceSn.Location = new System.Drawing.Point(721, 40);
             this.txtDeviceSn.Name = "txtDeviceSn";
             this.txtDeviceSn.Size = new System.Drawing.Size(129, 21);
             this.txtDeviceSn.TabIndex = 17;
@@ -309,7 +350,7 @@
             // label5
             // 
             this.label5.Font = new System.Drawing.Font("宋体", 9F);
-            this.label5.Location = new System.Drawing.Point(500, 28);
+            this.label5.Location = new System.Drawing.Point(645, 43);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(70, 14);
             this.label5.TabIndex = 16;
@@ -319,16 +360,16 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(136, 143);
+            this.label3.Location = new System.Drawing.Point(348, 43);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(47, 12);
+            this.label3.Size = new System.Drawing.Size(29, 12);
             this.label3.TabIndex = 15;
-            this.label3.Text = "UseTls:";
+            this.label3.Text = "Tls:";
             // 
             // chkUseTls
             // 
             this.chkUseTls.AutoSize = true;
-            this.chkUseTls.Location = new System.Drawing.Point(189, 143);
+            this.chkUseTls.Location = new System.Drawing.Point(383, 43);
             this.chkUseTls.Name = "chkUseTls";
             this.chkUseTls.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
             this.chkUseTls.Size = new System.Drawing.Size(15, 14);
@@ -337,14 +378,14 @@
             // 
             // txtPassword
             // 
-            this.txtPassword.Location = new System.Drawing.Point(576, 98);
+            this.txtPassword.Location = new System.Drawing.Point(721, 118);
             this.txtPassword.Name = "txtPassword";
             this.txtPassword.Size = new System.Drawing.Size(129, 21);
             this.txtPassword.TabIndex = 12;
             // 
             // txtUserName
             // 
-            this.txtUserName.Location = new System.Drawing.Point(576, 61);
+            this.txtUserName.Location = new System.Drawing.Point(721, 81);
             this.txtUserName.Name = "txtUserName";
             this.txtUserName.Size = new System.Drawing.Size(129, 21);
             this.txtUserName.TabIndex = 13;
@@ -352,7 +393,7 @@
             // label_Password
             // 
             this.label_Password.Font = new System.Drawing.Font("宋体", 9F);
-            this.label_Password.Location = new System.Drawing.Point(500, 101);
+            this.label_Password.Location = new System.Drawing.Point(645, 121);
             this.label_Password.Name = "label_Password";
             this.label_Password.Size = new System.Drawing.Size(70, 14);
             this.label_Password.TabIndex = 10;
@@ -362,7 +403,7 @@
             // label_UseName
             // 
             this.label_UseName.Font = new System.Drawing.Font("宋体", 9F);
-            this.label_UseName.Location = new System.Drawing.Point(500, 64);
+            this.label_UseName.Location = new System.Drawing.Point(645, 84);
             this.label_UseName.Name = "label_UseName";
             this.label_UseName.Size = new System.Drawing.Size(70, 14);
             this.label_UseName.TabIndex = 11;
@@ -371,15 +412,15 @@
             // 
             // txtAliveInterval
             // 
-            this.txtAliveInterval.Location = new System.Drawing.Point(576, 139);
+            this.txtAliveInterval.Location = new System.Drawing.Point(721, 13);
             this.txtAliveInterval.Name = "txtAliveInterval";
-            this.txtAliveInterval.Size = new System.Drawing.Size(129, 21);
+            this.txtAliveInterval.Size = new System.Drawing.Size(41, 21);
             this.txtAliveInterval.TabIndex = 7;
             // 
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(493, 143);
+            this.label4.Location = new System.Drawing.Point(638, 17);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(77, 12);
             this.label4.TabIndex = 6;
@@ -387,7 +428,7 @@
             // 
             // txtPort
             // 
-            this.txtPort.Location = new System.Drawing.Point(189, 102);
+            this.txtPort.Location = new System.Drawing.Point(144, 118);
             this.txtPort.Name = "txtPort";
             this.txtPort.Size = new System.Drawing.Size(129, 21);
             this.txtPort.TabIndex = 5;
@@ -395,15 +436,15 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(136, 106);
+            this.label2.Location = new System.Drawing.Point(31, 123);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(47, 12);
+            this.label2.Size = new System.Drawing.Size(107, 12);
             this.label2.TabIndex = 4;
-            this.label2.Text = "端口号:";
+            this.label2.Text = "Mqtt服务器端口号:";
             // 
             // txtServerIp
             // 
-            this.txtServerIp.Location = new System.Drawing.Point(189, 61);
+            this.txtServerIp.Location = new System.Drawing.Point(144, 77);
             this.txtServerIp.Name = "txtServerIp";
             this.txtServerIp.Size = new System.Drawing.Size(129, 21);
             this.txtServerIp.TabIndex = 3;
@@ -411,7 +452,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(100, 66);
+            this.label1.Location = new System.Drawing.Point(55, 82);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(83, 12);
             this.label1.TabIndex = 2;
@@ -419,7 +460,7 @@
             // 
             // txtClientId
             // 
-            this.txtClientId.Location = new System.Drawing.Point(189, 24);
+            this.txtClientId.Location = new System.Drawing.Point(144, 40);
             this.txtClientId.Name = "txtClientId";
             this.txtClientId.Size = new System.Drawing.Size(129, 21);
             this.txtClientId.TabIndex = 1;
@@ -427,7 +468,7 @@
             // lblClientId
             // 
             this.lblClientId.AutoSize = true;
-            this.lblClientId.Location = new System.Drawing.Point(124, 28);
+            this.lblClientId.Location = new System.Drawing.Point(79, 44);
             this.lblClientId.Name = "lblClientId";
             this.lblClientId.Size = new System.Drawing.Size(59, 12);
             this.lblClientId.TabIndex = 0;
@@ -531,5 +572,9 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Button btnImportExcel;
+        private System.Windows.Forms.ComboBox cbxLocalNetInterface;
+        private System.Windows.Forms.TextBox txtLocalPort;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.Label label7;
     }
 }

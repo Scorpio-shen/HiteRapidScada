@@ -83,8 +83,8 @@ namespace Scada.Comm.Devices
                     throw new Exception("Application instance certificate invalid!");
                 }
 
-                //applicationInstance.ApplicationConfiguration.ServerConfiguration.BaseAddresses.Clear();
-                //applicationInstance.ApplicationConfiguration.ServerConfiguration.BaseAddresses.Add(deviceTemplate.OPCServerIP);
+                applicationInstance.ApplicationConfiguration.ServerConfiguration.BaseAddresses.Clear();
+                applicationInstance.ApplicationConfiguration.ServerConfiguration.BaseAddresses.Add(deviceTemplate.OPCServerIP);
             }
             catch (Exception ex) 
             {
